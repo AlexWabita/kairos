@@ -2,6 +2,28 @@
 
 import { useState, useRef, useEffect } from "react"
 import { initKairosSession } from '@/lib/supabase/sessions'
+import BibleVerse from './BibleVerse'
+
+// ── Detect if a message is requesting a specific Bible verse ─
+function detectVerseRequest(text) {
+  const versePattern = /\b(genesis|exodus|leviticus|numbers|deuteronomy|joshua|judges|ruth|1\s?samuel|2\s?samuel|1\s?kings|2\s?kings|1\s?chronicles|2\s?chronicles|ezra|nehemiah|esther|job|psalms?|proverbs|ecclesiastes|song\s?of\s?solomon|isaiah|jeremiah|lamentations|ezekiel|daniel|hosea|joel|amos|obadiah|jonah|micah|nahum|habakkuk|zephaniah|haggai|zechariah|malachi|matthew|mark|luke|john|acts|romans|1\s?corinthians|2\s?corinthians|galatians|ephesians|philippians|colossians|1\s?thessalonians|2\s?thessalonians|1\s?timothy|2\s?timothy|titus|philemon|hebrews|james|1\s?peter|2\s?peter|1\s?john|2\s?john|3\s?john|jude|revelation)\s+\d+:\d+(-\d+)?/i
+  const match = text.match(versePattern)
+  return match ? match[0] : null
+}
+
+// ── Detect if a message is a Bible keyword search ────────────
+function detectBibleSearch(text) {
+  const lower = text.toLowerCase()
+  const triggers = [
+    "where does the bible say",
+    "find verses about",
+    "search the bible for",
+    "what does the bible say about",
+    "verses about",
+    "bible verses on",
+  ]
+  return triggers.some(t => lower.includes(t))
+}
 
 /* ── Ambient Glow Orb ────────────────────────────────────── */
 function GlowOrb({ size, left, top, color, delay = "0s" }) {
@@ -58,7 +80,7 @@ function TypingIndicator() {
   )
 }
 
-/* ── Scripture Block ─────────────────────────────────────── */
+/* ── Scripture Block (AI-generated inline) ───────────────── */
 function ScriptureBlock({ text, reference }) {
   return (
     <div style={{
@@ -93,7 +115,7 @@ function ScriptureBlock({ text, reference }) {
 }
 
 /* ── Message Bubble ──────────────────────────────────────── */
-function Message({ role, content, isNew }) {
+function Message({ role, content, isNew, verseData }) {
   const isKairos = role === "assistant"
 
   const renderContent = (text) => {
@@ -153,8 +175,18 @@ function Message({ role, content, isNew }) {
         padding:      "var(--space-5) var(--space-5)",
         boxShadow:    isKairos ? "var(--shadow-card)" : "none",
         borderLeft:   isKairos ? "2px solid rgba(240,192,96,0.2)" : "none",
+        width:        "100%",
       }}>
         {renderContent(content)}
+
+        {/* Verified verse card — shown when API returned exact text */}
+        {verseData && (
+          <BibleVerse
+            reference={verseData.reference}
+            text={verseData.text}
+            translation={verseData.translation}
+          />
+        )}
       </div>
     </div>
   )
@@ -169,6 +201,7 @@ export default function CompanionCore({ profile = null }) {
   const [newMsgIdx,       setNewMsgIdx]       = useState(null)
   const [kairosUser,      setKairosUser]      = useState(null)
   const [conversationId,  setConversationId]  = useState(null)
+  const [translation,     setTranslation]     = useState("WEB")
 
   const bottomRef   = useRef(null)
   const inputRef    = useRef(null)
@@ -197,6 +230,18 @@ export default function CompanionCore({ profile = null }) {
     ta.style.height = Math.min(ta.scrollHeight, 160) + "px"
   }
 
+  // Fetch exact verse from Bible API
+  const fetchVerse = async (reference) => {
+    try {
+      const res  = await fetch(`/api/bible/verse?ref=${encodeURIComponent(reference)}&translation=${translation}`)
+      const data = await res.json()
+      if (data.success) return data
+    } catch (err) {
+      console.warn('[Kairos Bible] Verse fetch failed:', err.message)
+    }
+    return null
+  }
+
   const handleSend = async () => {
     const text = input.trim()
     if (!text || loading) return
@@ -214,6 +259,16 @@ export default function CompanionCore({ profile = null }) {
     setLoading(true)
 
     try {
+      // ── Check if this is a direct verse request ───────────
+      const verseRef  = detectVerseRequest(text)
+      const isSearch  = detectBibleSearch(text)
+      let   verseData = null
+
+      if (verseRef) {
+        verseData = await fetchVerse(verseRef)
+      }
+
+      // ── Send to AI ────────────────────────────────────────
       const res = await fetch("/api/ai/companion", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
@@ -223,13 +278,16 @@ export default function CompanionCore({ profile = null }) {
           profile,
           userId:         kairosUser?.id || null,
           conversationId: conversationId,
+          verseContext:   verseData
+            ? `Exact text already retrieved: "${verseData.text}" — ${verseData.reference} (${verseData.translation}). Reference this directly, do not paraphrase it.`
+            : null,
+          isVerseRequest: !!verseRef,
+          isSearch:       isSearch,
         }),
       })
 
       const data = await res.json()
 
-      // Store the conversation ID returned from the API
-      // so all subsequent messages attach to the same conversation
       if (data.conversationId && !conversationId) {
         setConversationId(data.conversationId)
         console.log('[Kairos] Conversation started:', data.conversationId)
@@ -239,6 +297,7 @@ export default function CompanionCore({ profile = null }) {
         role:      "assistant",
         content:   data.reply || "Something stilled. Please try again.",
         escalated: data.escalated || false,
+        verseData: verseData,
       }
 
       const finalMessages = [...updatedHistory, assistantMsg]
@@ -315,14 +374,40 @@ export default function CompanionCore({ profile = null }) {
           </p>
         </div>
 
-        <div style={{
-          width:        "8px",
-          height:       "8px",
-          borderRadius: "50%",
-          background:   "var(--color-life)",
-          boxShadow:    "0 0 8px var(--color-life)",
-          animation:    "pulse 2s ease-in-out infinite",
-        }} />
+        {/* Translation selector + status dot */}
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+          <select
+            value={translation}
+            onChange={(e) => setTranslation(e.target.value)}
+            title="Bible translation"
+            style={{
+              background:    "rgba(13,20,40,0.8)",
+              border:        "1px solid var(--color-border)",
+              borderRadius:  "var(--radius-full)",
+              padding:       "4px 10px",
+              color:         "var(--color-muted)",
+              fontFamily:    "var(--font-body)",
+              fontSize:      "0.65rem",
+              letterSpacing: "0.08em",
+              cursor:        "pointer",
+              outline:       "none",
+            }}
+          >
+            <option value="WEB">WEB</option>
+            <option value="KJV">KJV</option>
+            <option value="ASV">ASV</option>
+            <option value="BBE">BBE</option>
+          </select>
+
+          <div style={{
+            width:        "8px",
+            height:       "8px",
+            borderRadius: "50%",
+            background:   "var(--color-life)",
+            boxShadow:    "0 0 8px var(--color-life)",
+            animation:    "pulse 2s ease-in-out infinite",
+          }} />
+        </div>
       </div>
 
       {/* ── MESSAGES AREA ──────────────────────────────────── */}
@@ -420,6 +505,7 @@ export default function CompanionCore({ profile = null }) {
             role={msg.role}
             content={msg.content}
             isNew={i === newMsgIdx}
+            verseData={msg.verseData || null}
           />
         ))}
 
