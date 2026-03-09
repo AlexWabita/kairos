@@ -24,16 +24,20 @@ const OPENROUTER_MODELS = [
     label: "Llama 3.3 70B",
   },
   {
-    id:    "deepseek/deepseek-chat-v3-0324:free",
-    label: "DeepSeek Chat V3",
+    id:    "openai/gpt-oss-120b:free",
+    label: "GPT OSS 120B",
   },
   {
-    id:    "qwen/qwen3-14b:free",
-    label: "Qwen3 14B",
+    id:    "arcee-ai/arcee-trinity-large-preview:free",
+    label: "Arcee Trinity Large",
   },
   {
-    id:    "mistralai/mistral-small-3.1-24b-instruct:free",
-    label: "Mistral Small 3.1",
+    id:    "stepfun/step-3.5-flash:free",
+    label: "StepFun Step 3.5 Flash",
+  },
+  {
+    id:    "z-ai/glm-4.5-air:free",
+    label: "GLM 4.5 Air",
   },
 ]
 
@@ -46,12 +50,12 @@ const GEMINI_MODELS = [
     label: "Gemini 2.0 Flash",
   },
   {
-    id:    "gemini-1.5-flash",
-    label: "Gemini 1.5 Flash",
+    id:    "gemini-2.0-flash-lite",
+    label: "Gemini 2.0 Flash Lite",
   },
   {
-    id:    "gemini-1.5-flash-8b",
-    label: "Gemini 1.5 Flash 8B",
+    id:    "gemini-1.5-flash-002",
+    label: "Gemini 1.5 Flash 002",
   },
 ]
 
@@ -121,10 +125,7 @@ async function tryGemini(model, messages, systemPrompt) {
   log("info", `[Gemini]     Trying: ${model.label}`)
 
   // Convert OpenAI-style messages to Gemini format
-  // Gemini uses 'user'/'model' roles instead of 'user'/'assistant'
-  // System prompt becomes the first user message in Gemini
   const geminiContents = [
-    // Inject system prompt as opening context
     {
       role:  "user",
       parts: [{ text: `[SYSTEM INSTRUCTIONS — follow these throughout]\n\n${systemPrompt}\n\n[END SYSTEM INSTRUCTIONS]\n\nAcknowledge you understand and are ready.` }],
@@ -133,7 +134,6 @@ async function tryGemini(model, messages, systemPrompt) {
       role:  "model",
       parts: [{ text: "Understood. I am Kairos, ready to serve as your compassionate companion." }],
     },
-    // Convert conversation history
     ...messages.map(m => ({
       role:  m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }],

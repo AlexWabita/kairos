@@ -20,12 +20,23 @@ import {
   CRISIS_RESOURCES,
   HARMFUL_RESPONSE,
 }                         from "@/lib/ai/guardrails"
+import {
+  getOrCreateConversation,
+  saveMessage,
+  updateConversation,
+}                         from "@/lib/supabase/conversations"
 
 export async function POST(request) {
   try {
     // ── 1. Parse request ─────────────────────────────────────
     const body = await request.json()
-    const { message, history = [], profile = null } = body
+    const {
+      message,
+      history        = [],
+      profile        = null,
+      userId         = null,
+      conversationId = null,
+    } = body
 
     if (!message || typeof message !== "string" || !message.trim()) {
       return NextResponse.json(
@@ -42,7 +53,16 @@ export async function POST(request) {
       return NextResponse.json(HARMFUL_RESPONSE)
     }
 
-    // ── 3. Build the system prompt ───────────────────────────
+    // ── 3. Persist conversation + user message ───────────────
+    let activeConversationId = null
+
+    if (userId) {
+      activeConversationId = await getOrCreateConversation(userId, conversationId)
+      await saveMessage(activeConversationId, "user", message)
+      await updateConversation(activeConversationId, message)
+    }
+
+    // ── 4. Build the system prompt ───────────────────────────
     // Layer 1: Core identity (never changes)
     let systemPrompt = KAIROS_IDENTITY
 
@@ -57,9 +77,8 @@ export async function POST(request) {
       systemPrompt += `\n\n${CRISIS_INSTRUCTION}`
     }
 
-    // ── 4. Build conversation history ───────────────────────
+    // ── 5. Build conversation history ────────────────────────
     // Keep last 10 messages for context (5 exchanges)
-    // Too much history = slower and more expensive
     const recentHistory = history.slice(-10)
 
     const messages = [
@@ -67,10 +86,10 @@ export async function POST(request) {
       { role: "user", content: message },
     ]
 
-    // ── 5. Send to AI ────────────────────────────────────────
+    // ── 6. Send to AI ────────────────────────────────────────
     const rawResponse = await sendToAI(messages, systemPrompt)
 
-    // ── 6. Post-response check ───────────────────────────────
+    // ── 7. Post-response check ───────────────────────────────
     let reply = postResponseCheck(rawResponse)
 
     // Append crisis resources if crisis was detected
@@ -78,11 +97,17 @@ export async function POST(request) {
       reply += `\n\n---\n${CRISIS_RESOURCES}`
     }
 
-    // ── 7. Return response ───────────────────────────────────
+    // ── 8. Save Kairos response ──────────────────────────────
+    if (userId && activeConversationId) {
+      await saveMessage(activeConversationId, "assistant", reply)
+    }
+
+    // ── 9. Return response ───────────────────────────────────
     return NextResponse.json({
       reply,
-      escalated:     check.type === "crisis",
-      messageType:   check.type,
+      escalated:        check.type === "crisis",
+      messageType:      check.type,
+      conversationId:   activeConversationId,
     })
 
   } catch (error) {

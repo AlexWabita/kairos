@@ -96,8 +96,6 @@ function ScriptureBlock({ text, reference }) {
 function Message({ role, content, isNew }) {
   const isKairos = role === "assistant"
 
-  // Parse scripture blocks from response
-  // Format: [scripture]text|reference[/scripture]
   const renderContent = (text) => {
     const parts = text.split(/\[scripture\](.*?)\[\/scripture\]/gs)
     return parts.map((part, i) => {
@@ -164,12 +162,13 @@ function Message({ role, content, isNew }) {
 
 /* ── Main Companion Component ────────────────────────────── */
 export default function CompanionCore({ profile = null }) {
-  const [messages,    setMessages]    = useState([])
-  const [input,       setInput]       = useState("")
-  const [loading,     setLoading]     = useState(false)
-  const [started,     setStarted]     = useState(false)
-  const [newMsgIdx,   setNewMsgIdx]   = useState(null)
-  const [kairosUser,  setKairosUser]  = useState(null)
+  const [messages,        setMessages]        = useState([])
+  const [input,           setInput]           = useState("")
+  const [loading,         setLoading]         = useState(false)
+  const [started,         setStarted]         = useState(false)
+  const [newMsgIdx,       setNewMsgIdx]       = useState(null)
+  const [kairosUser,      setKairosUser]      = useState(null)
+  const [conversationId,  setConversationId]  = useState(null)
 
   const bottomRef   = useRef(null)
   const inputRef    = useRef(null)
@@ -208,7 +207,6 @@ export default function CompanionCore({ profile = null }) {
       textareaRef.current.style.height = "auto"
     }
 
-    // Add user message
     const userMsg = { role: "user", content: text }
     const updatedHistory = [...messages, userMsg]
     setMessages(updatedHistory)
@@ -220,14 +218,22 @@ export default function CompanionCore({ profile = null }) {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
-          message: text,
-          history: messages.map(m => ({ role: m.role, content: m.content })),
+          message:        text,
+          history:        messages.map(m => ({ role: m.role, content: m.content })),
           profile,
-          userId: kairosUser?.id || null,
+          userId:         kairosUser?.id || null,
+          conversationId: conversationId,
         }),
       })
 
       const data = await res.json()
+
+      // Store the conversation ID returned from the API
+      // so all subsequent messages attach to the same conversation
+      if (data.conversationId && !conversationId) {
+        setConversationId(data.conversationId)
+        console.log('[Kairos] Conversation started:', data.conversationId)
+      }
 
       const assistantMsg = {
         role:      "assistant",
@@ -251,7 +257,6 @@ export default function CompanionCore({ profile = null }) {
   }
 
   const handleKeyDown = (e) => {
-    // Send on Enter, new line on Shift+Enter
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       handleSend()
@@ -330,7 +335,6 @@ export default function CompanionCore({ profile = null }) {
         margin:     "0 auto",
         paddingBottom: "var(--space-6)",
       }}>
-        {/* Opening prompt — shown before first message */}
         {!started && messages.length === 0 && (
           <div style={{
             textAlign:  "center",
@@ -358,7 +362,6 @@ export default function CompanionCore({ profile = null }) {
               What are you carrying today?
             </h2>
 
-            {/* Suggested openers */}
             <div style={{
               display:        "flex",
               flexWrap:       "wrap",
@@ -411,7 +414,6 @@ export default function CompanionCore({ profile = null }) {
           </div>
         )}
 
-        {/* Message list */}
         {messages.map((msg, i) => (
           <Message
             key={i}
@@ -421,7 +423,6 @@ export default function CompanionCore({ profile = null }) {
           />
         ))}
 
-        {/* Typing indicator */}
         {loading && <TypingIndicator />}
 
         <div ref={bottomRef} />
@@ -481,7 +482,6 @@ export default function CompanionCore({ profile = null }) {
             />
           </div>
 
-          {/* Send button */}
           <button
             onClick={handleSend}
             disabled={!input.trim() || loading}
