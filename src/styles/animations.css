@@ -1,0 +1,131 @@
+/*
+ * KAIROS — Animation System
+ * All keyframes and animation utilities.
+ * Principle: Every animation has meaning. Nothing moves without reason.
+ * Sacred feel: movements are gentle, unhurried — like light, breath, or water.
+ */
+
+/* ── KEYFRAMES ───────────────────────────────────────────── */
+
+/* Ambient glow breathing — hero backgrounds, companion orbs */
+@keyframes breathe {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.06); }
+}
+
+/* Particle float — background ambient particles */
+@keyframes particleFloat {
+  0%   { transform: translateY(0) translateX(0);    opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(-100vh) translateX(20px); opacity: 0; }
+}
+
+/* Sacred entrance — page sections, cards appearing */
+@keyframes sacredEnter {
+  from { opacity: 0; transform: translateY(20px); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0);    filter: blur(0);   }
+}
+
+/* Fade up — subtle element entrances */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* Fade in — pure opacity */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Float — gentle hovering elements */
+@keyframes float {
+  0%, 100% { transform: translateY(0px);   }
+  50%       { transform: translateY(-8px);  }
+}
+
+/* Gold shimmer — button and text hover effects */
+@keyframes goldShimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+/* Pulse gold — glowing elements that pulse */
+@keyframes pulseGold {
+  0%, 100% { box-shadow: 0 0 20px rgba(240, 192, 96, 0.10); }
+  50%       { box-shadow: 0 0 40px rgba(240, 192, 96, 0.30); }
+}
+
+/* Light ray sweep — hero divine light effect */
+@keyframes lightRay {
+  0%   { transform: rotate(0deg)   scaleY(0); opacity: 0;    }
+  30%  { opacity: 0.15; }
+  70%  { opacity: 0.15; }
+  100% { transform: rotate(30deg)  scaleY(1); opacity: 0;    }
+}
+
+/* Companion cursor — blinking text cursor while AI types */
+@keyframes companionCursor {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* Staggered word reveal — companion text appears word by word */
+@keyframes wordReveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* Spin — loading states */
+@keyframes spin {
+  from { transform: rotate(0deg);   }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── ANIMATION UTILITY CLASSES ───────────────────────────── */
+
+.animate-breathe      { animation: breathe      var(--duration-breath) var(--ease-breathe) infinite; }
+.animate-float        { animation: float        var(--duration-float)  var(--ease-breathe) infinite; }
+.animate-sacred-enter { animation: sacredEnter  0.8s var(--ease-divine) forwards; }
+.animate-fade-up      { animation: fadeUp       0.6s var(--ease-sacred) forwards; }
+.animate-fade-in      { animation: fadeIn       0.4s var(--ease-sacred) forwards; }
+.animate-pulse-gold   { animation: pulseGold    2s   var(--ease-breathe) infinite; }
+.animate-shimmer      { animation: goldShimmer  2s   linear infinite; }
+.animate-spin         { animation: spin         1s   linear infinite; }
+.animate-cursor       { animation: companionCursor 1s step-end infinite; }
+
+/* ── STAGGER DELAYS ──────────────────────────────────────── */
+/* Use with animate-fade-up or animate-sacred-enter */
+
+.delay-0   { animation-delay: 0ms;   }
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+.delay-600 { animation-delay: 600ms; }
+.delay-700 { animation-delay: 700ms; }
+.delay-800 { animation-delay: 800ms; }
+
+/* ── INITIAL STATE FOR ANIMATED ELEMENTS ─────────────────── */
+/* Apply to elements that will animate in — prevents flash */
+
+.will-animate {
+  opacity: 0;
+}
+
+/* ── REDUCED MOTION — Always respect user preference ─────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration:   0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration:  0.01ms !important;
+  }
+
+  .will-animate {
+    opacity: 1;
+  }
+}

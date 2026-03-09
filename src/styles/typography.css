@@ -1,0 +1,148 @@
+/*
+ * KAIROS — Typography System
+ * Three-font system:
+ *   Cinzel         → Display / Logo / Hero titles
+ *   Cormorant Garamond → Companion responses / Section headings / Scripture
+ *   Nunito         → UI / Navigation / Buttons / Body copy
+ */
+
+/* ── FONT IMPORTS ─────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Nunito:wght@300;400;500;600;700&display=swap');
+
+/* ── BASE TYPOGRAPHY ─────────────────────────────────────── */
+
+/* All body text defaults */
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-body-md);
+  line-height: var(--leading-normal);
+  color: var(--color-divine);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── DISPLAY — Cinzel ─────────────────────────────────────── */
+/* Use for: Kairos logo, hero headings only */
+
+.text-display {
+  font-family: var(--font-display);
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-tight);
+}
+
+.text-display-xl {
+  font-family: var(--font-display);
+  font-size: var(--text-display-xl);
+  font-weight: 900;
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-tight);
+}
+
+.text-display-lg {
+  font-family: var(--font-display);
+  font-size: var(--text-display-lg);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: var(--leading-tight);
+}
+
+.text-display-md {
+  font-family: var(--font-display);
+  font-size: var(--text-display-md);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  line-height: 1.3;
+}
+
+/* ── HEADINGS — Cormorant Garamond ───────────────────────── */
+/* Use for: Section titles, companion responses, important text */
+
+.text-heading-lg {
+  font-family: var(--font-heading);
+  font-size: var(--text-heading-lg);
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--color-divine);
+}
+
+.text-heading-md {
+  font-family: var(--font-heading);
+  font-size: var(--text-heading-md);
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--color-divine);
+}
+
+.text-heading-sm {
+  font-family: var(--font-heading);
+  font-size: var(--text-heading-sm);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--color-divine);
+}
+
+/* ── COMPANION TEXT ──────────────────────────────────────── */
+/* The way Kairos speaks — warm, wise, unhurried */
+
+.text-companion {
+  font-family: var(--font-heading);
+  font-size: var(--text-body-lg);
+  font-weight: 300;
+  line-height: var(--leading-relaxed);
+  color: var(--color-divine);
+}
+
+/* ── SCRIPTURE ───────────────────────────────────────────── */
+/* How Bible verses appear — set apart, gold, italic */
+
+.text-scripture {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: var(--text-body-md);
+  font-weight: 400;
+  color: var(--color-gold-warm);
+  line-height: var(--leading-relaxed);
+  border-left: 2px solid var(--color-gold-warm);
+  padding-left: var(--space-4);
+}
+
+/* ── BODY — Nunito ───────────────────────────────────────── */
+
+.text-body-lg { font-size: var(--text-body-lg); line-height: var(--leading-relaxed); }
+.text-body-md { font-size: var(--text-body-md); line-height: var(--leading-normal);  }
+.text-body-sm { font-size: var(--text-body-sm); line-height: var(--leading-normal);  }
+
+/* ── LABELS & CAPTIONS ───────────────────────────────────── */
+/* Small UI text — navigation, tags, timestamps */
+
+.text-label {
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.text-caption {
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
+  font-weight: 400;
+  color: var(--color-muted);
+  line-height: var(--leading-normal);
+}
+
+/* ── GOLD GRADIENT TEXT ──────────────────────────────────── */
+/* Used for the KAIROS logo and key hero moments only */
+
+.text-gold-gradient {
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gold { color: var(--color-gold-bright); }
+.text-gold-warm { color: var(--color-gold-warm); }
+.text-soft { color: var(--color-soft); }
+.text-muted { color: var(--color-muted); }

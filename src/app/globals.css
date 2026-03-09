@@ -1,0 +1,225 @@
+/*
+ * KAIROS — Global Styles
+ * IMPORTANT: @import statements MUST come before @tailwind directives
+ */
+
+/* ── KAIROS DESIGN SYSTEM (must be first) ────────────────── */
+@import '../styles/tokens.css';
+@import '../styles/typography.css';
+@import '../styles/animations.css';
+
+/* ── TAILWIND (must come after imports) ──────────────────── */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── BASE RESETS ─────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--color-void);
+  color: var(--color-divine);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── SCROLLBAR ───────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-void);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-hover);
+}
+
+/* ── SELECTION ───────────────────────────────────────────── */
+
+::selection {
+  background: var(--color-gold-glow);
+  color: var(--color-gold-bright);
+}
+
+/* ── FOCUS VISIBLE ───────────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--color-gold-bright);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── LINKS ───────────────────────────────────────────────── */
+
+a {
+  color: var(--color-gold-warm);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-sacred);
+}
+
+a:hover {
+  color: var(--color-gold-bright);
+}
+
+/* ── IMAGES ──────────────────────────────────────────────── */
+
+img, video {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ── INTERACTIVE ─────────────────────────────────────────── */
+
+button {
+  cursor: pointer;
+  font-family: var(--font-body);
+  border: none;
+  background: none;
+}
+
+input, textarea {
+  font-family: var(--font-body);
+  font-size: var(--text-body-md);
+  color: var(--color-divine);
+  background: var(--color-void);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition:
+    border-color var(--duration-fast) var(--ease-sacred),
+    box-shadow var(--duration-fast) var(--ease-sacred);
+}
+
+input:focus, textarea:focus {
+  outline: none;
+  border-color: var(--color-gold-bright);
+  box-shadow: var(--shadow-input);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--color-muted);
+}
+
+/* ── KAIROS UTILITY CLASSES ──────────────────────────────── */
+
+.kairos-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  transition:
+    transform    var(--duration-normal) var(--ease-sacred),
+    box-shadow   var(--duration-normal) var(--ease-sacred),
+    border-color var(--duration-fast)   var(--ease-sacred);
+}
+
+.kairos-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card), var(--shadow-gold-sm);
+  border-color: var(--color-border-hover);
+}
+
+.kairos-btn-primary {
+  background: var(--gradient-gold);
+  color: var(--color-void);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--text-body-sm);
+  letter-spacing: var(--tracking-normal);
+  padding: 0.75rem 2rem;
+  border-radius: var(--radius-full);
+  border: none;
+  cursor: pointer;
+  transition:
+    opacity    var(--duration-fast) var(--ease-sacred),
+    transform  var(--duration-fast) var(--ease-sacred),
+    box-shadow var(--duration-fast) var(--ease-sacred);
+}
+
+.kairos-btn-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-gold-sm);
+}
+
+.kairos-btn-primary:active {
+  transform: scale(0.98);
+}
+
+.kairos-btn-secondary {
+  background: transparent;
+  color: var(--color-soft);
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--text-body-sm);
+  padding: 0.75rem 2rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition:
+    color        var(--duration-fast) var(--ease-sacred),
+    border-color var(--duration-fast) var(--ease-sacred),
+    background   var(--duration-fast) var(--ease-sacred);
+}
+
+.kairos-btn-secondary:hover {
+  color: var(--color-divine);
+  border-color: var(--color-border-hover);
+  background: var(--color-gold-subtle);
+}
+
+.kairos-glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: breathe var(--duration-breath) var(--ease-breathe) infinite;
+}
+
+.kairos-section-label {
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--color-gold-warm);
+  margin-bottom: var(--space-3);
+}
+
+.kairos-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-5);
+}
+
+@media (min-width: 768px) {
+  .kairos-container {
+    padding: 0 var(--space-8);
+  }
+}
