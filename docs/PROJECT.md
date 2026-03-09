@@ -1,5 +1,5 @@
 # KAIROS — Project Memory Document
-> Version: 2.0.0 | Started: 2026 | Status: Phase 4 — Core Feature ✅ WORKING
+> Version: 3.0.0 | Started: 2026 | Status: Phase 5 — Supabase ✅ COMPLETE
 
 ---
 
@@ -111,22 +111,38 @@ General AI is trained to be everything to everyone and offend no one — so it h
 | Layer | Tool | Status |
 |---|---|---|
 | IDE | VS Code | ✅ Active |
-| Version Control | GitHub | ✅ Active |
+| Version Control | GitHub (private) | ✅ Active — main + dev branches |
 | Frontend Framework | Next.js 16.1.6 | ✅ Installed |
 | Styling | Tailwind CSS + CSS Variables | ✅ Installed |
-| Database & Auth | Supabase | 🔜 Phase 5 |
-| AI Engine (Primary) | OpenRouter API | ✅ Working — Llama 3.3 70B |
-| AI Engine (Backup) | Google Gemini API | ✅ Configured — activate with key |
-| Hosting | Vercel or Netlify | 🔜 Phase 6 |
-| Platform | Web-based (PWA) | 🔜 Phase 6 |
+| Database & Auth | Supabase | ✅ Phase 5 Complete |
+| AI Engine (Primary) | OpenRouter API | ✅ Working — 5 model fallback chain |
+| AI Engine (Backup) | Google Gemini API | ✅ Configured — key pending billing resolution |
+| Bible API (Primary) | scripture.api.bible | ✅ Key registered — Phase 6 implementation |
+| Bible API (Fallback) | bible-api.com | ✅ Planned — no key required |
+| Hosting | Vercel or Netlify | 🔜 Phase 8 |
+| Platform | Web-based (PWA) | 🔜 Phase 8 |
 
-**AI Architecture — Dual Fallback Chain:**
-- Phase 1: OpenRouter (4 free models tried in order)
-- Phase 2: Google Gemini (3 free models tried in order)
-- Total: 7 fallback options across 2 independent API providers
+**AI Architecture — Dual Fallback Chain (Updated):**
+- Phase 1: OpenRouter (5 free models tried in order)
+  1. Llama 3.3 70B (meta-llama/llama-3.3-70b-instruct:free)
+  2. GPT OSS 120B (openai/gpt-oss-120b:free)
+  3. Arcee Trinity Large (arcee-ai/arcee-trinity-large-preview:free)
+  4. StepFun Step 3.5 Flash (stepfun/step-3.5-flash:free)
+  5. GLM 4.5 Air (z-ai/glm-4.5-air:free)
+- Phase 2: Google Gemini (3 models tried in order)
+  1. gemini-2.0-flash
+  2. gemini-2.0-flash-lite
+  3. gemini-1.5-flash-002
+- Total: 8 fallback options across 2 independent API providers
 - Model switching is completely invisible to users
 - All failures logged to VS Code terminal only — never shown to users
 - Production: swap to Claude or Gemini Pro with one line change
+
+**Bible API Architecture (Phase 6):**
+- Primary: scripture.api.bible — full search, 2500+ translations, user-selectable version
+- Fallback: bible-api.com — no auth required, always available, KJV/WEB
+- User preferred translation stored in Supabase users table
+- Same dual-fallback pattern as AI chain — invisible to user
 
 ---
 
@@ -165,32 +181,47 @@ General AI is trained to be everything to everyone and offend no one — so it h
 - [x] 3D strategy defined (Three.js)
 - [x] DESIGN.md created
 
-### Phase 4 — Core Feature ✅ WORKING (in active development)
-- [x] Step 1: Foundation files — package.json, configs, all installed
-- [x] Step 2: Base styles — tokens.css, typography.css, animations.css, globals.css
-- [x] Step 3: Landing page — Hero, Navbar (with hamburger animation), sections, footer
-- [x] Step 4: Companion interaction — CompanionCore.jsx working end to end
-- [x] Step 5: AI identity prompts + guardrails system
-- [x] Step 6: API route — /api/ai/companion live and responding
-- [x] Step 7: Dual API fallback chain — OpenRouter + Gemini
-- [x] First real conversation tested — Kairos responded to "Are tattoos bad for a modern Christian?" with nuance, Biblical context, and a follow-up question. Response quality confirmed premium.
+### Phase 4 — Core Feature ✅ COMPLETE
+- [x] Foundation files — package.json, configs, all installed
+- [x] Base styles — tokens.css, typography.css, animations.css, globals.css
+- [x] Landing page — Hero, Navbar (with hamburger animation), sections, footer
+- [x] Companion interaction — CompanionCore.jsx working end to end
+- [x] AI identity prompts + guardrails system
+- [x] API route — /api/ai/companion live and responding
+- [x] Dual API fallback chain — OpenRouter + Gemini
+- [x] First real conversation tested and confirmed premium quality
 
-### Phase 5 — Supabase Integration 🔜 NEXT
-- [ ] Create Supabase project (free)
-- [ ] Add keys to .env.local
-- [ ] Run database migrations (7 tables from ARCHITECTURE.md)
-- [ ] Wire Supabase client (src/lib/supabase/)
-- [ ] Anonymous session management
-- [ ] User authentication (email signup)
-- [ ] Profile creation and onboarding conversation
-- [ ] Journey entry saving
+### Phase 5 — Supabase Integration ✅ COMPLETE
+- [x] GitHub repository created — private, main + dev branches, push protection on main
+- [x] Supabase project created — region: eu-west-2 London
+- [x] Database migration — all 7 tables live with RLS and indexes
+- [x] pgvector extension enabled — ready for Phase 6 RAG embeddings
+- [x] Supabase client wired — client.js, admin.js, server.js, middleware.js
+- [x] Anonymous session management — working end to end
+- [x] Conversations saved to database on first message
+- [x] Every message (user + Kairos) saved to messages table
+- [x] conversationId passed back to frontend — all messages in same session attach correctly
+- [x] AI fallback chain updated — 5 OpenRouter models + 3 Gemini models
+- [x] Scripture API key registered — scripture.api.bible (key in .env.local)
+- [x] Auth placeholder pages fixed — (auth)/layout.jsx + forgot-password/page.jsx
+- [ ] User authentication (email signup) — deferred to Phase 5b or Phase 6 start
+- [ ] Profile creation and onboarding conversation — deferred
+- [ ] Journey entry saving UI — deferred
 
-### Phase 6 — Response Quality & Training 🔜 FUTURE
-- [ ] Research and decide: fine-tuning vs RAG vs prompt engineering
-- [ ] Build Kairos Knowledge Base (curated Biblical content, commentaries)
-- [ ] Implement RAG (Retrieval Augmented Generation) for grounded responses
+### Phase 6 — Bible API + RAG + Response Quality 🔜 NEXT
+- [ ] Wire scripture.api.bible — exact verse lookup, keyword search
+- [ ] Wire bible-api.com as fallback
+- [ ] Add preferred_bible_version to users table in Supabase
+- [ ] Build settings UI — user can select preferred Bible translation
+- [ ] Detect when a scripture reference is needed in conversation
+- [ ] Pull exact verse text from API before responding — never generate from memory
+- [ ] Build Kairos Knowledge Base in Supabase (curated Biblical content, commentaries)
+- [ ] Implement RAG — Kairos searches knowledge base before every response
 - [ ] Response quality testing across different user types
 - [ ] Refine identity prompt based on real conversation feedback
+- [ ] User authentication (email signup) — carry over from Phase 5
+- [ ] Profile creation and onboarding conversation
+- [ ] Journey entry saving UI
 
 ### Phase 7 — Organisation Portal 🔜 FUTURE
 - [ ] Organisation account type in database
@@ -223,9 +254,20 @@ General AI is trained to be everything to everyone and offend no one — so it h
 | 3 | OpenRouter for AI | Free models for dev, one-line swap to Claude for production |
 | 3 | Monetization: Hybrid Path 3 | Individuals free, orgs pay small fee, mission stays pure |
 | 3 | Next.js upgraded to latest | Security vulnerability in 14.2.5 |
-| 4 | Dual API fallback chain | OpenRouter + Gemini = 7 fallback options, zero downtime risk |
+| 4 | Dual API fallback chain | OpenRouter + Gemini = multiple fallback options, zero downtime risk |
 | 4 | Privacy settings on OpenRouter | Required to unlock free model access |
 | 4 | Anonymous first, save after interaction | Remove all barriers for wounded seekers |
+| 5 | GitHub private repo — main + dev | Protect codebase, clean branch strategy |
+| 5 | Supabase region: eu-west-2 London | Closest available region to Kenya |
+| 5 | RLS enabled per table with explicit role grants | Security by default, anon users can still write |
+| 5 | pgvector extension enabled | Future-ready for Phase 6 RAG embeddings |
+| 5 | conversationId stored in frontend state | All messages in session attach to same conversation |
+| 5 | OpenRouter model list updated | Old model IDs deprecated — 5 fresh verified free models |
+| 5 | scripture.api.bible as primary Bible API | 2500+ translations, search, free tier sufficient |
+| 5 | bible-api.com as Bible API fallback | No auth required, always available, same pattern as AI chain |
+| 5 | User-selectable Bible translation | Stored in users table, applies to all scripture references |
+| 5 | Exact verse from API, not AI memory | AI can hallucinate references — API guarantees accuracy |
+| 5 | Deferred email auth to Phase 6 | Anonymous flow working cleanly — auth adds complexity, build it right |
 
 ---
 
@@ -248,112 +290,167 @@ Includes: white-label option, community deployment, usage reports.
 Their members always use Kairos completely free.
 Messaging: "Your contribution funds free access for everyone who cannot pay."
 
-**When to implement:** After Phase 5-6 when real users and real stories exist.
+**When to implement:** After Phase 6 when real users and real stories exist.
 
 ---
 
-## 12. OPEN QUESTIONS FOR NEXT SESSION
+## 12. BIBLE API STRATEGY (Decided in Phase 5)
 
-### Q1: How do we make Kairos responses feel even more premium and distinct?
-Currently powered by Llama 3.3 70B via OpenRouter. Responses are good but could be:
-- More distinctly Kairos in voice — less generic AI feel
-- Better at naturally weaving in scripture without being preachy
-- More emotionally intelligent — shorter responses in pain moments
-Options to explore:
-- Refine the identity prompt further
-- Implement RAG with a curated Biblical knowledge base
-- Fine-tune a model on curated Kairos-style conversations (expensive, future)
+### The Problem
+Generative AI knows scripture the way a well-read person does — from memory. It can hallucinate references, misquote verses, or paraphrase when someone needs the exact word. For a product built on Biblical truth, this is a credibility risk.
 
-### Q2: Can Kairos be trained on real, live data?
-Yes — but there are three approaches with very different costs and complexity:
-- **Prompt engineering** (current) — shape behaviour through instructions. Free. Limited.
-- **RAG (Retrieval Augmented Generation)** — give Kairos a searchable knowledge base of curated Biblical content, commentaries, and approved answers. Recommended next step.
-- **Fine-tuning** — actually train a model on Kairos-style conversations. Expensive. Only worth it at scale.
-RAG is the right next step — we build a knowledge base in Supabase and Kairos searches it before responding.
+### The Solution — Three Layers
+**Layer 1 — Bible API (Phase 6)**
+- scripture.api.bible — primary. 2500+ translations, 1600+ languages, keyword search, verse lookup
+- bible-api.com — fallback. No auth, KJV/WEB, always available
+- When a scripture reference is needed: query API for exact text, insert into response
+- The AI interprets and contextualises — but the scripture itself is always exact, never generated
 
-### Q3: How exactly do organisations use the product?
-To be fully designed in Phase 7. Current thinking:
-- Organisation creates an account and pays monthly fee
-- They get an admin dashboard to see aggregate usage (never individual conversations)
-- They can customise the welcome message and recommend specific resources
-- They can embed Kairos on their own website via iframe or widget
-- Their members sign up through a special link tied to that organisation
-- The organisation's contribution is shown publicly: "Supported by [Church Name]"
+**Layer 2 — RAG with curated content (Phase 6)**
+- Knowledge base in Supabase — trusted commentaries, approved theological answers
+- Kairos searches this before responding — grounding answers in verified content
 
-### Q4: What is the GitHub strategy?
-- Repository should be created now before more code is written
-- Private repo during development
-- .gitignore already configured — .env.local will never be committed
-- Branch strategy: main (stable) + dev (active development)
+**Layer 3 — User translation preference**
+- Stored in users table: preferred_bible_version
+- Applied to every scripture reference across the entire experience
+- Selectable in settings UI — professional, personalised, persistent
+
+### User Needs Solved
+| User need | Solution |
+|---|---|
+| "Where does the Bible say that?" | Bible API keyword search |
+| "Read me John 3:16" | Bible API exact verse fetch |
+| "What does this verse mean?" | RAG knowledge base + AI interpretation |
+| "Which translation is that from?" | API returns version metadata |
+| "Is that really in the Bible?" | Cross-reference against API before responding |
+| "I prefer NIV / KJV / ESV" | User setting — stored in profile, applied everywhere |
 
 ---
 
-## 13. CURRENT FILE STRUCTURE STATUS
+## 13. OPEN QUESTIONS FOR NEXT SESSION
+
+### Q1: Email authentication flow
+We deferred email signup to Phase 6. When we build it:
+- Supabase Auth handles email + password
+- On signup, anonymous session migrates to authenticated account — no data lost
+- `migrateAnonymousSession()` function already written in sessions.js, ready to wire
+- Profile creation conversation happens after first login
+
+### Q2: RAG architecture design
+Before building RAG in Phase 6, we need to decide:
+- What content goes in the knowledge base? (Bible text, commentaries, curated Q&A?)
+- How do we seed it? Manual curation vs automated pipeline?
+- How does Kairos decide when to search the knowledge base vs rely on training?
+- Vector embeddings: use OpenAI embeddings API or a free alternative?
+
+### Q3: Bible API integration pattern
+- Should every Kairos response attempt a scripture lookup, or only when explicitly referenced?
+- How do we detect that a verse is being cited vs a general Biblical concept?
+- What happens when the user asks about a passage that isn't a direct quote?
+
+### Q4: Gemini billing restriction in Kenya
+Google's free trial signup throws `OR_BACR2_44` for Kenyan accounts.
+- OpenRouter with 5 models is sufficient for now
+- May resolve itself — keep Gemini in the chain for when it works
+- Alternative: explore Cloudflare AI Workers as a third provider (free tier)
+
+---
+
+## 14. CURRENT FILE STRUCTURE STATUS
 
 ```
 kairos/
 ├── docs/
-│   ├── PROJECT.md          ✅ This file
-│   ├── ARCHITECTURE.md     ✅ Complete
-│   ├── DESIGN.md           ✅ Complete
-│   └── PHASES.md           🔜 Not yet created
+│   ├── PROJECT.md              ✅ This file — updated v3.0.0
+│   ├── ARCHITECTURE.md         ✅ Complete
+│   ├── DESIGN.md               ✅ Complete
+│   └── PHASES.md               🔜 Not yet created
 ├── src/
 │   ├── app/
-│   │   ├── layout.jsx      ✅
-│   │   ├── page.jsx        ✅ Landing page
-│   │   ├── globals.css     ✅
-│   │   ├── loading.jsx     ✅
-│   │   ├── not-found.jsx   ✅
-│   │   ├── error.jsx       ✅
-│   │   ├── (auth)/         🔜 Phase 5
+│   │   ├── layout.jsx          ✅
+│   │   ├── page.jsx            ✅ Landing page
+│   │   ├── globals.css         ✅
+│   │   ├── loading.jsx         ✅
+│   │   ├── not-found.jsx       ✅
+│   │   ├── error.jsx           ✅
+│   │   ├── (auth)/
+│   │   │   ├── layout.jsx      ✅ Stub — real auth Phase 6
+│   │   │   └── forgot-password/
+│   │   │       └── page.jsx    ✅ Stub — real auth Phase 6
 │   │   ├── (main)/
-│   │   │   ├── layout.jsx  ✅
+│   │   │   ├── layout.jsx      ✅
 │   │   │   └── journey/
-│   │   │       └── page.jsx ✅ Companion page
+│   │   │       └── page.jsx    ✅ Companion page
 │   │   └── api/
 │   │       └── ai/
 │   │           └── companion/
-│   │               └── route.js ✅ Live and working
+│   │               └── route.js ✅ Saves conversations + messages to Supabase
 │   ├── components/
 │   │   ├── companion/
-│   │   │   └── CompanionCore.jsx ✅ Working
+│   │   │   └── CompanionCore.jsx ✅ Session + conversationId tracking
 │   │   ├── landing/
-│   │   │   └── Hero.jsx    ✅
+│   │   │   └── Hero.jsx        ✅
 │   │   └── shared/
-│   │       └── Navbar.jsx  ✅ With hamburger animation
+│   │       └── Navbar.jsx      ✅ With hamburger animation
 │   ├── lib/
 │   │   ├── ai/
-│   │   │   ├── client.js   ✅ Dual API fallback chain
-│   │   │   ├── prompts.js  ✅ Kairos identity
-│   │   │   └── guardrails.js ✅ Safety system
-│   │   └── supabase/       🔜 Phase 5
+│   │   │   ├── client.js       ✅ 5 OpenRouter + 3 Gemini fallback chain
+│   │   │   ├── prompts.js      ✅ Kairos identity
+│   │   │   └── guardrails.js   ✅ Safety system
+│   │   └── supabase/
+│   │       ├── client.js       ✅ Frontend Supabase client
+│   │       ├── admin.js        ✅ Server-only admin client
+│   │       ├── server.js       ✅ Cookie-based server client
+│   │       ├── middleware.js   ✅ Session refresh on every request
+│   │       ├── sessions.js     ✅ Anonymous session management
+│   │       └── conversations.js ✅ Conversation + message persistence
 │   └── styles/
-│       ├── tokens.css      ✅
-│       ├── typography.css  ✅
-│       └── animations.css  ✅
-├── .env.local              ✅ OpenRouter + Gemini keys
-├── .env.example            ✅
-├── .gitignore              ✅
-├── jsconfig.json           ✅
-├── next.config.js          ✅
-├── tailwind.config.js      ✅
-└── package.json            ✅ Next.js 16.1.6
+│       ├── tokens.css          ✅
+│       ├── typography.css      ✅
+│       └── animations.css      ✅
+├── middleware.js               ✅ Next.js middleware for auth session refresh
+├── .env.local                  ✅ OpenRouter + Gemini + Supabase + Scripture API keys
+├── .env.example                ✅ All key placeholders documented
+├── .gitignore                  ✅ .env.local never committed
+├── jsconfig.json               ✅
+├── next.config.js              ✅
+├── tailwind.config.js          ✅
+└── package.json                ✅ Next.js 16.1.6
 ```
 
 ---
 
-## 14. SESSION LOG
+## 15. SUPABASE DATABASE SCHEMA (Live)
+
+All tables have RLS enabled. Anon and authenticated roles have explicit grants.
+
+| Table | Purpose | Status |
+|---|---|---|
+| users | Anonymous + authenticated profiles | ✅ Live |
+| sessions | Anonymous session tracking by cookie token | ✅ Live |
+| conversations | Each conversation thread | ✅ Live + saving |
+| messages | Every message (user + Kairos) | ✅ Live + saving |
+| journey_entries | Saved reflections, prayers, milestones | ✅ Live — UI Phase 6 |
+| organisations | Churches/ministries on paid plan | ✅ Live — portal Phase 7 |
+| knowledge_base | Curated Biblical content for RAG | ✅ Live — seeding Phase 6 |
+
+**Extensions enabled:** pgvector (for semantic search embeddings in Phase 6)
+
+---
+
+## 16. SESSION LOG
 
 | Session | What We Did | Next Steps |
 |---|---|---|
 | 1 | Vision, mission, principles, users, tech stack, name, file structure | ARCHITECTURE.md |
 | 2 | Full architecture — DB schema, AI logic, guardrails, user flows, API routes | Phase 3 Design |
 | 3 | Design language, foundation files, Next.js installed, monetization decided | Base styles |
-| 4 | Full landing page, Companion built, API live, dual fallback chain, first conversation tested | Phase 5 Supabase + response quality |
+| 4 | Full landing page, Companion built, API live, dual fallback chain, first conversation tested | Phase 5 Supabase |
+| 5 | GitHub setup, Supabase migration, anonymous sessions, conversation saving, AI models updated, Scripture API registered | Phase 6 — Bible API + RAG + Email Auth |
 
 ---
 
-## 15. HOW TO START A NEW CHAT (IMPORTANT)
+## 17. HOW TO START A NEW CHAT (IMPORTANT)
 
 Copy and paste this exact message at the start of every new chat:
 
@@ -362,12 +459,12 @@ I am building Kairos — a Biblical truth life companion web application. You ar
 
 [PASTE ENTIRE PROJECT.md CONTENTS HERE]
 
-We are currently in Phase 5. The immediate next steps are:
-1. Set up GitHub repository for the project
-2. Set up Supabase (database + auth)
-3. Improve response quality — make Kairos feel even more distinctly itself
-4. Discuss RAG (Retrieval Augmented Generation) to ground responses in curated Biblical content
-5. Discuss organisation portal design for churches and ministries
+We are currently moving into Phase 6. The immediate next steps are:
+1. Wire scripture.api.bible for exact verse lookup and keyword search
+2. Wire bible-api.com as Bible API fallback
+3. Build user-selectable Bible translation setting
+4. Build email authentication (carry over from Phase 5)
+5. Begin RAG architecture — knowledge base seeding and search
 
 Please confirm you have read the document and are ready to continue.
 ---
