@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { initKairosSession } from '@/lib/supabase/sessions'
 
 /* ── Ambient Glow Orb ────────────────────────────────────── */
 function GlowOrb({ size, left, top, color, delay = "0s" }) {
@@ -163,15 +164,26 @@ function Message({ role, content, isNew }) {
 
 /* ── Main Companion Component ────────────────────────────── */
 export default function CompanionCore({ profile = null }) {
-  const [messages,  setMessages]  = useState([])
-  const [input,     setInput]     = useState("")
-  const [loading,   setLoading]   = useState(false)
-  const [started,   setStarted]   = useState(false)
-  const [newMsgIdx, setNewMsgIdx] = useState(null)
+  const [messages,    setMessages]    = useState([])
+  const [input,       setInput]       = useState("")
+  const [loading,     setLoading]     = useState(false)
+  const [started,     setStarted]     = useState(false)
+  const [newMsgIdx,   setNewMsgIdx]   = useState(null)
+  const [kairosUser,  setKairosUser]  = useState(null)
 
-  const bottomRef    = useRef(null)
-  const inputRef     = useRef(null)
-  const textareaRef  = useRef(null)
+  const bottomRef   = useRef(null)
+  const inputRef    = useRef(null)
+  const textareaRef = useRef(null)
+
+  // Initialise anonymous session on mount
+  useEffect(() => {
+    initKairosSession().then(session => {
+      if (session) {
+        setKairosUser(session.user)
+        console.log('[Kairos] Session ready:', session.type, session.user.id)
+      }
+    })
+  }, [])
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -211,6 +223,7 @@ export default function CompanionCore({ profile = null }) {
           message: text,
           history: messages.map(m => ({ role: m.role, content: m.content })),
           profile,
+          userId: kairosUser?.id || null,
         }),
       })
 
