@@ -22,7 +22,7 @@ const supabase = createClient(
 )
 
 // ── KNOWLEDGE BASE ENTRIES ────────────────────────────────────
-// 30 curated entries: 10 apologetics, 10 pastoral, 10 scripture context
+// 63 curated entries: 20 apologetics, 24 pastoral, 10 scripture context, 9 FAQ
 const KNOWLEDGE_ENTRIES = [
 
   // ── APOLOGETICS ─────────────────────────────────────────────
@@ -107,6 +107,88 @@ const KNOWLEDGE_ENTRIES = [
     content: `Paul said it plainly: if Christ has not been raised, faith is futile and Christians are to be pitied above all people. The resurrection is not a peripheral doctrine — it is the hinge on which everything turns. The early disciples did not preach a set of ethical teachings; they preached a specific event. The empty tomb was not explained away by the authorities — they claimed the body was stolen, which concedes it was gone. The post-resurrection appearances were to hundreds of people, including to Paul himself who had been an active persecutor of the church. The transformation of the disciples from hiding in fear to preaching publicly at risk of death is one of history's most dramatic reversals. The resurrection means death is not the final word — for Jesus or for anyone who is in Him. It is the foundation of Christian hope, not its wishful conclusion.`,
   },
 
+  // ── APOLOGETICS — FAQ (from reference images) ───────────────
+
+  {
+    title:        "If God exists, why isn't His exact identity more obvious?",
+    category:     "apologetics",
+    scripture_ref: "Luke 16:31, Romans 1:19-20",
+    source:       "Kairos curated — FAQ reference",
+    content: `That God exists is a fact most people have agreed on throughout history. It is the exact identity of God that causes disagreement. Perhaps God's identity is more obvious than we think. Jesus told a parable about a man who died and went to Hades. The condemned man insinuated to Father Abraham that God's identity was not as obvious as it should have been — otherwise he wouldn't have ended up there. He begged Abraham to send someone from the dead to warn his brothers. Abraham responded that if they don't listen to Moses and the prophets, they will not be persuaded even if someone rises from the dead. God has made His identity clear. Our problem is that we are like children who cover their ears and shout. In our sinfulness we are not eager to learn truth about God because it costs us some of the things we love best — our independence, our opinions, our sinful ways. Sinful humanity cannot bear very much reality about God. The clarity is there. The willingness to look is the question.`,
+  },
+
+  {
+    title:        "Has science proven there is no God?",
+    category:     "apologetics",
+    scripture_ref: "Genesis 1:1, Psalm 19:1-4, John 1:3",
+    source:       "Kairos curated — FAQ reference",
+    content: `The existence of an immaterial and eternal God is beyond the purview of science, which studies material reality and the laws and forces that help explain the structure and function of the universe. Science cannot prove or disprove God — that is not a failure of science, it is simply outside its domain. But science has its roots in biblical teachings. The Bible says God created humanity in His image — one implication is that our minds are ready-made for understanding the world if we will bother to investigate it. God commanded humanity to be fruitful and subdue the earth — a call to stewardship that requires observing the law-like regularities and exquisite complexities in nature. It is no accident that many of the pioneers of science held a biblical worldview that expects the orderly, law-like phenomena that enable life to flourish. Science and faith are not at war. They are answering different questions with different tools.`,
+  },
+
+  {
+    title:        "Has science proven miracles are impossible?",
+    category:     "apologetics",
+    scripture_ref: "Exodus 14:21, Matthew 14:25-27",
+    source:       "Kairos curated — FAQ reference",
+    content: `The idea that science has proven the impossibility of miracles stems from a faulty understanding of the relationship between God and science. This mistaken view — held by Christians and agnostics alike — gives the laws of nature a status they don't have in reality. The biblical understanding is that phenomena that function in a law-like manner all owe their being to God moment by moment. A meteorologist might well have given a thorough scientific explanation of the parting of the Red Sea. The Bible itself hints at that possibility — the Lord drove the sea back with a powerful east wind all that night and turned the sea into dry land. In that case the miracle was not that a scientific explanation was lacking. It was the timing — the Israelites being at the edge of the sea precisely when the east wind dried it up. God is not beholden to scientific law. Scientific law is our attempt to make sense of what God is doing all the time. Miracles are not violations of nature — they are God acting with intentionality in time.`,
+  },
+
+  {
+    title:        "If God is good, why does He allow evil to exist?",
+    category:     "apologetics",
+    scripture_ref: "Matthew 19:26, Habakkuk 1:13, Genesis 50:15-21, Romans 5:6-11",
+    source:       "Kairos curated — FAQ reference",
+    content: `Scripture affirms God's unlimited power, His perfect goodness, and the reality of evil — and does not resolve the tension cheaply. God doesn't give a comprehensive account of why He allows evil. But for those who follow the evidence carefully, God sets forth a pattern: where He allows evil, He turns it toward a greater good. The greatest example of this pattern is the death of Jesus — through whom God's enemies are made His children. The cross is not God failing to prevent evil; it is God absorbing evil in order to redeem it. This does not make evil acceptable or minimise its horror. It means that evil does not have the final word. The biblical response to evil is not explanation — it is redemption. God enters the worst of what this world produces and transforms it. That is not a comfortable answer, but it is a true one, and it is the only answer that takes evil seriously enough without surrendering to despair.`,
+  },
+
+  {
+    title:        "How important is it to believe the right things about God?",
+    category:     "apologetics",
+    scripture_ref: "Mark 8:36-37, John 17:3",
+    source:       "Kairos curated — FAQ reference",
+    content: `When you board a jet, you do so because you believe it is airworthy and will get you to your destination safely. If you did not believe that, you would not board. If your belief in the jet's safety were mistaken, you would want someone to tell you so. Our beliefs about the jet and the reality about the jet are not necessarily in agreement — and clearly it matters that they line up. How much more is at stake when it comes to beliefs about God. God is our maker and judge. If what you believe about God turns out to be false, you have staked everything on a faulty foundation. This is not an argument for rigid dogmatism — it is an argument for honest inquiry. The stakes of getting God wrong are higher than almost any other question we face. That is not a reason for fear; it is a reason to take the question seriously and to pursue it with everything you have.`,
+  },
+
+  {
+    title:        "Am I at odds with God? What exactly is sin?",
+    category:     "apologetics",
+    scripture_ref: "Romans 3:10-18, 1 John 1:8-10",
+    source:       "Kairos curated — FAQ reference",
+    content: `Human beings are naturally at odds with God, and this aversion may be hidden by a veneer of respectability — but given the right circumstances it becomes evident in each of us. Sin is not primarily a list of prohibited behaviours. Sin is a refusal to live humbly under God's reign and acknowledge our obligations to Him. It is the fundamental posture of independence — living as though we are the centre of our own universe rather than as creatures in relationship with our Creator. The philosopher Sartre, as a schoolboy, burned a small rug and felt — in his own words — the gaze of God. He fell into a rage against God. By Sartre's account, "He never looked at me again." In reality, it was Sartre who never looked at God again. That story captures something true about all of us. We are all guilty of this turning away — and we all need the forgiveness that comes from returning.`,
+  },
+
+  {
+    title:        "What is the reason anyone is sent to hell?",
+    category:     "apologetics",
+    scripture_ref: "Psalm 97:2, Colossians 2:14, Romans 5:6-11",
+    source:       "Kairos curated — FAQ reference",
+    content: `Sin violates God's law, which expresses His righteous character. Sin involves rebellion against the Creator-King whose throne is founded on righteousness and justice. Sin incurs a debt of guilt and punishment. The crucifixion of the innocent and eternal God-Man, Jesus Christ, is the only possible satisfaction of divine justice — but it is only for those who attach themselves to Christ by faith. Others must endure their own punishment for their offenses against the infinite and holy God. This is not a doctrine to be held lightly or with any satisfaction. It is one of the hardest realities in scripture. It is also what makes the gospel genuinely good news — not good advice, not helpful suggestions, but rescue from a real danger. The cross only makes sense in light of what it rescues us from. And 2 Peter 3:9 makes clear that God is not willing that any should perish — He is patient, holding the door open.`,
+  },
+
+  {
+    title:        "How can God send sincere people of other faiths to hell?",
+    category:     "apologetics",
+    scripture_ref: "Deuteronomy 6:4, Acts 4:12, John 14:6",
+    source:       "Kairos curated — FAQ reference",
+    content: `Only one God is the Creator and Ruler of all. Sin violates His laws, summarised as love the Lord your God with all your heart, soul, and strength. Such love has no room for other gods. Worship of false gods — no matter how devout the worship — involves rebellion against the true God who provided salvation only through His Son. Imagine the pain and offense your parents would feel if you identified someone else as your father and mother. In a similar way, it is painful and offensive to God when we misidentify Him, saying things of Him that are not true and which conflict with His eternal nature. This is one of Christianity's most difficult claims, and it should be held with genuine humility and grief — not triumphalism. The response to it is not to soften the claim, but to recognise that it makes the urgent sharing of the genuine gospel not a burden but an act of love toward people we care about.`,
+  },
+
+  {
+    title:        "Why can't God simply annihilate those who die in unbelief?",
+    category:     "apologetics",
+    scripture_ref: "Matthew 25:46, Luke 12:4-5, John 5:28-29, Revelation 9:5-6",
+    source:       "Kairos curated — FAQ reference",
+    content: `Scripture says God is both perfectly just and loving, and that the penalty for living in rebellion against God is eternal punishment. Annihilation would not satisfy God's perfect justice because the offense of our sins is infinite — committed against an infinite and holy God. Just as the reward for faith-righteousness through Christ is eternal fellowship with God, the penalty for rebellion against Him is eternal ruin and separation from God. This doctrine is not one that any honest person holds with comfort. It should produce urgency — urgency in receiving the grace that is offered, and urgency in extending it to others. The weight of eternity is precisely why the gospel matters so profoundly. God does not delight in the death of the wicked — Ezekiel 33:11 records Him saying so plainly. He takes no pleasure in judgment. That He permits it is the measure of how seriously He takes human freedom and the reality of moral choice.`,
+  },
+
+  {
+    title:        "If there is one God, why are there so many religions?",
+    category:     "apologetics",
+    scripture_ref: "Romans 1:18-23, Acts 17:22-28",
+    source:       "Kairos curated — FAQ reference",
+    content: `God has made Himself known to everyone through creation and the conscience. This knowledge has not been well received by human beings. Rather than acknowledging who God is and being grateful, we have suppressed this original knowledge. The result is a darkening of the mind. People create gods they prefer rather than worshipping God as He is. Given the diversity of people and cultures, it is no surprise that a variety of religions has emerged — each one a variation on the human attempt to reach toward something transcendent, shaped by local culture, history, and the particular ways in which people have suppressed or distorted the original revelation. This is not a counsel of despair about other religions — many contain genuine fragments of truth. But it is an honest account of why the picture is fragmented. The Christian claim is that in Jesus, the fragmented picture finds its complete form. Not because Christians are wiser, but because God chose to make Himself fully known in a person.`,
+  },
+
   // ── PASTORAL ─────────────────────────────────────────────────
 
   {
@@ -187,6 +269,120 @@ const KNOWLEDGE_ENTRIES = [
     scripture_ref: "Malachi 2:16, Matthew 19:8, 1 Corinthians 7:15",
     source:       "Kairos curated",
     content: `Divorce is one of the areas where the church has most consistently added pain to people who are already in profound pain. The harm caused by handling divorce poorly — with condemnation, exclusion, or rigid rule-application without pastoral wisdom — has driven many people permanently from faith communities. The biblical texts on divorce are more complex and contextual than they are often presented. Jesus' words in Matthew 19 were addressed to a specific question about a specific practice of easy divorce that left women destitute. The pastoral response to someone whose marriage has ended must begin with compassion, not with a verdict. Many marriages end because of abuse, abandonment, addiction, or profound incompatibility — not simple selfishness. People who have been through divorce carry grief, shame, and often profound failure — whether or not they were the one who initiated it. They need presence and grace, not a tribunal.`,
+  },
+
+  // ── PASTORAL — Where to Turn (from reference images) ────────
+
+  {
+    title:        "When you feel discouraged and nothing seems to be going right",
+    category:     "pastoral",
+    scripture_ref: "2 Corinthians 1:3-11, Psalm 37:1-4",
+    source:       "Kairos curated — Where to Turn reference",
+    content: `Discouragement is one of the most common and most draining experiences of the spiritual life. It is the slow erosion of hope — not a single blow but the accumulation of setbacks, delays, and disappointments that make continuing feel pointless. Paul wrote 2 Corinthians from within his own suffering — he described being under pressure far beyond his ability to endure, to the point of despairing of life itself. But he also described the God who raises the dead — who specialises in situations beyond human capacity. Psalm 37 is a long, patient meditation on what to do when life seems unfair and the wicked seem to prosper — it returns again and again to trust, delight, commit, rest, wait. These are not passive instructions. They are active postures of the heart that reorient us toward God's perspective rather than our own limited view. Discouragement often tells us the truth about our own limits — but lies about whether God's limits are the same.`,
+  },
+
+  {
+    title:        "When you need forgiveness and are weighed down by what you have done",
+    category:     "pastoral",
+    scripture_ref: "Psalm 51, 1 John 1:8-10",
+    source:       "Kairos curated — Where to Turn reference",
+    content: `Psalm 51 is David's prayer after his gravest moral failure — adultery, deception, and the arranged killing of an innocent man. It is one of the most honest prayers in all of scripture. What is remarkable about it is where it goes: not into minimising, not into despair, but into the full weight of what happened followed by a request for the full weight of God's mercy. "Have mercy on me, O God, according to your steadfast love; according to your abundant mercy blot out my transgressions." The prayer does not flinch at what was done. Neither does God. 1 John 1:9 makes the mechanics simple: if we confess our sins, He is faithful and just to forgive them and to cleanse us from all unrighteousness. Not some. All. The gospel is not a second chance — it is a new life. Forgiveness in Christ is not reluctant; it is the very reason the cross happened.`,
+  },
+
+  {
+    title:        "When you are afraid and facing danger",
+    category:     "pastoral",
+    scripture_ref: "Psalm 27, Acts 27:13-26",
+    source:       "Kairos curated — Where to Turn reference",
+    content: `Fear is one of the most honest human responses to a dangerous world — and the Bible never mocks it or tells people to simply stop feeling it. Psalm 27 opens with a declaration — "The Lord is my light and my salvation — whom shall I fear?" — but David was not speaking from a safe and comfortable life. He was surrounded by enemies who wanted to destroy him. The declaration is not the absence of threat; it is the presence of God in the middle of it. Paul's experience in Acts 27 — shipwrecked in a violent storm — is one of the most vivid accounts of physical danger in the New Testament. An angel appeared to him not to remove the danger but to promise presence and outcome within it. Fear is not the opposite of faith. Bringing fear to God honestly — not pretending it is not there — is itself an act of trust. What does the Lord mean when He says "Fear not" so often in scripture? Not that danger is unreal, but that He is more real than the danger.`,
+  },
+
+  {
+    title:        "When you are tired, exhausted, and running on empty",
+    category:     "pastoral",
+    scripture_ref: "Psalm 127:1-2, Matthew 11:28-30",
+    source:       "Kairos curated — Where to Turn reference",
+    content: `Exhaustion is not a spiritual failure. Even Elijah — immediately after one of the greatest demonstrations of divine power in the Old Testament — lay down under a tree and asked God to take his life. He was done. God's response was not a rebuke or a theology lecture. An angel touched him and said "Get up and eat — the journey is too much for you." God fed him and let him sleep. Twice. The rest and nourishment came before the mission continued. Psalm 127 is honest about human limits — "It is in vain that you rise up early and go late to rest, eating the bread of anxious toil." There is a rest that is a gift, not a reward. Jesus' invitation in Matthew 11 is to those who are weary and burdened — "Come to me, and I will give you rest." The rest He offers is not the absence of work but the presence of a yoke that fits — partnered with One whose strength never runs out.`,
+  },
+
+  {
+    title:        "When someone has betrayed you or friends have let you down",
+    category:     "pastoral",
+    scripture_ref: "Psalm 55, Colossians 3:13",
+    source:       "Kairos curated — Where to Turn reference",
+    content: `Psalm 55 is David writing about betrayal by a close friend — not an enemy, which would have been easier to bear. "If an enemy were insulting me, I could endure it... But it is you, a man like myself, my companion, my close friend." The specific pain of betrayal by someone trusted is one of the most destabilising human experiences. It shakes not just a relationship but the capacity to trust. The Psalms do not rush past this pain. They sit in it, name it, and bring it honestly to God. Colossians 3 eventually speaks of bearing with one another and forgiving as God has forgiven — but that is not a first response. The first response to betrayal is to bring the wound honestly before God, to let the grief be real, and not to perform a forgiveness that has not yet been processed. What God gives in these moments is not an immediate resolution but a steady companionship through the disorientation.`,
+  },
+
+  {
+    title:        "When your past haunts you and you cannot seem to move forward",
+    category:     "pastoral",
+    scripture_ref: "Colossians 1:21-22, Isaiah 43:18-19",
+    source:       "Kairos curated — Where to Turn reference",
+    content: `The past has enormous power over the present — and spiritual communities do not always handle this well. Sometimes the message is "just give it to God" in a way that minimises how deeply the past can be embedded in a person's sense of self, their patterns of relating, and even their neurology. Colossians 1:21-22 speaks of people who were once alienated and enemies in their minds — and who have now been reconciled and presented holy and blameless. The past is real. The transformation is also real. But the work of moving from one to the other is rarely simple or immediate. Isaiah 43 contains one of the most striking instructions in all of scripture: "Forget the former things; do not dwell on the past. See, I am doing a new thing." The invitation is not to pretend the past did not happen — it is to fix the gaze on what God is doing now and ahead. That shift of attention is often the hardest work a person does.`,
+  },
+
+  {
+    title:        "When you feel like giving up and your faith feels insufficient",
+    category:     "pastoral",
+    scripture_ref: "Luke 11:5-13, Mark 9:14-24",
+    source:       "Kairos curated — Where to Turn reference",
+    content: `The man in Mark 9 who brought his suffering son to Jesus said one of the most honest things in the entire New Testament: "I believe — help my unbelief." He did not pretend to have more faith than he had. He did not manufacture certainty. He brought what he had — incomplete, mixed with doubt — and it was enough. Jesus healed his son. The parable of the persistent friend in Luke 11 is about the kind of prayer that does not give up — not because God is reluctant but because persistence shapes us and deepens trust. The invitation to keep asking, keep seeking, keep knocking is not about wearing God down. It is about the work that sustained asking does in the one who asks. Faith that feels insufficient is still faith. A mustard seed is almost invisible — and Jesus said that is enough to move mountains. The measure of faith required is not enormous; it is honest.`,
+  },
+
+  {
+    title:        "When you doubt your worth and wonder if God truly loves you",
+    category:     "pastoral",
+    scripture_ref: "Psalm 139:13-18, John 3:16, Romans 8:38-39",
+    source:       "Kairos curated — Where to Turn reference",
+    content: `Psalm 139 is one of scripture's most intimate declarations about how God knows and values each person. "You created my inmost being; you knit me together in my mother's womb." The psalmist is not speaking abstractly — this is a deeply personal claim that God's knowledge of us extends to our formation before we had any capacity to earn or deserve His attention. John 3:16 specifies that God so loved the world — not the impressive parts of it, not the people who had figured things out, but the broken, hostile, fallen world. That includes the parts of us we most doubt and are most ashamed of. The question "does God truly love me?" is often asked from within a specific wound — an experience of rejection, abandonment, or unworthiness that has shaped how God feels. The answer is not a feeling; it is a historical event. The cross happened when we were still enemies. That is the measure.`,
+  },
+
+  {
+    title:        "When you carry a heavy load and need rest for your soul",
+    category:     "pastoral",
+    scripture_ref: "Matthew 11:28-30, Psalm 46",
+    source:       "Kairos curated — Where to Turn reference",
+    content: `"Come to me, all you who are weary and burdened, and I will give you rest." These words of Jesus are among the most widely known in the gospel — and among the most frequently received as metaphor when they are meant as a literal invitation. The rest Jesus offers is not the rest of having fewer problems. It is the rest of a different kind of burden — a yoke that fits, carried with One who is gentle and humble in heart. Psalm 46 describes God as a refuge and strength — an ever-present help in trouble. The psalm does not describe the trouble going away; it describes God being present within it. "Therefore we will not fear, though the earth give way and the mountains fall into the heart of the sea." The heaviness you carry is real. The invitation is not to pretend it is light but to stop carrying it alone. That is what it means to cast your burden on the Lord — not a spiritual technique but a genuine transfer of weight.`,
+  },
+
+  {
+    title:        "When you need direction and wisdom for a decision",
+    category:     "pastoral",
+    scripture_ref: "Proverbs 3:5-6, Psalm 25:9, James 1:5-8",
+    source:       "Kairos curated — Where to Turn reference",
+    content: `The need for direction is one of the most consistent experiences of the life of faith — and one of the areas where people most often feel they are not hearing clearly from God. Proverbs 3:5-6 offers the most concise summary: trust in the Lord with all your heart, do not lean on your own understanding, acknowledge Him in all your ways, and He will make your paths straight. This is not a formula for receiving a divine GPS signal — it is a description of an orientation of life in which decisions are made within a posture of trust rather than self-sufficiency. James says that if anyone lacks wisdom, ask God — who gives generously without finding fault. But James adds a condition: ask in faith, not doubting. Uncertainty about outcome is not the same as doubt about God's character. The direction that comes from God often arrives through scripture, through wise counsel, through circumstances, and through the slow formation of desire in a surrendered heart.`,
+  },
+
+  {
+    title:        "When you are angry and struggling to control it",
+    category:     "pastoral",
+    scripture_ref: "Ephesians 4:26-27, James 1:19-20",
+    source:       "Kairos curated — Where to Turn reference",
+    content: `Anger is not inherently sinful — the Bible is clear on that. "Be angry and do not sin" in Ephesians 4 assumes the anger, and then addresses what to do with it. God Himself is described as angry at injustice and evil throughout scripture. Jesus overturned the tables in the temple. The question is not whether anger is present but what it is doing and where it goes. James says to be quick to hear, slow to speak, and slow to anger — because human anger does not produce the righteousness of God. Unprocessed anger handed over to the enemy gives him a foothold. Anger that is held honestly before God, that is not acted upon impulsively, that is brought into the light — that anger can be transformed. It can become the energy of righteous action rather than destruction. The invitation is not to suppress anger but to bring it to God before it controls us.`,
+  },
+
+  {
+    title:        "When you feel weak and your strength has run out",
+    category:     "pastoral",
+    scripture_ref: "2 Corinthians 12:9, Isaiah 40:28-31",
+    source:       "Kairos curated — Where to Turn reference",
+    content: `Paul's experience of weakness is one of the most counterintuitive things in the New Testament. He prayed three times to have his thorn removed — and God said no. Not because God was indifferent, but because the response was something more valuable: "My grace is sufficient for you, for my power is made perfect in weakness." Paul's conclusion is startling: "Therefore I will boast all the more gladly about my weaknesses, so that Christ's power may rest on me." Weakness, in the economy of God, is not an obstacle to His work — it is often the condition for it. The strength that runs out is the strength that was always insufficient. What God offers in its place is not a restored version of our own strength, but access to something that does not run out. Isaiah 40 ends with a progression — soaring like eagles, running without weariness, walking without fainting. Walking without fainting is the most honest picture of what endurance actually looks like for most people.`,
+  },
+
+  {
+    title:        "When God does not seem to act and His delays feel unbearable",
+    category:     "pastoral",
+    scripture_ref: "John 11:1-44, Psalm 13",
+    source:       "Kairos curated — Where to Turn reference",
+    content: `John 11 contains one of the most painful details in the gospels — not the grief of Mary and Martha at Lazarus's death, but verse 6: "When Jesus heard that Lazarus was sick, he stayed where he was two more days." He waited on purpose. He let what could have been prevented happen. The sisters' grief when He finally arrived was real and He did not dismiss it — "Lord, if you had been here, my brother would not have died." Jesus wept. He did not correct their theology or explain His delay. He mourned with them. Then He acted with a power that could not have been displayed if He had arrived earlier. The delay was not indifference — it was purpose. Psalm 13 is David crying "How long, O Lord? Will you forget me forever?" — and ending with trust. The distance between those two places is not made by argument but by the long, honest practice of bringing the pain to God rather than turning away from Him.`,
+  },
+
+  {
+    title:        "When you have left God and feel too far gone to return",
+    category:     "pastoral",
+    scripture_ref: "Luke 15:11-32, Romans 8:38-39",
+    source:       "Kairos curated — Where to Turn reference",
+    content: `The parable of the Prodigal Son is Jesus' answer to the feeling of being too far gone. The son in the story did not simply wander — he took his inheritance, which in his culture was equivalent to saying "I wish you were dead," and he wasted every bit of it in deliberate, sustained rebellion. When he came to his senses, he did not expect full restoration. He rehearsed a speech asking to be made a servant. He never got to deliver it. The father saw him "while he was still a long way off" — which means the father was watching for him. He ran to meet him. He interrupted the rehearsed speech with restoration. The robe, the ring, the sandals, the feast — these are not a cautious welcome. They are the full reinstatement of sonship. Jesus told this story to people who thought some people had gone too far. The only thing the story requires of the returning one is the turning — coming back is enough.`,
   },
 
   // ── SCRIPTURE CONTEXT ─────────────────────────────────────────
