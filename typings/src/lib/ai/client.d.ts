@@ -10,7 +10,6 @@
  *   2. If ALL OpenRouter models fail → automatically switch to Gemini
  *   3. If Gemini also fails → clear error logged to terminal
  *
- * Adding more models: just add entries to OPENROUTER_MODELS or GEMINI_MODELS
  * Server-side only. No API keys ever reach the browser.
  */
 
@@ -19,6 +18,7 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 const GEMINI_URL     = "https://generativelanguage.googleapis.com/v1beta/models"
 
 // ── OPENROUTER MODEL CHAIN ────────────────────────────────────
+// Best model first. Fallback down the list on failure.
 const OPENROUTER_MODELS = [
   {
     id:    "meta-llama/llama-3.3-70b-instruct:free",
@@ -27,10 +27,6 @@ const OPENROUTER_MODELS = [
   {
     id:    "openai/gpt-oss-120b:free",
     label: "GPT OSS 120B",
-  },
-  {
-    id:    "arcee-ai/arcee-trinity-large-preview:free",
-    label: "Arcee Trinity Large",
   },
   {
     id:    "stepfun/step-3.5-flash:free",
@@ -43,8 +39,6 @@ const OPENROUTER_MODELS = [
 ]
 
 // ── GEMINI MODEL CHAIN ────────────────────────────────────────
-// Completely free — no credits needed
-// Get your free key at: aistudio.google.com
 const GEMINI_MODELS = [
   {
     id:    "gemini-2.0-flash",
@@ -67,13 +61,13 @@ function log(type, message) {
   if (!isDev) return
   const timestamp = new Date().toLocaleTimeString()
   declare interface colorsType {
-	static info: any;
+	static info: string;
 
-	static success: any;
+	static success: string;
 
-	static warn: any;
+	static warn: string;
 
-	static error: any;
+	static error: string;
 
 	static provider: any[];
 }

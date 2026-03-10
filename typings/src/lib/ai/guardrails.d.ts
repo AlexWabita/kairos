@@ -1,3 +1,4 @@
+
 /**
  * KAIROS — Guardrails System
  * Protects users and maintains Kairos' integrity.
@@ -109,32 +110,4 @@ I am here with you right now, and I care deeply — but a real human voice can h
 /**
  * Harmful content response — returned when harmful request detected
  */
-export const HARMFUL_RESPONSE = {
-  reply:     "That is something Kairos is not able to help with. But if there is something deeper going on — something you are carrying — I am here for that conversation.",
-  escalated: false,
-}
-
-/**
- * Post-response check — sanitise and clean AI response before it reaches the user
- * Returns cleaned response string
- */
-export function postResponseCheck(response) {
-  if (!response || typeof response !== "string") {
-    return "Something went quiet for a moment. Please share what is on your heart again."
-  }
-
-  // Strip all markdown formatting — asterisks, headers, bullets, etc.
-  let cleaned = stripMarkdown(response)
-
-  // Trim excessive length
-  const MAX_CHARS = 1800
-  if (cleaned.length > MAX_CHARS) {
-    const trimmed    = cleaned.slice(0, MAX_CHARS)
-    const lastPeriod = trimmed.lastIndexOf(".")
-    cleaned = lastPeriod > MAX_CHARS * 0.7
-      ? trimmed.slice(0, lastPeriod + 1)
-      : trimmed
-  }
-
-  return cleaned.trim()
-}
+declare interface HARMFUL_RESPONSEType {}

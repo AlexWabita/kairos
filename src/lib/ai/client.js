@@ -9,7 +9,6 @@
  *   2. If ALL OpenRouter models fail → automatically switch to Gemini
  *   3. If Gemini also fails → clear error logged to terminal
  *
- * Adding more models: just add entries to OPENROUTER_MODELS or GEMINI_MODELS
  * Server-side only. No API keys ever reach the browser.
  */
 
@@ -18,6 +17,7 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 const GEMINI_URL     = "https://generativelanguage.googleapis.com/v1beta/models"
 
 // ── OPENROUTER MODEL CHAIN ────────────────────────────────────
+// Best model first. Fallback down the list on failure.
 const OPENROUTER_MODELS = [
   {
     id:    "meta-llama/llama-3.3-70b-instruct:free",
@@ -26,10 +26,6 @@ const OPENROUTER_MODELS = [
   {
     id:    "openai/gpt-oss-120b:free",
     label: "GPT OSS 120B",
-  },
-  {
-    id:    "arcee-ai/arcee-trinity-large-preview:free",
-    label: "Arcee Trinity Large",
   },
   {
     id:    "stepfun/step-3.5-flash:free",
@@ -42,8 +38,6 @@ const OPENROUTER_MODELS = [
 ]
 
 // ── GEMINI MODEL CHAIN ────────────────────────────────────────
-// Completely free — no credits needed
-// Get your free key at: aistudio.google.com
 const GEMINI_MODELS = [
   {
     id:    "gemini-2.0-flash",
@@ -66,16 +60,15 @@ function log(type, message) {
   if (!isDev) return
   const timestamp = new Date().toLocaleTimeString()
   const colors = {
-    info:     "\x1b[36m",  // Cyan
-    success:  "\x1b[32m",  // Green
-    warn:     "\x1b[33m",  // Yellow
-    error:    "\x1b[31m",  // Red
-    provider: "\x1b[35m",  // Magenta — for provider switches
+    info:     "\x1b[36m",
+    success:  "\x1b[32m",
+    warn:     "\x1b[33m",
+    error:    "\x1b[31m",
+    provider: "\x1b[35m",
   }
-  const color  = colors[type] || ""
-  const reset  = "\x1b[0m"
-  const label  = `${color}[Kairos AI]${reset}`
-  console.log(`${label} ${timestamp} — ${message}`)
+  const color = colors[type] || ""
+  const reset = "\x1b[0m"
+  console.log(`${color}[Kairos AI]${reset} ${timestamp} — ${message}`)
 }
 
 // ── OPENROUTER ATTEMPT ────────────────────────────────────────
@@ -124,7 +117,6 @@ async function tryGemini(model, messages, systemPrompt) {
 
   log("info", `[Gemini]     Trying: ${model.label}`)
 
-  // Convert OpenAI-style messages to Gemini format
   const geminiContents = [
     {
       role:  "user",
@@ -168,7 +160,7 @@ async function tryGemini(model, messages, systemPrompt) {
   return content
 }
 
-// ── MAIN EXPORT: SEND TO AI ───────────────────────────────────
+// ── MAIN EXPORT ───────────────────────────────────────────────
 export async function sendToAI(messages, systemPrompt) {
   const failures = []
 
@@ -212,13 +204,12 @@ export async function sendToAI(messages, systemPrompt) {
       }
     }
   } else {
-    log("warn", "GEMINI_API_KEY not set — skipping Gemini (add to .env.local)")
+    log("warn", "GEMINI_API_KEY not set — skipping Gemini")
   }
 
   // ── ALL FAILED ────────────────────────────────────────────
   log("error", "All providers and models failed:")
   failures.forEach(f => log("error", `  ✗ ${f.model}: ${f.reason}`))
-  log("error", "Check openrouter.ai/models or aistudio.google.com for availability")
 
   throw new Error("All models across all providers failed. Check terminal for details.")
 }
