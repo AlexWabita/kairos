@@ -207,12 +207,12 @@ export default function CompanionCore({ profile = null }) {
   const inputRef    = useRef(null)
   const textareaRef = useRef(null)
 
-  // Initialise anonymous session on mount
+// Initialise anonymous session on mount
   useEffect(() => {
     initKairosSession().then(session => {
-      if (session) {
+      if (session?.user) {
         setKairosUser(session.user)
-        console.log('[Kairos] Session ready:', session.type, session.user.id)
+        console.log('[Kairos] Session ready:', session. type, session.user.id)
       }
     })
   }, [])
