@@ -25,19 +25,25 @@ function detectBibleSearch(text) {
   return triggers.some(t => lower.includes(t))
 }
 
+// ── Auto-title: first sentence, max 60 chars ─────────────────
+function extractTitle(content) {
+  const first = content.split(/[.!?\n]/)[0].trim()
+  return first.length > 60 ? first.substring(0, 57) + "…" : first
+}
+
 /* ── Ambient Glow Orb ────────────────────────────────────── */
 function GlowOrb({ size, left, top, color, delay = "0s" }) {
   return (
     <div style={{
-      position:     "absolute",
+      position:      "absolute",
       left, top,
-      transform:    "translate(-50%, -50%)",
+      transform:     "translate(-50%, -50%)",
       width:  size,
       height: size,
-      background:   `radial-gradient(circle, ${color} 0%, transparent 70%)`,
-      borderRadius: "50%",
+      background:    `radial-gradient(circle, ${color} 0%, transparent 70%)`,
+      borderRadius:  "50%",
       pointerEvents: "none",
-      animation:    `breathe 4s ease-in-out ${delay} infinite`,
+      animation:     `breathe 4s ease-in-out ${delay} infinite`,
     }} />
   )
 }
@@ -114,8 +120,104 @@ function ScriptureBlock({ text, reference }) {
   )
 }
 
+/* ── Save Button ─────────────────────────────────────────── */
+function SaveButton({ saved, saving, isAuthenticated, onSave }) {
+  if (saved) {
+    return (
+      <div style={{
+        display:    "flex",
+        alignItems: "center",
+        gap:        "var(--space-2)",
+        marginTop:  "var(--space-4)",
+        paddingTop: "var(--space-3)",
+        borderTop:  "1px solid rgba(240,192,96,0.1)",
+      }}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--color-gold-warm)"
+          stroke="none">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+        <span style={{
+          fontFamily: "var(--font-body)",
+          fontSize:   "0.72rem",
+          color:      "var(--color-gold-warm)",
+          letterSpacing: "0.05em",
+        }}>
+          Saved to your journey
+        </span>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div style={{
+        marginTop:  "var(--space-4)",
+        paddingTop: "var(--space-3)",
+        borderTop:  "1px solid rgba(240,192,96,0.1)",
+      }}>
+        <a href="/register" style={{
+          fontFamily:     "var(--font-body)",
+          fontSize:       "0.72rem",
+          color:          "var(--color-muted)",
+          letterSpacing:  "0.05em",
+          textDecoration: "none",
+          display:        "flex",
+          alignItems:     "center",
+          gap:            "var(--space-2)",
+          transition:     "color 0.2s ease",
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-gold-warm)"}
+        onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-muted)"}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+          </svg>
+          Sign in to save this moment
+        </a>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{
+      marginTop:  "var(--space-4)",
+      paddingTop: "var(--space-3)",
+      borderTop:  "1px solid rgba(240,192,96,0.1)",
+    }}>
+      <button
+        onClick={onSave}
+        disabled={saving}
+        style={{
+          background:  "none",
+          border:      "none",
+          padding:     0,
+          cursor:      saving ? "wait" : "pointer",
+          display:     "flex",
+          alignItems:  "center",
+          gap:         "var(--space-2)",
+          color:       "var(--color-muted)",
+          fontFamily:  "var(--font-body)",
+          fontSize:    "0.72rem",
+          letterSpacing: "0.05em",
+          transition:  "color 0.2s ease",
+          opacity:     saving ? 0.6 : 1,
+        }}
+        onMouseEnter={(e) => { if (!saving) e.currentTarget.style.color = "var(--color-gold-warm)" }}
+        onMouseLeave={(e) => { if (!saving) e.currentTarget.style.color = "var(--color-muted)" }}
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
+        {saving ? "Saving…" : "Save this moment"}
+      </button>
+    </div>
+  )
+}
+
 /* ── Message Bubble ──────────────────────────────────────── */
-function Message({ role, content, isNew, verseData }) {
+function Message({ role, content, isNew, verseData, onSave, saved, saving, isAuthenticated }) {
   const isKairos = role === "assistant"
 
   const renderContent = (text) => {
@@ -127,13 +229,13 @@ function Message({ role, content, isNew, verseData }) {
       }
       return part ? (
         <p key={i} style={{
-          fontFamily:  isKairos ? "var(--font-heading)" : "var(--font-body)",
-          fontSize:    isKairos ? "var(--text-body-lg)" : "var(--text-body-md)",
-          fontWeight:  isKairos ? 300 : 400,
-          lineHeight:  "var(--leading-relaxed)",
-          color:       "var(--color-divine)",
-          margin:      "0 0 var(--space-3) 0",
-          whiteSpace:  "pre-wrap",
+          fontFamily: isKairos ? "var(--font-heading)" : "var(--font-body)",
+          fontSize:   isKairos ? "var(--text-body-lg)" : "var(--text-body-md)",
+          fontWeight: isKairos ? 300 : 400,
+          lineHeight: "var(--leading-relaxed)",
+          color:      "var(--color-divine)",
+          margin:     "0 0 var(--space-3) 0",
+          whiteSpace: "pre-wrap",
         }}>
           {part}
         </p>
@@ -179,12 +281,22 @@ function Message({ role, content, isNew, verseData }) {
       }}>
         {renderContent(content)}
 
-        {/* Verified verse card — shown when API returned exact text */}
+        {/* Verified verse card */}
         {verseData && (
           <BibleVerse
             reference={verseData.reference}
             text={verseData.text}
             translation={verseData.translation}
+          />
+        )}
+
+        {/* Save button — Kairos messages only */}
+        {isKairos && (
+          <SaveButton
+            saved={saved}
+            saving={saving}
+            isAuthenticated={isAuthenticated}
+            onSave={onSave}
           />
         )}
       </div>
@@ -194,25 +306,31 @@ function Message({ role, content, isNew, verseData }) {
 
 /* ── Main Companion Component ────────────────────────────── */
 export default function CompanionCore({ profile = null }) {
-  const [messages,        setMessages]        = useState([])
-  const [input,           setInput]           = useState("")
-  const [loading,         setLoading]         = useState(false)
-  const [started,         setStarted]         = useState(false)
-  const [newMsgIdx,       setNewMsgIdx]       = useState(null)
-  const [kairosUser,      setKairosUser]      = useState(null)
-  const [conversationId,  setConversationId]  = useState(null)
-  const [translation,     setTranslation]     = useState("WEB")
+  const [messages,       setMessages]       = useState([])
+  const [input,          setInput]          = useState("")
+  const [loading,        setLoading]        = useState(false)
+  const [started,        setStarted]        = useState(false)
+  const [newMsgIdx,      setNewMsgIdx]      = useState(null)
+  const [kairosUser,     setKairosUser]     = useState(null)
+  const [sessionType,    setSessionType]    = useState(null)   // 'anonymous' | 'authenticated'
+  const [conversationId, setConversationId] = useState(null)
+  const [translation,    setTranslation]    = useState("WEB")
+  const [savedMsgIds,    setSavedMsgIds]    = useState(new Set())
+  const [savingMsgIdx,   setSavingMsgIdx]   = useState(null)
 
   const bottomRef   = useRef(null)
   const inputRef    = useRef(null)
   const textareaRef = useRef(null)
 
-// Initialise anonymous session on mount
+  const isAuthenticated = sessionType === "authenticated"
+
+  // Initialise session on mount
   useEffect(() => {
     initKairosSession().then(session => {
       if (session?.user) {
         setKairosUser(session.user)
-        console.log('[Kairos] Session ready:', session. type, session.user.id)
+        setSessionType(session.type)
+        console.log('[Kairos] Session ready:', session.type, session.user.id)
       }
     })
   }, [])
@@ -242,6 +360,43 @@ export default function CompanionCore({ profile = null }) {
     return null
   }
 
+  // Save a Kairos message to journey_entries
+  const handleSave = async (msgIndex) => {
+    const msg = messages[msgIndex]
+    if (!msg || savedMsgIds.has(msgIndex)) return
+  
+    setSavingMsgIdx(msgIndex)
+    try {
+      const scripture_ref = msg.verseData
+        ? `${msg.verseData.reference} (${msg.verseData.  translation})`
+        : null
+  
+      const res = await fetch("/api/journey/save", {
+        method:  "POST",
+        headers: { "Content-Type": "application/  json" },
+        body:    JSON.stringify({
+          content:         msg.content,
+          title:           extractTitle(msg.content),
+          scripture_ref,
+          conversation_id: conversationId,
+          userId:          kairosUser?.id ||   null,   // ← ADD THIS
+        }),
+      })
+      const data = await res.json()
+  
+      if (data.success) {
+        setSavedMsgIds(prev => new Set([...prev,   msgIndex]))
+        console.log('[Kairos] Moment saved:', data.id)
+      } else {
+        console.error('[Kairos] Save failed:', data.  error)
+      }
+    } catch (err) {
+      console.error('[Kairos] Save error:', err.  message)
+    } finally {
+      setSavingMsgIdx(null)
+    }
+  }
+
   const handleSend = async () => {
     const text = input.trim()
     if (!text || loading) return
@@ -259,7 +414,6 @@ export default function CompanionCore({ profile = null }) {
     setLoading(true)
 
     try {
-      // ── Check if this is a direct verse request ───────────
       const verseRef  = detectVerseRequest(text)
       const isSearch  = detectBibleSearch(text)
       let   verseData = null
@@ -268,7 +422,6 @@ export default function CompanionCore({ profile = null }) {
         verseData = await fetchVerse(verseRef)
       }
 
-      // ── Send to AI ────────────────────────────────────────
       const res = await fetch("/api/ai/companion", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
@@ -282,7 +435,7 @@ export default function CompanionCore({ profile = null }) {
             ? `Exact text already retrieved: "${verseData.text}" — ${verseData.reference} (${verseData.translation}). Reference this directly, do not paraphrase it.`
             : null,
           isVerseRequest: !!verseRef,
-          isSearch:       isSearch,
+          isSearch,
         }),
       })
 
@@ -324,50 +477,50 @@ export default function CompanionCore({ profile = null }) {
 
   return (
     <div style={{
-      position:       "relative",
-      minHeight:      "100vh",
-      display:        "flex",
-      flexDirection:  "column",
-      background:     "var(--gradient-hero)",
-      overflow:       "hidden",
+      position:      "relative",
+      minHeight:     "100vh",
+      display:       "flex",
+      flexDirection: "column",
+      background:    "var(--gradient-hero)",
+      overflow:      "hidden",
     }}>
       {/* Ambient background */}
-      <GlowOrb size="500px" left="60%" top="30%"  color="rgba(240,192,96,0.08)"  delay="0s"   />
-      <GlowOrb size="300px" left="20%" top="70%"  color="rgba(64,144,208,0.06)"  delay="2s"   />
-      <GlowOrb size="200px" left="80%" top="80%"  color="rgba(240,192,96,0.05)"  delay="1s"   />
+      <GlowOrb size="500px" left="60%" top="30%"  color="rgba(240,192,96,0.08)"  delay="0s"  />
+      <GlowOrb size="300px" left="20%" top="70%"  color="rgba(64,144,208,0.06)"  delay="2s"  />
+      <GlowOrb size="200px" left="80%" top="80%"  color="rgba(240,192,96,0.05)"  delay="1s"  />
 
       {/* ── HEADER ─────────────────────────────────────────── */}
       <div style={{
-        padding:      "var(--space-5) var(--space-5) var(--space-4)",
-        borderBottom: "1px solid var(--color-border)",
-        background:   "rgba(6,9,18,0.6)",
+        padding:        "var(--space-5) var(--space-5) var(--space-4)",
+        borderBottom:   "1px solid var(--color-border)",
+        background:     "rgba(6,9,18,0.6)",
         backdropFilter: "blur(12px)",
-        position:     "sticky",
-        top:          0,
-        zIndex:       10,
-        display:      "flex",
-        alignItems:   "center",
+        position:       "sticky",
+        top:            0,
+        zIndex:         10,
+        display:        "flex",
+        alignItems:     "center",
         justifyContent: "space-between",
       }}>
         <div>
           <a href="/" style={{ textDecoration: "none" }}>
             <span style={{
-              fontFamily:    "var(--font-display)",
-              fontSize:      "1.1rem",
-              letterSpacing: "0.2em",
-              background:    "var(--gradient-text)",
+              fontFamily:           "var(--font-display)",
+              fontSize:             "1.1rem",
+              letterSpacing:        "0.2em",
+              background:           "var(--gradient-text)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor:  "transparent",
-              backgroundClip: "text",
+              backgroundClip:       "text",
             }}>
               KAIROS
             </span>
           </a>
           <p style={{
-            fontFamily: "var(--font-body)",
-            fontSize:   "0.7rem",
-            color:      "var(--color-muted)",
-            marginTop:  "2px",
+            fontFamily:    "var(--font-body)",
+            fontSize:      "0.7rem",
+            color:         "var(--color-muted)",
+            marginTop:     "2px",
             letterSpacing: "0.05em",
           }}>
             Your companion is present
@@ -412,12 +565,12 @@ export default function CompanionCore({ profile = null }) {
 
       {/* ── MESSAGES AREA ──────────────────────────────────── */}
       <div style={{
-        flex:       1,
-        overflowY:  "auto",
-        padding:    "var(--space-8) var(--space-5)",
-        maxWidth:   "760px",
-        width:      "100%",
-        margin:     "0 auto",
+        flex:          1,
+        overflowY:     "auto",
+        padding:       "var(--space-8) var(--space-5)",
+        maxWidth:      "760px",
+        width:         "100%",
+        margin:        "0 auto",
         paddingBottom: "var(--space-6)",
       }}>
         {!started && messages.length === 0 && (
@@ -437,11 +590,11 @@ export default function CompanionCore({ profile = null }) {
               Your appointed moment
             </p>
             <h2 style={{
-              fontFamily: "var(--font-heading)",
-              fontSize:   "clamp(1.8rem, 4vw, 3rem)",
-              fontWeight: 300,
-              color:      "var(--color-divine)",
-              lineHeight: 1.4,
+              fontFamily:   "var(--font-heading)",
+              fontSize:     "clamp(1.8rem, 4vw, 3rem)",
+              fontWeight:   300,
+              color:        "var(--color-divine)",
+              lineHeight:   1.4,
               marginBottom: "var(--space-10)",
             }}>
               What are you carrying today?
@@ -470,16 +623,16 @@ export default function CompanionCore({ profile = null }) {
                     inputRef.current?.focus()
                   }}
                   style={{
-                    background:    "rgba(20,29,53,0.8)",
-                    border:        "1px solid var(--color-border)",
-                    borderRadius:  "var(--radius-full)",
-                    padding:       "var(--space-2) var(--space-4)",
-                    color:         "var(--color-soft)",
-                    fontFamily:    "var(--font-body)",
-                    fontSize:      "0.8rem",
-                    cursor:        "pointer",
-                    transition:    "all var(--duration-fast) var(--ease-sacred)",
-                    textAlign:     "left",
+                    background:   "rgba(20,29,53,0.8)",
+                    border:       "1px solid var(--color-border)",
+                    borderRadius: "var(--radius-full)",
+                    padding:      "var(--space-2) var(--space-4)",
+                    color:        "var(--color-soft)",
+                    fontFamily:   "var(--font-body)",
+                    fontSize:     "0.8rem",
+                    cursor:       "pointer",
+                    transition:   "all var(--duration-fast) var(--ease-sacred)",
+                    textAlign:    "left",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = "var(--color-gold-warm)"
@@ -506,11 +659,14 @@ export default function CompanionCore({ profile = null }) {
             content={msg.content}
             isNew={i === newMsgIdx}
             verseData={msg.verseData || null}
+            isAuthenticated={isAuthenticated}
+            saved={savedMsgIds.has(i)}
+            saving={savingMsgIdx === i}
+            onSave={() => handleSave(i)}
           />
         ))}
 
         {loading && <TypingIndicator />}
-
         <div ref={bottomRef} />
       </div>
 
@@ -523,10 +679,10 @@ export default function CompanionCore({ profile = null }) {
         backdropFilter: "blur(12px)",
       }}>
         <div style={{
-          maxWidth: "760px",
-          margin:   "0 auto",
-          display:  "flex",
-          gap:      "var(--space-3)",
+          maxWidth:   "760px",
+          margin:     "0 auto",
+          display:    "flex",
+          gap:        "var(--space-3)",
           alignItems: "flex-end",
         }}>
           <div style={{ flex: 1, position: "relative" }}>
@@ -573,20 +729,20 @@ export default function CompanionCore({ profile = null }) {
             disabled={!input.trim() || loading}
             aria-label="Send message"
             style={{
-              width:        "52px",
-              height:       "52px",
-              borderRadius: "50%",
-              background:   input.trim() && !loading
+              width:          "52px",
+              height:         "52px",
+              borderRadius:   "50%",
+              background:     input.trim() && !loading
                 ? "var(--gradient-gold)"
                 : "var(--color-surface)",
-              border:       "1px solid var(--color-border)",
-              display:      "flex",
-              alignItems:   "center",
+              border:         "1px solid var(--color-border)",
+              display:        "flex",
+              alignItems:     "center",
               justifyContent: "center",
-              cursor:       input.trim() && !loading ? "pointer" : "not-allowed",
-              flexShrink:   0,
-              transition:   "all var(--duration-fast) var(--ease-sacred)",
-              boxShadow:    input.trim() && !loading ? "var(--shadow-gold-sm)" : "none",
+              cursor:         input.trim() && !loading ? "pointer" : "not-allowed",
+              flexShrink:     0,
+              transition:     "all var(--duration-fast) var(--ease-sacred)",
+              boxShadow:      input.trim() && !loading ? "var(--shadow-gold-sm)" : "none",
             }}
           >
             {loading ? (
@@ -609,11 +765,11 @@ export default function CompanionCore({ profile = null }) {
         </div>
 
         <p style={{
-          textAlign:  "center",
-          fontFamily: "var(--font-body)",
-          fontSize:   "0.65rem",
-          color:      "var(--color-faint)",
-          marginTop:  "var(--space-3)",
+          textAlign:     "center",
+          fontFamily:    "var(--font-body)",
+          fontSize:      "0.65rem",
+          color:         "var(--color-faint)",
+          marginTop:     "var(--space-3)",
           letterSpacing: "0.03em",
         }}>
           Press Enter to send · Shift+Enter for new line · Kairos is grounded in Biblical truth

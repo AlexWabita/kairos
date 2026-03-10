@@ -56,3 +56,16 @@ export async function getCurrentUser() {
   const { data: { user } } = await supabase.auth.getUser()
   return user
 }
+
+/**
+ * Delete the current user's account entirely.
+ * Calls a server-side route because auth.admin requires service role key.
+ */
+export async function deleteAccount() {
+  const res = await fetch("/api/account/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  })
+  const data = await res.json()
+  return { error: data.error ? new Error(data.error) : null }
+}

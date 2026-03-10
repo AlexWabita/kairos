@@ -1,8 +1,10 @@
 "use client"
 
-import { useState }  from "react"
-import { useRouter } from "next/navigation"
-import { signIn }    from "@/lib/supabase/auth"
+import { useState }          from "react"
+import { useRouter }         from "next/navigation"
+import { signIn }            from "@/lib/supabase/auth"
+import { supabase }          from "@/lib/supabase/client"
+import { migrateAnonymousSession } from "@/lib/supabase/sessions"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -22,10 +24,22 @@ export default function LoginPage() {
     if (error) {
       setError(error.message)
       setLoading(false)
-    } else {
-      router.push("/journey")
-      router.refresh()
+      return
     }
+
+    // Migrate any anonymous session data to the now-authenticated user
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (authUser) {
+        await migrateAnonymousSession(authUser.id)
+      }
+    } catch (migrationErr) {
+      // Non-fatal — log and continue
+      console.warn('[Kairos] Migration skipped:', migrationErr.message)
+    }
+
+    router.push("/journey")
+    router.refresh()
   }
 
   const handleKeyDown = (e) => {
@@ -120,7 +134,7 @@ export default function LoginPage() {
             transition:   "border-color 0.2s ease",
           }}
           onFocus={e => e.target.style.borderColor = "var(--color-gold-warm)"}
-          onBlur={e => e.target.style.borderColor  = "var(--color-border)"}
+          onBlur={e  => e.target.style.borderColor = "var(--color-border)"}
         />
       </div>
 
@@ -136,11 +150,11 @@ export default function LoginPage() {
             PASSWORD
           </label>
           <a href="/forgot-password" style={{
-            fontFamily: "var(--font-body)",
-            fontSize:   "0.7rem",
-            color:      "var(--color-gold-warm)",
+            fontFamily:     "var(--font-body)",
+            fontSize:       "0.7rem",
+            color:          "var(--color-gold-warm)",
             textDecoration: "none",
-            opacity:    0.8,
+            opacity:        0.8,
           }}>
             Forgot password?
           </a>
@@ -168,7 +182,7 @@ export default function LoginPage() {
             transition:   "border-color 0.2s ease",
           }}
           onFocus={e => e.target.style.borderColor = "var(--color-gold-warm)"}
-          onBlur={e => e.target.style.borderColor  = "var(--color-border)"}
+          onBlur={e  => e.target.style.borderColor = "var(--color-border)"}
         />
       </div>
 
@@ -177,20 +191,20 @@ export default function LoginPage() {
         onClick={handleSubmit}
         disabled={!email || !password || loading}
         style={{
-          width:        "100%",
-          padding:      "var(--space-4)",
-          background:   email && password && !loading
+          width:         "100%",
+          padding:       "var(--space-4)",
+          background:    email && password && !loading
             ? "var(--gradient-gold)"
             : "var(--color-surface)",
-          border:       "1px solid var(--color-border)",
-          borderRadius: "var(--radius-lg)",
-          color:        email && password && !loading ? "#060912" : "var(--color-muted)",
-          fontFamily:   "var(--font-display)",
-          fontSize:     "0.75rem",
+          border:        "1px solid var(--color-border)",
+          borderRadius:  "var(--radius-lg)",
+          color:         email && password && !loading ? "#060912" : "var(--color-muted)",
+          fontFamily:    "var(--font-display)",
+          fontSize:      "0.75rem",
           letterSpacing: "0.15em",
-          cursor:       email && password && !loading ? "pointer" : "not-allowed",
-          transition:   "all 0.2s ease",
-          boxShadow:    email && password && !loading ? "var(--shadow-gold-sm)" : "none",
+          cursor:        email && password && !loading ? "pointer" : "not-allowed",
+          transition:    "all 0.2s ease",
+          boxShadow:     email && password && !loading ? "var(--shadow-gold-sm)" : "none",
         }}
       >
         {loading ? "Entering..." : "ENTER YOUR MOMENT"}
