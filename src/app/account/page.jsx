@@ -382,15 +382,37 @@ export default function AccountPage() {
                 }}>
                   SAVED MOMENTS
                 </p>
-                <p style={{
-                  fontFamily: "var(--font-body)",
-                  fontSize:   "0.95rem",
-                  color:      journeyCount > 0 ? "var(--color-gold-warm)" : "var(--color-muted)",
-                }}>
-                  {journeyCount === 0
-                    ? "None yet — start a conversation and save what resonates"
-                    : `${journeyCount} moment${journeyCount !== 1 ? "s" : ""} saved`}
-                </p>
+                {journeyCount === 0 ? (
+                  <p style={{
+                    fontFamily: "var(--font-body)",
+                    fontSize:   "0.95rem",
+                    color:      "var(--color-muted)",
+                  }}>
+                    None yet — start a conversation and save what resonates
+                  </p>
+                ) : (
+                  <a
+                    href="/journey/saved"
+                    style={{
+                      fontFamily:     "var(--font-body)",
+                      fontSize:       "0.95rem",
+                      color:          "var(--color-gold-warm)",
+                      textDecoration: "none",
+                      display:        "inline-flex",
+                      alignItems:     "center",
+                      gap:            "var(--space-2)",
+                      transition:     "opacity 0.2s ease",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = "0.7"}
+                    onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+                  >
+                    {journeyCount} moment{journeyCount !== 1 ? "s" : ""} saved
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                  </a>
+                )}
               </div>
 
               <div>
