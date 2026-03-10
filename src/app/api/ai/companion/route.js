@@ -7,8 +7,9 @@
  * All guardrails run here before and after AI response.
  */
 
-import { NextResponse }          from "next/server"
-import { sendToAI }              from "@/lib/ai/client"
+import { NextResponse } from "next/server"
+import { rateLimit } from "@/lib/rateLimit"
+import { sendToAI } from "@/lib/ai/client"
 import {
   KAIROS_IDENTITY,
   buildUserContext,
@@ -49,6 +50,32 @@ export async function POST(request) {
         { status: 400 }
       )
     }
+
+
+
+    // ── 1b. Rate limit check ─────────────────────────────────
+    const ip  = request.headers.get("x-forwarded-for")
+               ?? request.headers.get("x-real-ip")
+               ?? "unknown"
+    const key = userId ? `user:${userId}` : `ip:${ip}`
+    const { allowed, remaining, resetMs } = rateLimit(key, 20, 60_000)
+
+    if (!allowed) {
+      const retryAfter = Math.ceil((resetMs - Date.now()) / 1000)
+      return NextResponse.json(
+        {
+          reply:     "You have sent a lot of messages in a short time. Take a breath — Kairos will be here when you return.",
+          escalated: false,
+          limited:   true,
+        },
+        {
+          status:  429,
+          headers: { "Retry-After": String(retryAfter) },
+        }
+      )
+    }
+
+
 
     // ── 2. Pre-send guardrail check ──────────────────────────
     const check = preSendCheck(message)

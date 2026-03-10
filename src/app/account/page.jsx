@@ -257,6 +257,12 @@ export default function AccountPage() {
     }
   }
 
+  // ── Export data ─────────────────────────────────────────
+  const handleExport = () => {
+    if (!profile?.id) return
+    window.open(`/api/account/export?userId=${profile.id}`, "_blank")
+  }
+
   // ── Loading state ───────────────────────────────────────
   if (pageLoading) {
     return (
@@ -513,6 +519,26 @@ export default function AccountPage() {
               </a>
 
               <button
+                onClick={handleExport}
+                style={{
+                  background:    "none",
+                  border:        "1px solid var(--color-border)",
+                  borderRadius:  "var(--radius-lg)",
+                  padding:       "var(--space-3) var(--space-5)",
+                  color:         "var(--color-muted)",
+                  fontFamily:    "var(--font-display)",
+                  fontSize:      "0.65rem",
+                  letterSpacing: "0.15em",
+                  cursor:        "pointer",
+                  transition:    "all 0.2s ease",
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = "var(--color-gold-warm)"}
+                onMouseLeave={e => e.currentTarget.style.borderColor = "var(--color-border)"}
+              >
+                EXPORT DATA
+              </button>
+
+              <button
                 onClick={handleSignOut}
                 disabled={signOutLoading}
                 style={{
@@ -575,6 +601,24 @@ export default function AccountPage() {
               DELETE ACCOUNT
             </button>
           </Card>
+
+          {/* ── Privacy link ───────────────────────────── */}
+          <div style={{ textAlign: "center", paddingBottom: "var(--space-4)" }}>
+            <a
+              href="/privacy"
+              style={{
+                fontFamily:     "var(--font-body)",
+                fontSize:       "0.7rem",
+                color:          "var(--color-muted)",
+                textDecoration: "none",
+                transition:     "color 0.2s ease",
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--color-gold-warm)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--color-muted)"}
+            >
+              Privacy Policy
+            </a>
+          </div>
 
         </div>
       </div>

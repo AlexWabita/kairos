@@ -11,6 +11,100 @@ function detectVerseRequest(text) {
   return match ? match[0] : null
 }
 
+/* ── First-visit privacy consent modal ──────────────────── */
+function ConsentModal({ onAccept }) {
+  return (
+    <div style={{
+      position:       "fixed",
+      inset:          0,
+      background:     "rgba(6,9,18,0.92)",
+      backdropFilter: "blur(8px)",
+      zIndex:         200,
+      display:        "flex",
+      alignItems:     "center",
+      justifyContent: "center",
+      padding:        "var(--space-5)",
+    }}>
+      <div style={{
+        background:   "linear-gradient(135deg, rgba(20,29,53,0.98) 0%, rgba(13,20,40,0.98) 100%)",
+        border:       "1px solid rgba(240,192,96,0.3)",
+        borderRadius: "var(--radius-xl)",
+        padding:      "var(--space-8)",
+        maxWidth:     "420px",
+        width:        "100%",
+        textAlign:    "center",
+      }}>
+        <p style={{
+          fontFamily:    "var(--font-display)",
+          fontSize:      "0.65rem",
+          letterSpacing: "0.25em",
+          textTransform: "uppercase",
+          color:         "var(--color-gold-warm)",
+          marginBottom:  "var(--space-5)",
+        }}>
+          Before we begin
+        </p>
+        <h2 style={{
+          fontFamily:   "var(--font-heading)",
+          fontSize:     "1.3rem",
+          fontWeight:   300,
+          color:        "var(--color-divine)",
+          lineHeight:   1.4,
+          marginBottom: "var(--space-4)",
+        }}>
+          A safe space for honest conversations
+        </h2>
+        <p style={{
+          fontFamily:   "var(--font-body)",
+          fontSize:     "0.85rem",
+          color:        "var(--color-soft)",
+          lineHeight:   "var(--leading-relaxed)",
+          marginBottom: "var(--space-3)",
+        }}>
+          Kairos stores your conversations to provide continuity across sessions.
+          What you share here is treated with care and is never sold or used for advertising.
+        </p>
+        <p style={{
+          fontFamily:   "var(--font-body)",
+          fontSize:     "0.8rem",
+          color:        "var(--color-muted)",
+          lineHeight:   "var(--leading-relaxed)",
+          marginBottom: "var(--space-7)",
+        }}>
+          By continuing you agree to our{" "}
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "var(--color-gold-warm)", textDecoration: "none" }}
+          >
+            Privacy Policy
+          </a>
+          .
+        </p>
+        <button
+          onClick={onAccept}
+          style={{
+            background:    "var(--gradient-gold)",
+            border:        "none",
+            borderRadius:  "var(--radius-full)",
+            padding:       "var(--space-3) var(--space-8)",
+            color:         "#060912",
+            fontFamily:    "var(--font-display)",
+            fontSize:      "0.7rem",
+            letterSpacing: "0.15em",
+            cursor:        "pointer",
+            boxShadow:     "var(--shadow-gold-sm)",
+            width:         "100%",
+          }}
+        >
+          I UNDERSTAND — BEGIN
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Detect if a message is a Bible keyword search ────────────
 function detectBibleSearch(text) {
   const lower = text.toLowerCase()
@@ -317,6 +411,7 @@ export default function CompanionCore({ profile = null }) {
   const [translation,    setTranslation]    = useState("WEB")
   const [savedMsgIds,    setSavedMsgIds]    = useState(new Set())
   const [savingMsgIdx,   setSavingMsgIdx]   = useState(null)
+  const [showConsent,    setShowConsent]    = useState(false)
 
   const bottomRef   = useRef(null)
   const inputRef    = useRef(null)
@@ -324,7 +419,22 @@ export default function CompanionCore({ profile = null }) {
 
   const isAuthenticated = sessionType === "authenticated"
 
-  // Initialise session on mount
+  // ── Check first-visit consent ───────────────────────────
+  useEffect(() => {
+    const accepted = document.cookie
+      .split("; ")
+      .find(row => row.startsWith("kairos_consent="))
+    if (!accepted) setShowConsent(true)
+  }, [])
+
+  const handleConsentAccept = () => {
+    const expires = new Date()
+    expires.setFullYear(expires.getFullYear() + 1)
+    document.cookie = `kairos_consent=1; expires=${expires.toUTCString()}; path=/; SameSite=Lax`
+    setShowConsent(false)
+  }
+
+  // ── Initialise session on mount ─────────────────────────
   useEffect(() => {
     initKairosSession().then(session => {
       if (session?.user) {
@@ -335,12 +445,12 @@ export default function CompanionCore({ profile = null }) {
     })
   }, [])
 
-  // Scroll to bottom on new messages
+  // ── Scroll to bottom on new messages ───────────────────
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, loading])
 
-  // Auto-resize textarea
+  // ── Auto-resize textarea ────────────────────────────────
   const handleInputChange = (e) => {
     setInput(e.target.value)
     const ta = e.target
@@ -348,7 +458,7 @@ export default function CompanionCore({ profile = null }) {
     ta.style.height = Math.min(ta.scrollHeight, 160) + "px"
   }
 
-  // Fetch exact verse from Bible API
+  // ── Fetch exact verse from Bible API ────────────────────
   const fetchVerse = async (reference) => {
     try {
       const res  = await fetch(`/api/bible/verse?ref=${encodeURIComponent(reference)}&translation=${translation}`)
@@ -360,38 +470,38 @@ export default function CompanionCore({ profile = null }) {
     return null
   }
 
-  // Save a Kairos message to journey_entries
+  // ── Save a Kairos message to journey_entries ────────────
   const handleSave = async (msgIndex) => {
     const msg = messages[msgIndex]
     if (!msg || savedMsgIds.has(msgIndex)) return
-  
+
     setSavingMsgIdx(msgIndex)
     try {
       const scripture_ref = msg.verseData
-        ? `${msg.verseData.reference} (${msg.verseData.  translation})`
+        ? `${msg.verseData.reference} (${msg.verseData.translation})`
         : null
-  
+
       const res = await fetch("/api/journey/save", {
         method:  "POST",
-        headers: { "Content-Type": "application/  json" },
+        headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
           content:         msg.content,
           title:           extractTitle(msg.content),
           scripture_ref,
           conversation_id: conversationId,
-          userId:          kairosUser?.id ||   null,   // ← ADD THIS
+          userId:          kairosUser?.id || null,
         }),
       })
       const data = await res.json()
-  
+
       if (data.success) {
-        setSavedMsgIds(prev => new Set([...prev,   msgIndex]))
+        setSavedMsgIds(prev => new Set([...prev, msgIndex]))
         console.log('[Kairos] Moment saved:', data.id)
       } else {
-        console.error('[Kairos] Save failed:', data.  error)
+        console.error('[Kairos] Save failed:', data.error)
       }
     } catch (err) {
-      console.error('[Kairos] Save error:', err.  message)
+      console.error('[Kairos] Save error:', err.message)
     } finally {
       setSavingMsgIdx(null)
     }
@@ -484,6 +594,9 @@ export default function CompanionCore({ profile = null }) {
       background:    "var(--gradient-hero)",
       overflow:      "hidden",
     }}>
+      {/* ── Consent modal — first visit only ─────────────── */}
+      {showConsent && <ConsentModal onAccept={handleConsentAccept} />}
+
       {/* Ambient background */}
       <GlowOrb size="500px" left="60%" top="30%"  color="rgba(240,192,96,0.08)"  delay="0s"  />
       <GlowOrb size="300px" left="20%" top="70%"  color="rgba(64,144,208,0.06)"  delay="2s"  />
