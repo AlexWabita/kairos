@@ -1,5 +1,5 @@
 # KAIROS — Project Memory Document
-> Version: 5.0.0 | Started: 2026 | Status: Phase 7 ✅ COMPLETE — Moving to Phase 7B
+> Version: 6.0.0 | Started: 2026 | Status: Phase 7E ✅ COMPLETE — Moving to Phase 8 (deferred) or Phase 9
 
 ---
 
@@ -98,17 +98,30 @@ These pay a small monthly fee. Their members always use it free.
 | Frontend | Next.js 16.1.6 (Turbopack) | ✅ |
 | Styling | Tailwind CSS + CSS Variables | ✅ |
 | Database & Auth | Supabase — eu-west-2 London | ✅ 7 tables live |
-| AI Primary | OpenRouter API | ✅ 4 model fallback |
-| AI Backup | Google Gemini API | ✅ 3 model fallback |
+| AI Primary | **Groq** (Llama 3.3 70B) | ✅ ~3s, free, 14,400 req/day |
+| AI Fallback | OpenRouter API | ✅ 4 model fallback |
+| AI Final Fallback | Google Gemini API | ✅ 3 model fallback |
 | Bible API Primary | rest.api.bible | ✅ Live |
 | Bible API Fallback | bible-api.com | ✅ Live |
-| Embeddings | Jina AI jina-embeddings-v2-base-en | ✅ 768 dims, free |
-| RAG | Supabase pgvector + match_knowledge_base() | ✅ 30 entries seeded |
+| Embeddings | OpenAI text-embedding-3-small | ✅ 1536 dims |
+| RAG | Supabase pgvector + match_rag_entries() | ✅ **54 entries** seeded |
 | Hosting | Vercel | 🔜 Phase 9 |
 
-**AI Fallback Chain:**
-OpenRouter: Llama 3.3 70B → GPT OSS 120B → StepFun Step 3.5 Flash → GLM 4.5 Air
-Gemini: gemini-2.0-flash → gemini-2.0-flash-lite → gemini-1.5-flash-002
+**AI Model Chain (priority order, 15s timeout per model):**
+1. `groq/llama-3.3-70b-versatile` — Groq, ~3s ✅ PRIMARY
+2. `groq/llama-3.1-70b-versatile` — Groq fallback
+3. `groq/mixtral-8x7b-32768` — Groq fallback
+4. `stepfun-ai/step-3.5-flash` — OpenRouter free
+5. `qwen/qwen-2.5-72b-instruct:free` — OpenRouter free
+6. `mistralai/mistral-7b-instruct:free` — OpenRouter free
+7. `thudm/glm-4.5-air` — OpenRouter free (slow, last resort)
+8. `gemini-2.0-flash` — Google AI
+9. `gemini-1.5-flash` — Google AI
+10. `gemini-1.5-flash-8b` — Google AI final net
+
+**REMOVED from chain:** `openrouter/llama-3.3-70b` (70% failure rate), `openrouter/gpt-oss-120b` (hit daily free cap in single session).
+
+**Continuation tracking:** Route returns `modelId` with every response. Client sends `lastModelId` back on next request. Continuation phrases ("continue", "please finish", etc.) route to the same model first. Truncation detection: if response ends without terminal punctuation, `wasTruncated: true` is returned and the UI shows a subtle note.
 
 **Bible API:**
 - Base URL: `https://rest.api.bible/v1`
@@ -117,25 +130,29 @@ Gemini: gemini-2.0-flash → gemini-2.0-flash-lite → gemini-1.5-flash-002
 - Default translation: WEB — user can select WEB/KJV/ASV/BBE in companion header
 
 **RAG:**
-- Embeddings: Jina AI, 768 dimensions
-- DB column: `knowledge_base.embedding vector(768)`
-- SQL function: `match_knowledge_base(query_embedding vector(768), match_threshold float DEFAULT 0.5, match_count int DEFAULT 3)`
+- Embeddings: OpenAI text-embedding-3-small, 1536 dimensions
+- DB function: `match_rag_entries()` (previously `match_knowledge_base()`)
+- 54 entries seeded (expanded from 30)
 - Threshold for search: messages with 4+ words
-- Seed command (dev only): `POST /api/admin/seed` with `Authorization: Bearer kairos-seed-dev`
+- Seed command (dev only): `POST /api/admin/seed` — ⚠️ REMOVE BEFORE PROD
 
 ---
 
 ## 7. ENVIRONMENT VARIABLES (.env.local)
+
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://zvleavbmqgxlybnmizst.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=[anon key]
 SUPABASE_SERVICE_ROLE_KEY=[service role key]
+GROQ_API_KEY=[key]           ← NEW — console.groq.com, free, no credit card
 OPENROUTER_API_KEY=[key]
 GEMINI_API_KEY=[key]
+OPENAI_API_KEY=[key]         ← RAG embeddings only (text-embedding-3-small)
 SCRIPTURE_API_KEY=[key]
-JINA_API_KEY=[key]
-SEED_SECRET=kairos-seed-dev
 ```
+
+> **GROQ_API_KEY** is required. Get it free at console.groq.com — no credit card needed. 14,400 req/day.
+> **JINA_API_KEY** is no longer used — embeddings migrated to OpenAI.
 
 ---
 
@@ -152,7 +169,7 @@ All tables: RLS enabled, anon + authenticated roles have explicit grants.
 | messages | Every message — user + Kairos | ✅ Live + saving |
 | journey_entries | Saved reflections, prayers, milestones | ✅ Live + saving |
 | organisations | Churches/ministries on paid plan | ✅ Live — portal Phase 8 |
-| knowledge_base | RAG knowledge base — 30 entries | ✅ Live + seeded |
+| rag_entries | RAG knowledge base — 54 entries | ✅ Live + seeded |
 
 **Extensions:** pgvector enabled
 
@@ -162,12 +179,14 @@ All tables: RLS enabled, anon + authenticated roles have explicit grants.
 | id | uuid | NO — gen_random_uuid() |
 | user_id | uuid | YES |
 | conversation_id | uuid | YES |
-| entry_type | text | YES — CHECK constraint: reflection, prayer, milestone, question, scripture |
+| entry_type | text | YES — CHECK constraint: **reflection, prayer, milestone, question, scripture** |
 | content | text | NO |
 | is_pinned | boolean | YES — default false |
 | created_at | timestamptz | YES — default now() |
 | title | text | YES |
 | scripture_ref | text | YES |
+
+⚠️ **entry_type 'moment' does NOT exist** — this caused a bug. Valid values only: reflection, prayer, milestone, question, scripture.
 
 ---
 
@@ -191,36 +210,66 @@ Foundation, Architecture, Design, Core Feature, Supabase Integration, Bible API 
 - [x] Login page updated — migrateAnonymousSession() called after successful sign in
 - [x] extractTitle() utility — first sentence, max 60 chars
 
-### Phase 7B — Saved Moments Library 🔜 NEXT
-- [ ] /journey/saved page — browse all saved entries
-- [ ] List view — title, date, scripture_ref, is_pinned indicator
-- [ ] Full entry view — read complete content of a saved moment
-- [ ] Rename title inline
-- [ ] Pin / unpin toggle (is_pinned column ready)
-- [ ] Delete individual entry
-- [ ] Empty state — warm prompt to start a conversation
+### Phase 7B ✅ COMPLETE — Saved Moments Library
+- [x] /journey/saved page — full saved moments library
+- [x] List view — title, date, scripture_ref, is_pinned indicator
+- [x] Expand entry — full content inline
+- [x] Rename title inline
+- [x] Pin / unpin toggle (is_pinned column)
+- [x] Delete individual entry with confirmation
+- [x] Empty state — warm prompt to start a conversation
 
-### Phase 7C — Security Hardening 🔜 NEXT (parallel to 7B)
-- [ ] Rate limiting on /api/ai/companion — prevent abuse and cost overrun
-- [ ] Privacy policy page — plain language, what is stored, retention, deletion, no selling
-- [ ] Data export — user can download all their journey entries as JSON or PDF
-- [ ] Input sanitization audit
+### Phase 7C ✅ COMPLETE — Security Hardening
+- [x] Rate limiting on /api/ai/companion — 20 req/min per user, in-memory sliding window (src/lib/rateLimit.js)
+- [x] Privacy policy page — /privacy — plain language, what is stored, retention, deletion, no selling
+- [x] First-visit consent modal — shown once, stored in localStorage
+- [x] Data export — /api/account/export — downloads all journey entries as JSON
+- [x] JSON export linked from account page
 
-### Phase 8 — Organisation Portal 🔜 FUTURE
-- [ ] Organisation account type, admin dashboard, white-label, Stripe billing
+### Phase 7D ✅ COMPLETE — LLM Voice & RAG Expansion
+- [x] Prompt structure overhauled — answer-first, one question rule, pre-send checklist
+- [x] RAG expanded from 30 to 54 entries (new table: rag_entries, function: match_rag_entries())
+- [x] Kairos identity hardened in prompts.js
+
+### Phase 7E ✅ COMPLETE — Model Chain Overhaul + Identity Under Pressure
+- [x] Groq added as primary provider — Llama 3.3 70B, ~3s, free tier, 14,400 req/day
+- [x] 15-second per-model timeout — fail fast, hand off
+- [x] Removed unstable OpenRouter Llama free + GPT OSS 120B (hit daily cap)
+- [x] Added Qwen 2.5 72B and Mistral 7B as OpenRouter fallbacks
+- [x] Continuation model tracking — same model used for follow-up requests
+- [x] Truncation detection — UI shows note if response appears cut off
+- [x] GROUNDING UNDER PRESSURE section added to prompts.js
+- [x] Adversarial testing confirmed: Kairos now holds identity under sustained philosophical challenge
+- [x] Installed @google/generative-ai package (required for Gemini SDK)
+
+### Phase 8 — Organisation Portal ⚠️ DEFERRED — Architecture Questions Unresolved
+Before any code is written, these must be decided:
+1. What is an organisation? (church only, or also counselling centres, small groups, para-church?)
+2. What does an org admin need? (invite members, aggregate usage stats, billing?)
+3. Billing model? (per-seat, flat org subscription, or freemium with cap?)
 
 ### Phase 9 — Launch 🔜 FUTURE
-- [ ] Voice, multi-language, SEO, PWA, Vercel deploy, domain
+- [ ] Vercel deployment — dev branch for preview, main for production
+- [ ] Response streaming — stream tokens to client for better perceived speed
+- [ ] Voice interface — speak to Kairos and hear responses
+- [ ] Multi-language support — at minimum Swahili
+- [ ] SEO — meta tags, Open Graph, sitemap, robots.txt
+- [ ] PWA — service worker, installable on mobile, offline fallback
+- [ ] Upgrade rate limiter to Upstash Redis (current in-memory resets on server restart)
+- [ ] Set up privacy contact email (currently placeholder in /privacy)
+- [ ] Remove /api/admin/seed and /api/bible/debug
+- [ ] Final security audit
 - [ ] Encryption at rest for message content (beyond Supabase infrastructure-level)
 - [ ] Uptime monitoring + error alerting
 
 ---
 
-## 10. CURRENT FILE STRUCTURE (Phase 7 complete)
+## 10. CURRENT FILE STRUCTURE (Phase 7E complete)
+
 ```
 kairos/
 ├── docs/
-│   ├── PROJECT.md              ✅ v5.0.0
+│   ├── PROJECT.md              ✅ v6.0.0
 │   ├── ARCHITECTURE.md         ✅
 │   └── DESIGN.md               ✅
 ├── src/
@@ -233,54 +282,57 @@ kairos/
 │   │   ├── error.jsx
 │   │   ├── (auth)/
 │   │   │   ├── layout.jsx
-│   │   │   ├── login/page.jsx          ✅ + migrateAnonymousSession on login
-│   │   │   ├── register/page.jsx       ✅
-│   │   │   └── forgot-password/page.jsx ✅
+│   │   │   ├── login/page.jsx              ✅ + migrateAnonymousSession on login
+│   │   │   ├── register/page.jsx           ✅
+│   │   │   └── forgot-password/page.jsx    ✅
 │   │   ├── (main)/
 │   │   │   ├── layout.jsx
-│   │   │   └── journey/page.jsx        ✅ Companion page
+│   │   │   └── journey/page.jsx            ✅ Companion page
 │   │   ├── account/
-│   │   │   └── page.jsx                ✅ Identity, security, navigation, danger zone
+│   │   │   └── page.jsx                    ✅ Identity, security, export, privacy link, danger zone
+│   │   ├── journey/
+│   │   │   └── saved/page.jsx              ✅ Saved moments library — NEW Phase 7B
+│   │   ├── privacy/
+│   │   │   └── page.jsx                    ✅ Privacy policy — NEW Phase 7C
 │   │   └── api/
-│   │       ├── ai/companion/route.js   ✅ RAG + verse + guardrails
-│   │       ├── bible/verse/route.js    ✅
-│   │       ├── bible/debug/route.js    ⚠️ Remove before prod
-│   │       ├── auth/callback/route.js  ✅
-│   │       ├── journey/save/route.js   ✅ Admin client pattern
-│   │       ├── account/delete/route.js ✅ Service role auth delete
-│   │       └── admin/seed/route.js     ⚠️ Remove before prod
+│   │       ├── ai/companion/route.js       ✅ Groq + OpenRouter + Gemini chain, rate limit, continuation tracking
+│   │       ├── bible/verse/route.js        ✅
+│   │       ├── bible/debug/route.js        ⚠️ REMOVE BEFORE PROD
+│   │       ├── auth/callback/route.js      ✅
+│   │       ├── journey/save/route.js       ✅ Admin client pattern
+│   │       ├── account/delete/route.js     ✅ Service role auth delete
+│   │       ├── account/export/route.js     ✅ JSON data export — NEW Phase 7C
+│   │       └── admin/seed/route.js         ⚠️ REMOVE BEFORE PROD
 │   ├── components/
 │   │   ├── companion/
-│   │   │   ├── CompanionCore.jsx       ✅ Save button + auth gate + sessionType
-│   │   │   └── BibleVerse.jsx          ✅
-│   │   ├── landing/Hero.jsx            ✅
+│   │   │   ├── CompanionCore.jsx           ✅ Save, auth gate, lastModelId state, wasTruncated UI
+│   │   │   └── BibleVerse.jsx              ✅
+│   │   ├── landing/Hero.jsx                ✅
 │   │   └── shared/
-│   │       ├── Navbar.jsx              ✅ Auth-aware
-│   │       └── Footer.jsx              ✅
+│   │       ├── Navbar.jsx                  ✅ Auth-aware
+│   │       └── Footer.jsx                  ✅
 │   └── lib/
 │       ├── ai/
-│       │   ├── client.js               ✅
-│       │   ├── prompts.js              ✅
-│       │   └── guardrails.js           ✅
-│       ├── bible/client.js             ✅
-│       ├── rag/
-│       │   ├── embeddings.js           ✅
-│       │   └── search.js               ✅
+│       │   ├── prompts.js                  ✅ Identity + GROUNDING UNDER PRESSURE + RAG/profile builders
+│       │   └── guardrails.js               ✅
+│       ├── bible/client.js                 ✅
+│       ├── rateLimit.js                    ✅ In-memory 20 req/min — NEW Phase 7C
 │       └── supabase/
-│           ├── client.js               ✅
-│           ├── admin.js                ✅
-│           ├── server.js               ✅ async createSupabaseServerClient()
-│           ├── auth.js                 ✅
-│           ├── sessions.js             ✅ migrateAnonymousSession(authUserId)
-│           └── conversations.js        ✅
-├── middleware.js                        ✅
-├── .env.local                           ✅ All 8 keys — never committed
-└── package.json                         ✅ Next.js 16.1.6
+│           ├── client.js                   ✅ Browser client
+│           ├── server.js                   ✅ async createSupabaseServerClient() — ALWAYS AWAIT
+│           ├── auth.js                     ✅ signOut()
+│           ├── sessions.js                 ✅ initKairosSession(), migrateAnonymousSession(authUserId)
+│           └── conversations.js            ✅
+├── middleware.js                            ✅ At project root — not inside src/app
+├── .env.local                               ✅ 8 keys — never committed
+└── package.json                             ✅ Next.js 16.1.6
 ```
+
+> **Removed:** `src/lib/ai/client.js`, `src/lib/rag/` directory, `src/lib/supabase/admin.js` — functionality folded into route files directly.
 
 ---
 
-## 11. DECISIONS LOG (Sessions 1–7)
+## 11. DECISIONS LOG (Sessions 1–9)
 
 | Session | Decision | Reason |
 |---|---|---|
@@ -292,15 +344,22 @@ kairos/
 | 6 | WEB as default translation | Modern, public domain, accessible |
 | 6 | stripMarkdown() in guardrails | Models ignore formatting instructions |
 | 6 | Jina AI for embeddings | Gemini embeddings blocked in Kenya; Jina is free + global |
-| 6 | vector(768) | Jina uses 768 dims, not 1536 |
 | 6 | RAG threshold: 4 word minimum | 8 was too high |
 | 6 | Auth callback handles PKCE + OTP | Supabase sends token_hash by default |
 | 7 | entry_type = 'reflection' | Matched existing DB check constraint; semantically accurate |
 | 7 | Admin client for /api/journey/save | Server cookie session unreliable for API routes; userId passed from client and verified in DB |
 | 7 | await createSupabaseServerClient() | Function is async due to await cookies() — all callers must await |
 | 7 | extractTitle() — first sentence, max 60 chars | Auto-title without requiring user input |
-| 7 | Saved moments library deferred to Phase 7B | Saving without viewing is incomplete UX — needs dedicated page |
-| 7 | Privacy hardening deferred to Phase 7C | Non-negotiable before launch; rate limiting + privacy policy + data export |
+| 8 | Rate limiter in-memory (rateLimit.js) | Fast to implement for MVP; Upstash Redis upgrade required before multi-instance prod |
+| 8 | Privacy consent modal — localStorage | Simple, no DB needed, respects intent |
+| 8 | Data export as JSON (not PDF) | Simpler, more reliable, standard format |
+| 9 | Groq as primary AI provider | Same Llama 3.3 70B model hosted directly — ~3s vs 30s+ on OpenRouter free |
+| 9 | 15s per-model timeout | Fail fast and hand off — prevents hanging on slow providers |
+| 9 | Removed OpenRouter Llama free + GPT OSS 120B | 70% failure rate and daily cap hit in single session |
+| 9 | Continuation model tracking | Voice consistency across multi-turn / split responses |
+| 9 | GROUNDING UNDER PRESSURE in prompts.js | Adversarial testing showed Kairos adopting challenger's godless frame; now holds identity under pressure |
+| 9 | Switched embeddings to OpenAI text-embedding-3-small | More reliable; Jina had integration issues at scale |
+| 9 | Renamed knowledge_base → rag_entries, match_knowledge_base → match_rag_entries | Cleaner naming, reflects actual purpose |
 
 ---
 
@@ -308,16 +367,15 @@ kairos/
 
 | Issue | Status | Notes |
 |---|---|---|
-| Gemini billing Kenya (OR_BACR2_44) | Open | OpenRouter sufficient; Gemini stays in chain |
+| Gemini billing Kenya (OR_BACR2_44) | Open | Groq now primary so Gemini is last resort; not urgent |
 | GET /undefined 404 | Minor | Middleware redirect with null URL; cosmetic |
 | Slow cold-start compile (15-20s) | Cosmetic | Turbopack first-compile; subsequent requests fast |
-| Model voice inconsistency | Deferred | Switching models mid-conversation changes tone |
-| Llama 3.3 70B provider errors | Open | Intermittent — fallback chain handles it |
-| No rate limiting on companion API | Phase 7C | Cost and abuse risk — must fix before launch |
-| No privacy policy | Phase 7C | Required before real users |
-| No data export | Phase 7C | GDPR + right thing to do |
-| /api/admin/seed in codebase | Remove before prod | |
-| /api/bible/debug in codebase | Remove before prod | |
+| Rate limiter resets on server restart | Phase 9 | Upgrade to Upstash Redis before multi-instance deployment |
+| Privacy contact email placeholder | Phase 9 | privacy@kairos.app referenced in /privacy but no inbox exists yet |
+| No response streaming | Phase 9 | Full response waits before displaying; streaming would improve UX |
+| /api/admin/seed in codebase | REMOVE BEFORE PROD | Public access would allow anyone to overwrite the knowledge base |
+| /api/bible/debug in codebase | REMOVE BEFORE PROD | Exposes internal API info |
+| Phase 8 architecture unresolved | Deferred | Three questions must be answered before any org portal code is written |
 
 ---
 
@@ -332,22 +390,24 @@ kairos/
 | 5 | GitHub, Supabase migration, anonymous sessions, conversation saving | Phase 6 |
 | 6 | Bible API, RAG (30 entries seeded), email auth, Navbar session awareness | Phase 7 |
 | 7 | Journey saving, account page, session migration on login, CIA Triad audit | Phase 7B + 7C |
+| 8 | Saved moments library, rate limiting, privacy policy, consent modal, data export | Phase 7D |
+| 9 | Prompt overhaul, RAG to 54 entries, Groq primary, model chain, continuation tracking, grounding under pressure | Phase 8 / 9 |
 
 ---
 
 ## 14. PRIVACY & SECURITY ASSESSMENT (CIA Triad)
 
 ### Confidentiality
-**Have:** RLS on all tables, users see only their own data, anonymous sessions isolated by token, no ads, no data selling by design.
-**Need:** Privacy policy page, data export for users, explicit retention policy, consideration of message content encryption beyond infrastructure level.
+**Have:** RLS on all tables, users see only their own data, anonymous sessions isolated by token, no ads, no data selling by design, privacy policy page live, consent modal on first visit, data export available.
+**Need:** Privacy contact email inbox (placeholder only), consideration of message content encryption beyond infrastructure level.
 
 ### Integrity
-**Have:** Auth token verification via Supabase, service role key server-side only, user IDs verified in DB before writes, RLS prevents cross-user writes.
-**Need:** Input sanitization audit, rate limiting on companion API, audit logging (future).
+**Have:** Auth token verification via Supabase, service role key server-side only, user IDs verified in DB before writes, RLS prevents cross-user writes, rate limiting on companion API.
+**Need:** Input sanitization audit, audit logging (future).
 
 ### Availability
-**Have:** Dual AI fallback (7 models), dual Bible API fallback, Supabase managed infrastructure.
-**Need:** Vercel deployment, uptime monitoring, error alerting, graceful degradation if all AI providers fail.
+**Have:** 10-model AI fallback chain, dual Bible API fallback, Supabase managed infrastructure, Groq primary with 14,400 req/day free tier.
+**Need:** Vercel deployment, uptime monitoring, error alerting, graceful degradation UI if all AI providers fail, Upstash Redis for rate limiter persistence.
 
 ---
 
@@ -357,7 +417,7 @@ kairos/
 **Tier 2 — Voluntary:** "Keep the light on for others" — optional donation after meaningful interactions.
 **Tier 3 — Organisations (Small Monthly Fee):** Churches/ministries/NGOs. Their members always free.
 
-Implement after Phase 7 when real users exist.
+Implement after Phase 7 when real users exist. Phase 8 architecture questions must be resolved first.
 
 ---
 
@@ -371,8 +431,14 @@ I am building Kairos — a Biblical AI life companion. You are my senior develop
 
 [PASTE ENTIRE PROJECT.md HERE]
 
-We completed Phase 7. Phase 7B is next — the saved moments library page.
-Start by asking me what you need before writing any code.
+We completed Phase 7E. The MVP is fully functional end-to-end.
+
+**Current situation:**
+- Phase 8 (Organisation Portal) is deferred — three architecture questions are unresolved (see Phase 8 in Section 9)
+- Phase 9 (Launch) is next in priority
+
+**What I need from you first:**
+Before writing any code, confirm what we are working on this session and whether you need any existing files pasted.
 
 ---
 
