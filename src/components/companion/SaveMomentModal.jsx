@@ -136,11 +136,13 @@ export default function SaveMomentModal({
         background:   "linear-gradient(135deg, rgba(20,29,53,0.98) 0%, rgba(13,20,40,0.98) 100%)",
         border:       "1px solid rgba(240,192,96,0.25)",
         borderRadius: "var(--radius-xl)",
-        padding:      "var(--space-7)",
-        maxWidth:     "480px",
+        padding:      "var(--space-8) var(--space-6)",
+        maxWidth:     "500px",
         width:        "100%",
         boxShadow:    "var(--shadow-deep)",
         animation:    "fadeUp 0.2s var(--ease-divine) forwards",
+        maxHeight:    "90vh",
+        overflowY:    "auto",
       }}>
 
         {/* Header */}
@@ -150,23 +152,25 @@ export default function SaveMomentModal({
           letterSpacing: "0.25em",
           textTransform: "uppercase",
           color:         "var(--color-gold-warm)",
-          marginBottom:  "var(--space-2)",
+          marginBottom:  "var(--space-3)",
+          marginTop:     0,
         }}>
           Save to journey
         </p>
         <h2 style={{
           fontFamily:   "var(--font-heading)",
-          fontSize:     "1.2rem",
+          fontSize:     "clamp(1.1rem, 3vw, 1.4rem)",
           fontWeight:   300,
           color:        "var(--color-divine)",
           lineHeight:   1.4,
-          marginBottom: "var(--space-6)",
+          marginBottom: "var(--space-7)",
+          marginTop:    0,
         }}>
           Name this moment
         </h2>
 
         {/* Title input */}
-        <div style={{ marginBottom: "var(--space-5)" }}>
+        <div style={{ marginBottom: "var(--space-6)" }}>
           <label style={{
             fontFamily:    "var(--font-body)",
             fontSize:      "0.68rem",
@@ -305,24 +309,23 @@ export default function SaveMomentModal({
           </p>
         )}
 
-        {/* Action buttons */}
-        <div style={{ display: "flex", gap: "var(--space-3)" }}>
+        <div style={{ display: "flex", gap: "var(--space-4)", marginTop: "var(--space-2)" }}>
           <button
             onClick={onCancel}
             disabled={saving}
             style={{
               flex:         1,
-              padding:      "var(--space-3)",
+              padding:      "var(--space-4)",
               background:   "none",
               border:       "1px solid var(--color-border)",
               borderRadius: "var(--radius-lg)",
               color:        "var(--color-muted)",
               fontFamily:   "var(--font-body)",
-              fontSize:     "0.82rem",
+              fontSize:     "0.85rem",
               cursor:       saving ? "not-allowed" : "pointer",
               opacity:      saving ? 0.5 : 1,
               transition:   "all 0.2s ease",
-              minHeight:    "48px",
+              minHeight:    "52px",
             }}
             onMouseEnter={(e) => {
               if (!saving) e.currentTarget.style.borderColor = "var(--color-border-hover)"
@@ -338,7 +341,7 @@ export default function SaveMomentModal({
             disabled={saving || !title.trim()}
             style={{
               flex:          2,
-              padding:       "var(--space-3)",
+              padding:       "var(--space-4)",
               background:    saving || !title.trim()
                 ? "var(--color-surface)"
                 : "var(--gradient-gold)",
@@ -348,11 +351,11 @@ export default function SaveMomentModal({
                 ? "var(--color-muted)"
                 : "#060912",
               fontFamily:    "var(--font-display)",
-              fontSize:      "0.65rem",
+              fontSize:      "0.68rem",
               letterSpacing: "0.15em",
               cursor:        saving || !title.trim() ? "not-allowed" : "pointer",
               transition:    "all 0.2s ease",
-              minHeight:     "48px",
+              minHeight:     "52px",
               boxShadow:     !saving && title.trim() ? "var(--shadow-gold-sm)" : "none",
             }}
           >
