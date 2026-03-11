@@ -4,6 +4,7 @@
  * with the Kairos dark aesthetic.
  */
 
+<html lang="en" suppressHydrationWarning></html>
 export default function AuthLayout({ children }) {
   return (
     <div style={{

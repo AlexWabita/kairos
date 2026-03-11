@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter }           from "next/navigation"
 import { supabase }            from "@/lib/supabase/client"
 import { signOut }             from "@/lib/supabase/auth"
+import ConfirmModal            from "@/components/shared/ConfirmModal"
 
 /* ── Small section card wrapper ─────────────────────────── */
 function Card({ children }) {
@@ -61,113 +62,41 @@ function StatusMsg({ msg }) {
   )
 }
 
-/* ── Danger confirmation dialog ──────────────────────────── */
-function DeleteConfirm({ onConfirm, onCancel, loading }) {
-  return (
-    <div style={{
-      position:       "fixed",
-      inset:          0,
-      background:     "rgba(6,9,18,0.85)",
-      backdropFilter: "blur(8px)",
-      zIndex:         100,
-      display:        "flex",
-      alignItems:     "center",
-      justifyContent: "center",
-      padding:        "var(--space-5)",
-    }}>
-      <div style={{
-        background:   "linear-gradient(135deg, rgba(20,29,53,0.98) 0%, rgba(13,20,40,0.98) 100%)",
-        border:       "1px solid rgba(220,60,60,0.4)",
-        borderRadius: "var(--radius-xl)",
-        padding:      "var(--space-8)",
-        maxWidth:     "400px",
-        width:        "100%",
-        textAlign:    "center",
-      }}>
-        <p style={{
-          fontFamily:    "var(--font-display)",
-          fontSize:      "0.65rem",
-          letterSpacing: "0.2em",
-          textTransform: "uppercase",
-          color:         "#f08080",
-          marginBottom:  "var(--space-4)",
-        }}>
-          Are you sure?
-        </p>
-        <p style={{
-          fontFamily:   "var(--font-heading)",
-          fontSize:     "1.2rem",
-          fontWeight:   300,
-          color:        "var(--color-divine)",
-          lineHeight:   1.5,
-          marginBottom: "var(--space-3)",
-        }}>
-          This will permanently delete your account and all saved journey entries.
-        </p>
-        <p style={{
-          fontFamily:   "var(--font-body)",
-          fontSize:     "0.8rem",
-          color:        "var(--color-muted)",
-          marginBottom: "var(--space-7)",
-        }}>
-          This cannot be undone.
-        </p>
-        <div style={{ display: "flex", gap: "var(--space-3)" }}>
-          <button
-            onClick={onCancel}
-            disabled={loading}
-            style={{
-              flex:         1,
-              padding:      "var(--space-3)",
-              background:   "none",
-              border:       "1px solid var(--color-border)",
-              borderRadius: "var(--radius-lg)",
-              color:        "var(--color-muted)",
-              fontFamily:   "var(--font-body)",
-              fontSize:     "0.8rem",
-              cursor:       "pointer",
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            style={{
-              flex:          1,
-              padding:       "var(--space-3)",
-              background:    "rgba(220,60,60,0.15)",
-              border:        "1px solid rgba(220,60,60,0.4)",
-              borderRadius:  "var(--radius-lg)",
-              color:         "#f08080",
-              fontFamily:    "var(--font-display)",
-              fontSize:      "0.7rem",
-              letterSpacing: "0.1em",
-              cursor:        loading ? "wait" : "pointer",
-              opacity:       loading ? 0.6 : 1,
-            }}
-          >
-            {loading ? "Deleting..." : "DELETE ACCOUNT"}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 /* ── Main Account Page ───────────────────────────────────── */
 export default function AccountPage() {
   const router = useRouter()
 
-  const [authUser,       setAuthUser]       = useState(null)
-  const [profile,        setProfile]        = useState(null)
-  const [journeyCount,   setJourneyCount]   = useState(null)
-  const [pageLoading,    setPageLoading]    = useState(true)
-  const [pwLoading,      setPwLoading]      = useState(false)
-  const [pwMsg,          setPwMsg]          = useState(null)
-  const [signOutLoading, setSignOutLoading] = useState(false)
-  const [showDelete,     setShowDelete]     = useState(false)
-  const [deleteLoading,  setDeleteLoading]  = useState(false)
+  const [authUser,          setAuthUser]          = useState(null)
+  const [profile,           setProfile]           = useState(null)
+  const [journeyCount,      setJourneyCount]      = useState(null)
+  const [pageLoading,       setPageLoading]       = useState(true)
+  const [pwLoading,         setPwLoading]         = useState(false)
+  const [pwMsg,             setPwMsg]             = useState(null)
+
+  // Confirm modal state — one modal, configured per action
+  const [confirmState, setConfirmState] = useState({
+    isOpen:       false,
+    title:        "",
+    message:      "",
+    detail:       "",
+    confirmLabel: "",
+    variant:      "danger",
+    onConfirm:    null,
+    loading:      false,
+  })
+
+  // ── Open / close confirm helpers ───────────────────────
+  const openConfirm = (config) => {
+    setConfirmState({ ...confirmState, isOpen: true, loading: false, ...config })
+  }
+
+  const closeConfirm = () => {
+    setConfirmState((prev) => ({ ...prev, isOpen: false, loading: false }))
+  }
+
+  const setConfirmLoading = (val) => {
+    setConfirmState((prev) => ({ ...prev, loading: val }))
+  }
 
   // ── Load user on mount ──────────────────────────────────
   useEffect(() => {
@@ -218,17 +147,17 @@ export default function AccountPage() {
     setPwLoading(false)
   }
 
-  // ── Sign out ────────────────────────────────────────────
-  const handleSignOut = async () => {
-    setSignOutLoading(true)
+  // ── Sign out (called after confirm) ────────────────────
+  const executeSignOut = async () => {
+    setConfirmLoading(true)
     await signOut()
     router.push("/")
     router.refresh()
   }
 
-  // ── Delete account ──────────────────────────────────────
-  const handleDelete = async () => {
-    setDeleteLoading(true)
+  // ── Delete account (called after confirm) ──────────────
+  const executeDelete = async () => {
+    setConfirmLoading(true)
     try {
       if (profile?.id) {
         await supabase
@@ -252,8 +181,7 @@ export default function AccountPage() {
       router.refresh()
     } catch (err) {
       console.error("[Kairos] Delete failed:", err.message)
-      setDeleteLoading(false)
-      setShowDelete(false)
+      closeConfirm()
     }
   }
 
@@ -287,13 +215,18 @@ export default function AccountPage() {
 
   return (
     <>
-      {showDelete && (
-        <DeleteConfirm
-          onConfirm={handleDelete}
-          onCancel={() => setShowDelete(false)}
-          loading={deleteLoading}
-        />
-      )}
+      {/* ── Shared confirm modal — configured per action ── */}
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        detail={confirmState.detail}
+        confirmLabel={confirmState.confirmLabel}
+        variant={confirmState.variant}
+        onConfirm={confirmState.onConfirm}
+        onCancel={closeConfirm}
+        loading={confirmState.loading}
+      />
 
       <div style={{
         minHeight:  "100vh",
@@ -345,14 +278,8 @@ export default function AccountPage() {
                   letterSpacing: "0.1em",
                   color:         "var(--color-muted)",
                   marginBottom:  "var(--space-1)",
-                }}>
-                  EMAIL
-                </p>
-                <p style={{
-                  fontFamily: "var(--font-body)",
-                  fontSize:   "0.95rem",
-                  color:      "var(--color-divine)",
-                }}>
+                }}>EMAIL</p>
+                <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--color-divine)" }}>
                   {authUser?.email}
                 </p>
               </div>
@@ -365,14 +292,8 @@ export default function AccountPage() {
                     letterSpacing: "0.1em",
                     color:         "var(--color-muted)",
                     marginBottom:  "var(--space-1)",
-                  }}>
-                    NAME
-                  </p>
-                  <p style={{
-                    fontFamily: "var(--font-body)",
-                    fontSize:   "0.95rem",
-                    color:      "var(--color-divine)",
-                  }}>
+                  }}>NAME</p>
+                  <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--color-divine)" }}>
                     {profile.display_name}
                   </p>
                 </div>
@@ -385,15 +306,9 @@ export default function AccountPage() {
                   letterSpacing: "0.1em",
                   color:         "var(--color-muted)",
                   marginBottom:  "var(--space-1)",
-                }}>
-                  SAVED MOMENTS
-                </p>
+                }}>SAVED MOMENTS</p>
                 {journeyCount === 0 ? (
-                  <p style={{
-                    fontFamily: "var(--font-body)",
-                    fontSize:   "0.95rem",
-                    color:      "var(--color-muted)",
-                  }}>
+                  <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--color-muted)" }}>
                     None yet — start a conversation and save what resonates
                   </p>
                 ) : (
@@ -409,8 +324,8 @@ export default function AccountPage() {
                       gap:            "var(--space-2)",
                       transition:     "opacity 0.2s ease",
                     }}
-                    onMouseEnter={e => e.currentTarget.style.opacity = "0.7"}
-                    onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
+                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
                   >
                     {journeyCount} moment{journeyCount !== 1 ? "s" : ""} saved
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
@@ -428,14 +343,8 @@ export default function AccountPage() {
                   letterSpacing: "0.1em",
                   color:         "var(--color-muted)",
                   marginBottom:  "var(--space-1)",
-                }}>
-                  MEMBER SINCE
-                </p>
-                <p style={{
-                  fontFamily: "var(--font-body)",
-                  fontSize:   "0.95rem",
-                  color:      "var(--color-divine)",
-                }}>
+                }}>MEMBER SINCE</p>
+                <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--color-divine)" }}>
                   {authUser?.created_at
                     ? new Date(authUser.created_at).toLocaleDateString("en-GB", {
                         day: "numeric", month: "long", year: "numeric",
@@ -473,12 +382,13 @@ export default function AccountPage() {
                 cursor:        pwLoading ? "wait" : "pointer",
                 opacity:       pwLoading ? 0.6 : 1,
                 transition:    "all 0.2s ease",
+                minHeight:     "44px",
               }}
-              onMouseEnter={e => {
+              onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = "var(--color-gold-warm)"
                 e.currentTarget.style.color       = "var(--color-gold-warm)"
               }}
-              onMouseLeave={e => {
+              onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = "var(--color-border)"
                 e.currentTarget.style.color       = "var(--color-soft)"
               }}
@@ -492,6 +402,7 @@ export default function AccountPage() {
           <Card>
             <SectionLabel>Navigation</SectionLabel>
             <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
+
               <a
                 href="/journey"
                 style={{
@@ -504,18 +415,50 @@ export default function AccountPage() {
                   fontSize:       "0.65rem",
                   letterSpacing:  "0.15em",
                   textDecoration: "none",
-                  display:        "inline-block",
+                  display:        "inline-flex",
+                  alignItems:     "center",
                   transition:     "all 0.2s ease",
+                  minHeight:      "44px",
                 }}
-                onMouseEnter={e => {
+                onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = "var(--color-gold-warm)"
                   e.currentTarget.style.color       = "var(--color-gold-warm)"
                 }}
-                onMouseLeave={e => {
+                onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = "var(--color-border)"
                   e.currentTarget.style.color       = "var(--color-soft)"
-                }}>
+                }}
+              >
                 OPEN COMPANION
+              </a>
+
+              <a
+                href="/settings"
+                style={{
+                  background:     "none",
+                  border:         "1px solid var(--color-border)",
+                  borderRadius:   "var(--radius-lg)",
+                  padding:        "var(--space-3) var(--space-5)",
+                  color:          "var(--color-soft)",
+                  fontFamily:     "var(--font-display)",
+                  fontSize:       "0.65rem",
+                  letterSpacing:  "0.15em",
+                  textDecoration: "none",
+                  display:        "inline-flex",
+                  alignItems:     "center",
+                  transition:     "all 0.2s ease",
+                  minHeight:      "44px",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "var(--color-gold-warm)"
+                  e.currentTarget.style.color       = "var(--color-gold-warm)"
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "var(--color-border)"
+                  e.currentTarget.style.color       = "var(--color-soft)"
+                }}
+              >
+                SETTINGS
               </a>
 
               <button
@@ -531,16 +474,23 @@ export default function AccountPage() {
                   letterSpacing: "0.15em",
                   cursor:        "pointer",
                   transition:    "all 0.2s ease",
+                  minHeight:     "44px",
                 }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = "var(--color-gold-warm)"}
-                onMouseLeave={e => e.currentTarget.style.borderColor = "var(--color-border)"}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--color-gold-warm)")}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--color-border)")}
               >
                 EXPORT DATA
               </button>
 
               <button
-                onClick={handleSignOut}
-                disabled={signOutLoading}
+                onClick={() => openConfirm({
+                  title:        "Sign out?",
+                  message:      "You will be returned to the home page.",
+                  detail:       "Your saved moments are safe and will be here when you return.",
+                  confirmLabel: "SIGN OUT",
+                  variant:      "neutral",
+                  onConfirm:    executeSignOut,
+                })}
                 style={{
                   background:    "none",
                   border:        "1px solid var(--color-border)",
@@ -550,15 +500,16 @@ export default function AccountPage() {
                   fontFamily:    "var(--font-display)",
                   fontSize:      "0.65rem",
                   letterSpacing: "0.15em",
-                  cursor:        signOutLoading ? "wait" : "pointer",
-                  opacity:       signOutLoading ? 0.6 : 1,
+                  cursor:        "pointer",
                   transition:    "all 0.2s ease",
+                  minHeight:     "44px",
                 }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = "var(--color-gold-warm)"}
-                onMouseLeave={e => e.currentTarget.style.borderColor = "var(--color-border)"}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--color-gold-warm)")}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--color-border)")}
               >
-                {signOutLoading ? "SIGNING OUT…" : "SIGN OUT"}
+                SIGN OUT
               </button>
+
             </div>
           </Card>
 
@@ -575,7 +526,14 @@ export default function AccountPage() {
               Permanently delete your account and all saved journey entries. This cannot be undone.
             </p>
             <button
-              onClick={() => setShowDelete(true)}
+              onClick={() => openConfirm({
+                title:        "Are you sure?",
+                message:      "This will permanently delete your account and all saved journey entries.",
+                detail:       "This cannot be undone.",
+                confirmLabel: "DELETE ACCOUNT",
+                variant:      "danger",
+                onConfirm:    executeDelete,
+              })}
               style={{
                 background:    "none",
                 border:        "1px solid rgba(220,60,60,0.3)",
@@ -588,12 +546,13 @@ export default function AccountPage() {
                 cursor:        "pointer",
                 opacity:       0.7,
                 transition:    "all 0.2s ease",
+                minHeight:     "44px",
               }}
-              onMouseEnter={e => {
+              onMouseEnter={(e) => {
                 e.currentTarget.style.opacity     = "1"
                 e.currentTarget.style.borderColor = "rgba(220,60,60,0.7)"
               }}
-              onMouseLeave={e => {
+              onMouseLeave={(e) => {
                 e.currentTarget.style.opacity     = "0.7"
                 e.currentTarget.style.borderColor = "rgba(220,60,60,0.3)"
               }}
@@ -613,8 +572,8 @@ export default function AccountPage() {
                 textDecoration: "none",
                 transition:     "color 0.2s ease",
               }}
-              onMouseEnter={e => e.currentTarget.style.color = "var(--color-gold-warm)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--color-muted)"}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-gold-warm)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-muted)")}
             >
               Privacy Policy
             </a>

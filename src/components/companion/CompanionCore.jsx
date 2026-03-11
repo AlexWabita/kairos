@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { initKairosSession } from '@/lib/supabase/sessions'
-import BibleVerse from './BibleVerse'
+import { initKairosSession } from "@/lib/supabase/sessions"
+import { useSettings }       from "@/context/SettingsContext"
+import BibleVerse            from "./BibleVerse"
 
 // ── Detect if a message is requesting a specific Bible verse ─
 function detectVerseRequest(text) {
@@ -79,8 +80,7 @@ function ConsentModal({ onAccept }) {
             style={{ color: "var(--color-gold-warm)", textDecoration: "none" }}
           >
             Privacy Policy
-          </a>
-          .
+          </a>.
         </p>
         <button
           onClick={onAccept}
@@ -107,7 +107,7 @@ function ConsentModal({ onAccept }) {
 
 // ── Detect if a message is a Bible keyword search ────────────
 function detectBibleSearch(text) {
-  const lower = text.toLowerCase()
+  const lower    = text.toLowerCase()
   const triggers = [
     "where does the bible say",
     "find verses about",
@@ -116,7 +116,7 @@ function detectBibleSearch(text) {
     "verses about",
     "bible verses on",
   ]
-  return triggers.some(t => lower.includes(t))
+  return triggers.some((t) => lower.includes(t))
 }
 
 // ── Auto-title: first sentence, max 60 chars ─────────────────
@@ -152,10 +152,10 @@ function TypingIndicator() {
       padding:    "var(--space-4) 0",
     }}>
       <span style={{
-        fontFamily: "var(--font-heading)",
-        fontStyle:  "italic",
-        fontSize:   "0.85rem",
-        color:      "var(--color-gold-warm)",
+        fontFamily:  "var(--font-heading)",
+        fontStyle:   "italic",
+        fontSize:    "0.85rem",
+        color:       "var(--color-gold-warm)",
         marginRight: "4px",
       }}>
         Kairos is listening
@@ -226,14 +226,13 @@ function SaveButton({ saved, saving, isAuthenticated, onSave }) {
         paddingTop: "var(--space-3)",
         borderTop:  "1px solid rgba(240,192,96,0.1)",
       }}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--color-gold-warm)"
-          stroke="none">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--color-gold-warm)" stroke="none">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
         </svg>
         <span style={{
-          fontFamily: "var(--font-body)",
-          fontSize:   "0.72rem",
-          color:      "var(--color-gold-warm)",
+          fontFamily:    "var(--font-body)",
+          fontSize:      "0.72rem",
+          color:         "var(--color-gold-warm)",
           letterSpacing: "0.05em",
         }}>
           Saved to your journey
@@ -249,19 +248,21 @@ function SaveButton({ saved, saving, isAuthenticated, onSave }) {
         paddingTop: "var(--space-3)",
         borderTop:  "1px solid rgba(240,192,96,0.1)",
       }}>
-        <a href="/register" style={{
-          fontFamily:     "var(--font-body)",
-          fontSize:       "0.72rem",
-          color:          "var(--color-muted)",
-          letterSpacing:  "0.05em",
-          textDecoration: "none",
-          display:        "flex",
-          alignItems:     "center",
-          gap:            "var(--space-2)",
-          transition:     "color 0.2s ease",
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-gold-warm)"}
-        onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-muted)"}
+        <a
+          href="/register"
+          style={{
+            fontFamily:     "var(--font-body)",
+            fontSize:       "0.72rem",
+            color:          "var(--color-muted)",
+            letterSpacing:  "0.05em",
+            textDecoration: "none",
+            display:        "flex",
+            alignItems:     "center",
+            gap:            "var(--space-2)",
+            transition:     "color 0.2s ease",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-gold-warm)")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-muted)")}
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -283,19 +284,20 @@ function SaveButton({ saved, saving, isAuthenticated, onSave }) {
         onClick={onSave}
         disabled={saving}
         style={{
-          background:  "none",
-          border:      "none",
-          padding:     0,
-          cursor:      saving ? "wait" : "pointer",
-          display:     "flex",
-          alignItems:  "center",
-          gap:         "var(--space-2)",
-          color:       "var(--color-muted)",
-          fontFamily:  "var(--font-body)",
-          fontSize:    "0.72rem",
+          background:    "none",
+          border:        "none",
+          padding:       0,
+          cursor:        saving ? "wait" : "pointer",
+          display:       "flex",
+          alignItems:    "center",
+          gap:           "var(--space-2)",
+          color:         "var(--color-muted)",
+          fontFamily:    "var(--font-body)",
+          fontSize:      "0.72rem",
           letterSpacing: "0.05em",
-          transition:  "color 0.2s ease",
-          opacity:     saving ? 0.6 : 1,
+          transition:    "color 0.2s ease",
+          opacity:       saving ? 0.6 : 1,
+          minHeight:     "32px",
         }}
         onMouseEnter={(e) => { if (!saving) e.currentTarget.style.color = "var(--color-gold-warm)" }}
         onMouseLeave={(e) => { if (!saving) e.currentTarget.style.color = "var(--color-muted)" }}
@@ -368,7 +370,7 @@ function Message({ role, content, isNew, verseData, onSave, saved, saving, isAut
         borderRadius: isKairos
           ? "0 var(--radius-lg) var(--radius-lg) var(--radius-lg)"
           : "var(--radius-lg) 0 var(--radius-lg) var(--radius-lg)",
-        padding:      "var(--space-5) var(--space-5)",
+        padding:      "var(--space-5)",
         boxShadow:    isKairos ? "var(--shadow-card)" : "none",
         borderLeft:   isKairos ? "2px solid rgba(240,192,96,0.2)" : "none",
         width:        "100%",
@@ -378,11 +380,11 @@ function Message({ role, content, isNew, verseData, onSave, saved, saving, isAut
         {/* Truncation indicator */}
         {wasTruncated && isKairos && (
           <p style={{
-            fontFamily:  "var(--font-body)",
-            fontSize:    "0.7rem",
-            color:       "var(--color-muted)",
-            fontStyle:   "italic",
-            marginTop:   "var(--space-2)",
+            fontFamily:   "var(--font-body)",
+            fontSize:     "0.7rem",
+            color:        "var(--color-muted)",
+            fontStyle:    "italic",
+            marginTop:    "var(--space-2)",
             marginBottom: 0,
           }}>
             Response may be incomplete — you can ask Kairos to continue.
@@ -414,6 +416,11 @@ function Message({ role, content, isNew, verseData, onSave, saved, saving, isAut
 
 /* ── Main Companion Component ────────────────────────────── */
 export default function CompanionCore({ profile = null }) {
+  // ── Settings ──────────────────────────────────────────────
+  // translation is driven by global settings; changing it here
+  // also updates the user's default for future sessions.
+  const { settings, updateSetting } = useSettings()
+
   const [messages,       setMessages]       = useState([])
   const [input,          setInput]          = useState("")
   const [loading,        setLoading]        = useState(false)
@@ -422,11 +429,10 @@ export default function CompanionCore({ profile = null }) {
   const [kairosUser,     setKairosUser]     = useState(null)
   const [sessionType,    setSessionType]    = useState(null)   // 'anonymous' | 'authenticated'
   const [conversationId, setConversationId] = useState(null)
-  const [translation,    setTranslation]    = useState("WEB")
   const [savedMsgIds,    setSavedMsgIds]    = useState(new Set())
   const [savingMsgIdx,   setSavingMsgIdx]   = useState(null)
   const [showConsent,    setShowConsent]    = useState(false)
-  const [lastModelId,    setLastModelId]    = useState(null)   // tracks which model replied last (for continuations)
+  const [lastModelId,    setLastModelId]    = useState(null)
 
   const bottomRef   = useRef(null)
   const inputRef    = useRef(null)
@@ -434,11 +440,14 @@ export default function CompanionCore({ profile = null }) {
 
   const isAuthenticated = sessionType === "authenticated"
 
+  // Translation from settings (updates when settings change)
+  const translation = settings.bibleTranslation || "WEB"
+
   // ── Check first-visit consent ───────────────────────────
   useEffect(() => {
     const accepted = document.cookie
       .split("; ")
-      .find(row => row.startsWith("kairos_consent="))
+      .find((row) => row.startsWith("kairos_consent="))
     if (!accepted) setShowConsent(true)
   }, [])
 
@@ -451,11 +460,11 @@ export default function CompanionCore({ profile = null }) {
 
   // ── Initialise session on mount ─────────────────────────
   useEffect(() => {
-    initKairosSession().then(session => {
+    initKairosSession().then((session) => {
       if (session?.user) {
         setKairosUser(session.user)
         setSessionType(session.type)
-        console.log('[Kairos] Session ready:', session.type, session.user.id)
+        console.log("[Kairos] Session ready:", session.type, session.user.id)
       }
     })
   }, [])
@@ -480,7 +489,7 @@ export default function CompanionCore({ profile = null }) {
       const data = await res.json()
       if (data.success) return data
     } catch (err) {
-      console.warn('[Kairos Bible] Verse fetch failed:', err.message)
+      console.warn("[Kairos Bible] Verse fetch failed:", err.message)
     }
     return null
   }
@@ -510,13 +519,13 @@ export default function CompanionCore({ profile = null }) {
       const data = await res.json()
 
       if (data.success) {
-        setSavedMsgIds(prev => new Set([...prev, msgIndex]))
-        console.log('[Kairos] Moment saved:', data.id)
+        setSavedMsgIds((prev) => new Set([...prev, msgIndex]))
+        console.log("[Kairos] Moment saved:", data.id)
       } else {
-        console.error('[Kairos] Save failed:', data.error)
+        console.error("[Kairos] Save failed:", data.error)
       }
     } catch (err) {
-      console.error('[Kairos] Save error:', err.message)
+      console.error("[Kairos] Save error:", err.message)
     } finally {
       setSavingMsgIdx(null)
     }
@@ -532,7 +541,7 @@ export default function CompanionCore({ profile = null }) {
       textareaRef.current.style.height = "auto"
     }
 
-    const userMsg = { role: "user", content: text }
+    const userMsg        = { role: "user", content: text }
     const updatedHistory = [...messages, userMsg]
     setMessages(updatedHistory)
     setNewMsgIdx(updatedHistory.length - 1)
@@ -552,7 +561,7 @@ export default function CompanionCore({ profile = null }) {
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
           message:        text,
-          history:        messages.map(m => ({ role: m.role, content: m.content })),
+          history:        messages.map((m) => ({ role: m.role, content: m.content })),
           profile,
           userId:         kairosUser?.id || null,
           conversationId: conversationId,
@@ -561,7 +570,7 @@ export default function CompanionCore({ profile = null }) {
             : null,
           isVerseRequest: !!verseRef,
           isSearch,
-          lastModelId,    // so the route can prefer the same model for continuations
+          lastModelId,
         }),
       })
 
@@ -569,17 +578,16 @@ export default function CompanionCore({ profile = null }) {
 
       if (data.conversationId && !conversationId) {
         setConversationId(data.conversationId)
-        console.log('[Kairos] Conversation started:', data.conversationId)
+        console.log("[Kairos] Conversation started:", data.conversationId)
       }
 
-      // Track which model replied so continuations can use the same one
       if (data.modelId) setLastModelId(data.modelId)
 
       const assistantMsg = {
-        role:        "assistant",
-        content:     data.reply || "Something stilled. Please try again.",
-        escalated:   data.escalated || false,
-        verseData:   verseData,
+        role:         "assistant",
+        content:      data.reply || "Something stilled. Please try again.",
+        escalated:    data.escalated || false,
+        verseData:    verseData,
         wasTruncated: data.wasTruncated || false,
       }
 
@@ -588,7 +596,7 @@ export default function CompanionCore({ profile = null }) {
       setNewMsgIdx(finalMessages.length - 1)
 
     } catch {
-      setMessages(prev => [...prev, {
+      setMessages((prev) => [...prev, {
         role:    "assistant",
         content: "Something stilled for a moment. Please share what is on your heart again.",
       }])
@@ -664,7 +672,7 @@ export default function CompanionCore({ profile = null }) {
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
           <select
             value={translation}
-            onChange={(e) => setTranslation(e.target.value)}
+            onChange={(e) => updateSetting("bibleTranslation", e.target.value)}
             title="Bible translation"
             style={{
               background:    "rgba(13,20,40,0.8)",
@@ -766,6 +774,7 @@ export default function CompanionCore({ profile = null }) {
                     cursor:       "pointer",
                     transition:   "all var(--duration-fast) var(--ease-sacred)",
                     textAlign:    "left",
+                    minHeight:    "44px",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = "var(--color-gold-warm)"
@@ -812,12 +821,13 @@ export default function CompanionCore({ profile = null }) {
         background:     "linear-gradient(to top, rgba(6,9,18,0.98) 80%, transparent)",
         backdropFilter: "blur(12px)",
       }}>
+        {/* ── Textarea + Send button — FIXED: alignItems center ── */}
         <div style={{
           maxWidth:   "760px",
           margin:     "0 auto",
           display:    "flex",
           gap:        "var(--space-3)",
-          alignItems: "flex-end",
+          alignItems: "center",   /* FIX: was flex-end, caused button to sit lower */
         }}>
           <div style={{ flex: 1, position: "relative" }}>
             <textarea
@@ -845,6 +855,7 @@ export default function CompanionCore({ profile = null }) {
                 minHeight:    "52px",
                 maxHeight:    "160px",
                 overflowY:    "auto",
+                display:      "block",
                 transition:   "border-color var(--duration-fast) var(--ease-sacred), box-shadow var(--duration-fast) var(--ease-sacred)",
               }}
               onFocus={(e) => {
@@ -898,11 +909,12 @@ export default function CompanionCore({ profile = null }) {
           </button>
         </div>
 
+        {/* ── Hint label — FIXED: was 0.65rem/color-faint, now visible ── */}
         <p style={{
           textAlign:     "center",
           fontFamily:    "var(--font-body)",
-          fontSize:      "0.65rem",
-          color:         "var(--color-faint)",
+          fontSize:      "0.72rem",          /* FIX: was 0.65rem */
+          color:         "var(--color-muted)", /* FIX: was color-faint — near invisible */
           marginTop:     "var(--space-3)",
           letterSpacing: "0.03em",
         }}>
