@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { initKairosSession } from "@/lib/supabase/sessions"
-import { useSettings }       from "@/context/SettingsContext"
-import BibleVerse            from "./BibleVerse"
+import { initKairosSession }  from "@/lib/supabase/sessions"
+import { useSettings }        from "@/context/SettingsContext"
+import BibleVerse             from "./BibleVerse"
+import SaveMomentModal        from "./SaveMomentModal"
 
 // ── Detect if a message is requesting a specific Bible verse ─
 function detectVerseRequest(text) {
@@ -73,12 +74,8 @@ function ConsentModal({ onAccept }) {
           marginBottom: "var(--space-7)",
         }}>
           By continuing you agree to our{" "}
-          <a
-            href="/privacy"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "var(--color-gold-warm)", textDecoration: "none" }}
-          >
+          <a href="/privacy" target="_blank" rel="noopener noreferrer"
+            style={{ color: "var(--color-gold-warm)", textDecoration: "none" }}>
             Privacy Policy
           </a>.
         </p>
@@ -105,7 +102,6 @@ function ConsentModal({ onAccept }) {
   )
 }
 
-// ── Detect if a message is a Bible keyword search ────────────
 function detectBibleSearch(text) {
   const lower    = text.toLowerCase()
   const triggers = [
@@ -117,12 +113,6 @@ function detectBibleSearch(text) {
     "bible verses on",
   ]
   return triggers.some((t) => lower.includes(t))
-}
-
-// ── Auto-title: first sentence, max 60 chars ─────────────────
-function extractTitle(content) {
-  const first = content.split(/[.!?\n]/)[0].trim()
-  return first.length > 60 ? first.substring(0, 57) + "…" : first
 }
 
 /* ── Ambient Glow Orb ────────────────────────────────────── */
@@ -180,7 +170,7 @@ function TypingIndicator() {
   )
 }
 
-/* ── Scripture Block (AI-generated inline) ───────────────── */
+/* ── Scripture Block ─────────────────────────────────────── */
 function ScriptureBlock({ text, reference }) {
   return (
     <div style={{
@@ -215,7 +205,7 @@ function ScriptureBlock({ text, reference }) {
 }
 
 /* ── Save Button ─────────────────────────────────────────── */
-function SaveButton({ saved, saving, isAuthenticated, onSave }) {
+function SaveButton({ saved, isAuthenticated, onSave }) {
   if (saved) {
     return (
       <div style={{
@@ -226,7 +216,8 @@ function SaveButton({ saved, saving, isAuthenticated, onSave }) {
         paddingTop: "var(--space-3)",
         borderTop:  "1px solid rgba(240,192,96,0.1)",
       }}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--color-gold-warm)" stroke="none">
+        <svg width="13" height="13" viewBox="0 0 24 24"
+          fill="var(--color-gold-warm)" stroke="none">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
         </svg>
         <span style={{
@@ -248,24 +239,23 @@ function SaveButton({ saved, saving, isAuthenticated, onSave }) {
         paddingTop: "var(--space-3)",
         borderTop:  "1px solid rgba(240,192,96,0.1)",
       }}>
-        <a
-          href="/register"
-          style={{
-            fontFamily:     "var(--font-body)",
-            fontSize:       "0.72rem",
-            color:          "var(--color-muted)",
-            letterSpacing:  "0.05em",
-            textDecoration: "none",
-            display:        "flex",
-            alignItems:     "center",
-            gap:            "var(--space-2)",
-            transition:     "color 0.2s ease",
-          }}
+        <a href="/register" style={{
+          fontFamily:     "var(--font-body)",
+          fontSize:       "0.72rem",
+          color:          "var(--color-muted)",
+          letterSpacing:  "0.05em",
+          textDecoration: "none",
+          display:        "flex",
+          alignItems:     "center",
+          gap:            "var(--space-2)",
+          transition:     "color 0.2s ease",
+        }}
           onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-gold-warm)")}
           onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-muted)")}
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            stroke="currentColor" strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
           </svg>
           Sign in to save this moment
@@ -282,12 +272,11 @@ function SaveButton({ saved, saving, isAuthenticated, onSave }) {
     }}>
       <button
         onClick={onSave}
-        disabled={saving}
         style={{
           background:    "none",
           border:        "none",
           padding:       0,
-          cursor:        saving ? "wait" : "pointer",
+          cursor:        "pointer",
           display:       "flex",
           alignItems:    "center",
           gap:           "var(--space-2)",
@@ -296,24 +285,24 @@ function SaveButton({ saved, saving, isAuthenticated, onSave }) {
           fontSize:      "0.72rem",
           letterSpacing: "0.05em",
           transition:    "color 0.2s ease",
-          opacity:       saving ? 0.6 : 1,
           minHeight:     "32px",
         }}
-        onMouseEnter={(e) => { if (!saving) e.currentTarget.style.color = "var(--color-gold-warm)" }}
-        onMouseLeave={(e) => { if (!saving) e.currentTarget.style.color = "var(--color-muted)" }}
+        onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-gold-warm)")}
+        onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-muted)")}
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          stroke="currentColor" strokeWidth="2"
+          strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
         </svg>
-        {saving ? "Saving…" : "Save this moment"}
+        Save this moment
       </button>
     </div>
   )
 }
 
 /* ── Message Bubble ──────────────────────────────────────── */
-function Message({ role, content, isNew, verseData, onSave, saved, saving, isAuthenticated, wasTruncated }) {
+function Message({ role, content, isNew, verseData, onSave, saved, isAuthenticated, wasTruncated }) {
   const isKairos = role === "assistant"
 
   const renderContent = (text) => {
@@ -377,7 +366,6 @@ function Message({ role, content, isNew, verseData, onSave, saved, saving, isAut
       }}>
         {renderContent(content)}
 
-        {/* Truncation indicator */}
         {wasTruncated && isKairos && (
           <p style={{
             fontFamily:   "var(--font-body)",
@@ -391,7 +379,6 @@ function Message({ role, content, isNew, verseData, onSave, saved, saving, isAut
           </p>
         )}
 
-        {/* Verified verse card */}
         {verseData && (
           <BibleVerse
             reference={verseData.reference}
@@ -400,11 +387,9 @@ function Message({ role, content, isNew, verseData, onSave, saved, saving, isAut
           />
         )}
 
-        {/* Save button — Kairos messages only */}
         {isKairos && (
           <SaveButton
             saved={saved}
-            saving={saving}
             isAuthenticated={isAuthenticated}
             onSave={onSave}
           />
@@ -416,9 +401,6 @@ function Message({ role, content, isNew, verseData, onSave, saved, saving, isAut
 
 /* ── Main Companion Component ────────────────────────────── */
 export default function CompanionCore({ profile = null }) {
-  // ── Settings ──────────────────────────────────────────────
-  // translation is driven by global settings; changing it here
-  // also updates the user's default for future sessions.
   const { settings, updateSetting } = useSettings()
 
   const [messages,       setMessages]       = useState([])
@@ -427,23 +409,24 @@ export default function CompanionCore({ profile = null }) {
   const [started,        setStarted]        = useState(false)
   const [newMsgIdx,      setNewMsgIdx]      = useState(null)
   const [kairosUser,     setKairosUser]     = useState(null)
-  const [sessionType,    setSessionType]    = useState(null)   // 'anonymous' | 'authenticated'
+  const [sessionType,    setSessionType]    = useState(null)
   const [conversationId, setConversationId] = useState(null)
   const [savedMsgIds,    setSavedMsgIds]    = useState(new Set())
-  const [savingMsgIdx,   setSavingMsgIdx]   = useState(null)
   const [showConsent,    setShowConsent]    = useState(false)
   const [lastModelId,    setLastModelId]    = useState(null)
+
+  // ── Save modal state ──────────────────────────────────────
+  // pendingSave holds the message index waiting for modal confirm
+  const [pendingSave,  setPendingSave]  = useState(null)   // number | null
+  const [savingModal,  setSavingModal]  = useState(false)
 
   const bottomRef   = useRef(null)
   const inputRef    = useRef(null)
   const textareaRef = useRef(null)
 
   const isAuthenticated = sessionType === "authenticated"
+  const translation     = settings.bibleTranslation || "WEB"
 
-  // Translation from settings (updates when settings change)
-  const translation = settings.bibleTranslation || "WEB"
-
-  // ── Check first-visit consent ───────────────────────────
   useEffect(() => {
     const accepted = document.cookie
       .split("; ")
@@ -458,23 +441,19 @@ export default function CompanionCore({ profile = null }) {
     setShowConsent(false)
   }
 
-  // ── Initialise session on mount ─────────────────────────
   useEffect(() => {
     initKairosSession().then((session) => {
       if (session?.user) {
         setKairosUser(session.user)
         setSessionType(session.type)
-        console.log("[Kairos] Session ready:", session.type, session.user.id)
       }
     })
   }, [])
 
-  // ── Scroll to bottom on new messages ───────────────────
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, loading])
 
-  // ── Auto-resize textarea ────────────────────────────────
   const handleInputChange = (e) => {
     setInput(e.target.value)
     const ta = e.target
@@ -482,7 +461,6 @@ export default function CompanionCore({ profile = null }) {
     ta.style.height = Math.min(ta.scrollHeight, 160) + "px"
   }
 
-  // ── Fetch exact verse from Bible API ────────────────────
   const fetchVerse = async (reference) => {
     try {
       const res  = await fetch(`/api/bible/verse?ref=${encodeURIComponent(reference)}&translation=${translation}`)
@@ -494,12 +472,22 @@ export default function CompanionCore({ profile = null }) {
     return null
   }
 
-  // ── Save a Kairos message to journey_entries ────────────
-  const handleSave = async (msgIndex) => {
+  // ── Open the save modal — does NOT call API yet ───────────
+  const handleSave = (msgIndex) => {
     const msg = messages[msgIndex]
     if (!msg || savedMsgIds.has(msgIndex)) return
+    setPendingSave(msgIndex)
+  }
 
-    setSavingMsgIdx(msgIndex)
+  // ── Called when user confirms in the modal ────────────────
+  const handleSaveConfirm = async ({ title, entry_type }) => {
+    const msgIndex = pendingSave
+    if (msgIndex === null) return
+
+    const msg = messages[msgIndex]
+    if (!msg) return
+
+    setSavingModal(true)
     try {
       const scripture_ref = msg.verseData
         ? `${msg.verseData.reference} (${msg.verseData.translation})`
@@ -510,7 +498,8 @@ export default function CompanionCore({ profile = null }) {
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
           content:         msg.content,
-          title:           extractTitle(msg.content),
+          title,
+          entry_type,
           scripture_ref,
           conversation_id: conversationId,
           userId:          kairosUser?.id || null,
@@ -527,7 +516,8 @@ export default function CompanionCore({ profile = null }) {
     } catch (err) {
       console.error("[Kairos] Save error:", err.message)
     } finally {
-      setSavingMsgIdx(null)
+      setSavingModal(false)
+      setPendingSave(null)
     }
   }
 
@@ -578,7 +568,6 @@ export default function CompanionCore({ profile = null }) {
 
       if (data.conversationId && !conversationId) {
         setConversationId(data.conversationId)
-        console.log("[Kairos] Conversation started:", data.conversationId)
       }
 
       if (data.modelId) setLastModelId(data.modelId)
@@ -613,6 +602,9 @@ export default function CompanionCore({ profile = null }) {
     }
   }
 
+  // The message currently pending save (for passing to modal)
+  const pendingMsg = pendingSave !== null ? messages[pendingSave] : null
+
   return (
     <div style={{
       position:      "relative",
@@ -622,10 +614,22 @@ export default function CompanionCore({ profile = null }) {
       background:    "var(--gradient-hero)",
       overflow:      "hidden",
     }}>
-      {/* ── Consent modal — first visit only ─────────────── */}
       {showConsent && <ConsentModal onAccept={handleConsentAccept} />}
 
-      {/* Ambient background */}
+      {/* ── Save moment modal ───────────────────────────────── */}
+      <SaveMomentModal
+        isOpen={pendingSave !== null}
+        content={pendingMsg?.content || ""}
+        scriptureRef={
+          pendingMsg?.verseData
+            ? `${pendingMsg.verseData.reference} (${pendingMsg.verseData.translation})`
+            : null
+        }
+        onConfirm={handleSaveConfirm}
+        onCancel={() => setPendingSave(null)}
+        saving={savingModal}
+      />
+
       <GlowOrb size="500px" left="60%" top="30%"  color="rgba(240,192,96,0.08)"  delay="0s"  />
       <GlowOrb size="300px" left="20%" top="70%"  color="rgba(64,144,208,0.06)"  delay="2s"  />
       <GlowOrb size="200px" left="80%" top="80%"  color="rgba(240,192,96,0.05)"  delay="1s"  />
@@ -668,7 +672,6 @@ export default function CompanionCore({ profile = null }) {
           </p>
         </div>
 
-        {/* Translation selector + status dot */}
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
           <select
             value={translation}
@@ -803,7 +806,6 @@ export default function CompanionCore({ profile = null }) {
             verseData={msg.verseData || null}
             isAuthenticated={isAuthenticated}
             saved={savedMsgIds.has(i)}
-            saving={savingMsgIdx === i}
             onSave={() => handleSave(i)}
             wasTruncated={msg.wasTruncated || false}
           />
@@ -821,13 +823,12 @@ export default function CompanionCore({ profile = null }) {
         background:     "linear-gradient(to top, rgba(6,9,18,0.98) 80%, transparent)",
         backdropFilter: "blur(12px)",
       }}>
-        {/* ── Textarea + Send button — FIXED: alignItems center ── */}
         <div style={{
           maxWidth:   "760px",
           margin:     "0 auto",
           display:    "flex",
           gap:        "var(--space-3)",
-          alignItems: "center",   /* FIX: was flex-end, caused button to sit lower */
+          alignItems: "center",
         }}>
           <div style={{ flex: 1, position: "relative" }}>
             <textarea
@@ -909,12 +910,11 @@ export default function CompanionCore({ profile = null }) {
           </button>
         </div>
 
-        {/* ── Hint label — FIXED: was 0.65rem/color-faint, now visible ── */}
         <p style={{
           textAlign:     "center",
           fontFamily:    "var(--font-body)",
-          fontSize:      "0.72rem",          /* FIX: was 0.65rem */
-          color:         "var(--color-muted)", /* FIX: was color-faint — near invisible */
+          fontSize:      "0.72rem",
+          color:         "var(--color-muted)",
           marginTop:     "var(--space-3)",
           letterSpacing: "0.03em",
         }}>

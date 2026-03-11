@@ -7,9 +7,19 @@ const admin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
+// Valid entry types — must match DB check constraint exactly
+const VALID_ENTRY_TYPES = ['reflection', 'prayer', 'milestone', 'question', 'scripture']
+
 export async function POST(req) {
   try {
-    const { content, title, scripture_ref, conversation_id, userId } = await req.json()
+    const {
+      content,
+      title,
+      entry_type,
+      scripture_ref,
+      conversation_id,
+      userId,
+    } = await req.json()
 
     if (!content) {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 })
@@ -18,6 +28,9 @@ export async function POST(req) {
     if (!userId) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
+
+    // Validate entry_type — fall back to 'reflection' if missing or invalid
+    const safeType = VALID_ENTRY_TYPES.includes(entry_type) ? entry_type : 'reflection'
 
     // Verify this is a real, non-anonymous user in our DB
     const { data: user, error: userError } = await admin
@@ -35,7 +48,7 @@ export async function POST(req) {
       .insert({
         user_id:         userId,
         conversation_id: conversation_id || null,
-        entry_type: 'reflection',
+        entry_type:      safeType,
         content,
         title:           title || null,
         scripture_ref:   scripture_ref || null,
