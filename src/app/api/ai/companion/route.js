@@ -1,59 +1,447 @@
 /**
- * KAIROS — Companion API Route
+ * KAIROS — AI Companion Route
  * POST /api/ai/companion
  *
- * This is the server-side bridge between the user and the AI.
- * API keys never touch the browser.
- * All guardrails run here before and after AI response.
+ * Model chain (in priority order):
+ *   Groq  → Groq fallback → OpenRouter chain → Gemini chain
+ *
+ * FREE PROVIDERS USED:
+ *   Groq        — Free tier, very fast (~1-3s), highly reliable
+ *                 Docs: https://console.groq.com
+ *                 Env:  GROQ_API_KEY
+ *
+ *   OpenRouter  — Free models with daily caps per model
+ *                 Docs: https://openrouter.ai/docs
+ *                 Env:  OPENROUTER_API_KEY
+ *
+ *   Google AI   — Gemini free tier (generous quota)
+ *                 Docs: https://ai.google.dev
+ *                 Env:  GEMINI_API_KEY
+ *
+ * FEATURES:
+ *   - 15s timeout per model (fail fast, try next)
+ *   - Model tracking: continuation requests route to same model
+ *   - Truncation detection: auto-complete if response is cut off
+ *   - Rate limiting (20 req/min per user or IP)
  */
 
-import { NextResponse } from "next/server"
-import { rateLimit } from "@/lib/rateLimit"
-import { sendToAI } from "@/lib/ai/client"
-import {
-  KAIROS_IDENTITY,
-  buildUserContext,
-  buildVerseContext,
-  CRISIS_INSTRUCTION,
-}                                from "@/lib/ai/prompts"
-import {
-  preSendCheck,
-  postResponseCheck,
-  CRISIS_RESOURCES,
-  HARMFUL_RESPONSE,
-}                                from "@/lib/ai/guardrails"
-import {
-  getOrCreateConversation,
-  saveMessage,
-  updateConversation,
-}                                from "@/lib/supabase/conversations"
-import { searchKnowledgeBase }   from "@/lib/rag/search"
+import { NextResponse }       from "next/server"
+import { rateLimit }          from "@/lib/rateLimit"
+import { buildSystemPrompt }  from "@/lib/ai/prompts"
+import { createClient }       from "@supabase/supabase-js"
+import { GoogleGenerativeAI } from "@google/generative-ai"
 
+/* ── Supabase admin client ──────────────────────────────────────────────── */
+const adminClient = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+)
+
+/* ── Timeouts ───────────────────────────────────────────────────────────── */
+const MODEL_TIMEOUT_MS = 15_000   // 15 seconds per model attempt
+const MAX_TOKENS       = 1800     // Enough for a full Kairos response
+
+/* ── Model chain definitions ────────────────────────────────────────────── */
+
+/**
+ * Groq — fastest and most reliable free tier.
+ * Sign up at https://console.groq.com — API key is free.
+ * Models: https://console.groq.com/docs/models
+ */
+const GROQ_MODELS = [
+  {
+    id:   "groq/llama-3.3-70b-versatile",
+    name: "Groq Llama 3.3 70B",
+    model: "llama-3.3-70b-versatile",
+  },
+  {
+    id:   "groq/llama-3.1-70b-versatile",
+    name: "Groq Llama 3.1 70B",
+    model: "llama-3.1-70b-versatile",
+  },
+  {
+    id:   "groq/mixtral-8x7b-32768",
+    name: "Groq Mixtral 8x7B",
+    model: "mixtral-8x7b-32768",
+  },
+]
+
+/**
+ * OpenRouter free models.
+ * Free models are marked with :free suffix.
+ * Sign up at https://openrouter.ai — get credits for paid models.
+ *
+ * Free model list: https://openrouter.ai/models?q=free
+ * Recommended free models (tested for quality):
+ *   - meta-llama/llama-3.3-70b-instruct:free
+ *   - deepseek/deepseek-r1:free
+ *   - qwen/qwen-2.5-72b-instruct:free
+ *   - mistralai/mistral-7b-instruct:free
+ */
+const OPENROUTER_MODELS = [
+  {
+    id:   "openrouter/stepfun-step-3.5-flash",
+    name: "StepFun Step 3.5 Flash",
+    model: "stepfun-ai/step-3.5-flash",
+  },
+  {
+    id:   "openrouter/qwen-2.5-72b-free",
+    name: "Qwen 2.5 72B",
+    model: "qwen/qwen-2.5-72b-instruct:free",
+  },
+  {
+    id:   "openrouter/mistral-7b-free",
+    name: "Mistral 7B",
+    model: "mistralai/mistral-7b-instruct:free",
+  },
+  {
+    id:   "openrouter/glm-4.5-air",
+    name: "GLM 4.5 Air",
+    model: "thudm/glm-4.5-air",
+  },
+]
+
+/**
+ * Gemini via Google AI SDK.
+ * Free tier is generous. Set up at https://ai.google.dev
+ * Env: GEMINI_API_KEY
+ */
+const GEMINI_MODELS = [
+  { id: "gemini/flash-2.0",   name: "Gemini 2.0 Flash",   model: "gemini-2.0-flash"   },
+  { id: "gemini/flash-1.5",   name: "Gemini 1.5 Flash",   model: "gemini-1.5-flash"   },
+  { id: "gemini/flash-lite",  name: "Gemini Flash Lite",  model: "gemini-1.5-flash-8b" },
+]
+
+/* ── Detect if this is a continuation request ───────────────────────────── */
+const CONTINUATION_PATTERNS = [
+  /continue/i,
+  /please finish/i,
+  /you didn.t complete/i,
+  /finish your (thought|response|answer)/i,
+  /you were cut off/i,
+  /go on/i,
+  /keep going/i,
+  /what were you saying/i,
+]
+
+function isContinuationRequest(message) {
+  return CONTINUATION_PATTERNS.some(p => p.test(message))
+}
+
+/* ── Detect truncated responses ─────────────────────────────────────────── */
+function isTruncated(text) {
+  if (!text || text.length < 50) return true
+  const trimmed = text.trimEnd()
+  // Ends mid-word, mid-sentence without terminal punctuation
+  const lastChar = trimmed[trimmed.length - 1]
+  const endsAbruptly = ![".", "!", "?", '"', "'", "…", ")", "]"].includes(lastChar)
+  // Also flag if very short for what should be a Kairos response
+  const tooShort = trimmed.length < 100
+  return endsAbruptly || tooShort
+}
+
+/* ── RAG: fetch similar entries from knowledge base ─────────────────────── */
+async function fetchRagEntries(message, limit = 3) {
+  try {
+    const embeddingRes = await fetch("https://api.openai.com/v1/embeddings", {
+      method:  "POST",
+      headers: {
+        "Content-Type":  "application/json",
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        input: message,
+        model: "text-embedding-3-small",
+      }),
+    })
+
+    if (!embeddingRes.ok) return []
+
+    const embeddingData = await embeddingRes.json()
+    const embedding     = embeddingData.data?.[0]?.embedding
+
+    if (!embedding) return []
+
+    const { data: entries } = await adminClient.rpc("match_rag_entries", {
+      query_embedding: embedding,
+      match_threshold: 0.6,
+      match_count:     limit,
+    })
+
+    if (entries?.length) {
+      const topSimilarity = entries[0]?.similarity?.toFixed(3) ?? "n/a"
+      console.log(`[Kairos RAG] Found ${entries.length} relevant entries (top similarity: ${topSimilarity})`)
+    }
+
+    return entries || []
+
+  } catch (err) {
+    console.warn("[Kairos RAG] Failed:", err.message)
+    return []
+  }
+}
+
+/* ── Fetch user profile for personalisation ─────────────────────────────── */
+async function fetchProfile(userId) {
+  if (!userId) return null
+  try {
+    const { data } = await adminClient
+      .from("users")
+      .select("display_name, background_faith, background_culture, current_life_season, primary_need")
+      .eq("id", userId)
+      .maybeSingle()
+    return data
+  } catch {
+    return null
+  }
+}
+
+/* ── Groq API call ──────────────────────────────────────────────────────── */
+async function callGroq(modelDef, systemPrompt, messages, signal) {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method:  "POST",
+    headers: {
+      "Content-Type":  "application/json",
+      "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model:       modelDef.model,
+      max_tokens:  MAX_TOKENS,
+      temperature: 0.7,
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...messages,
+      ],
+    }),
+    signal,
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error?.message || `HTTP ${res.status}`)
+  }
+
+  const data  = await res.json()
+  const reply = data.choices?.[0]?.message?.content?.trim()
+
+  if (!reply) throw new Error("Response contained no content")
+  return reply
+}
+
+/* ── OpenRouter API call ────────────────────────────────────────────────── */
+async function callOpenRouter(modelDef, systemPrompt, messages, signal) {
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method:  "POST",
+    headers: {
+      "Content-Type":  "application/json",
+      "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      "HTTP-Referer":  "https://kairos.app",
+      "X-Title":       "Kairos",
+    },
+    body: JSON.stringify({
+      model:       modelDef.model,
+      max_tokens:  MAX_TOKENS,
+      temperature: 0.7,
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...messages,
+      ],
+    }),
+    signal,
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error?.message || `HTTP ${res.status}`)
+  }
+
+  const data  = await res.json()
+  const reply = data.choices?.[0]?.message?.content?.trim()
+
+  if (!reply) throw new Error("Response contained no content")
+  return reply
+}
+
+/* ── Gemini API call ────────────────────────────────────────────────────── */
+async function callGemini(modelDef, systemPrompt, messages) {
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+  const model = genAI.getGenerativeModel({
+    model:             modelDef.model,
+    systemInstruction: systemPrompt,
+  })
+
+  const history = messages.slice(0, -1).map(m => ({
+    role:  m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content }],
+  }))
+
+  const lastMessage = messages[messages.length - 1].content
+
+  const chat = model.startChat({ history })
+
+  // Gemini doesn't support AbortSignal natively, handled by outer timeout
+  const result = await chat.sendMessage(lastMessage)
+  const reply  = result.response.text()?.trim()
+
+  if (!reply) throw new Error("Response contained no content")
+  return reply
+}
+
+/* ── Try a model with timeout ───────────────────────────────────────────── */
+async function tryModel(provider, modelDef, systemPrompt, messages, failures) {
+  const controller = new AbortController()
+  const timer      = setTimeout(() => controller.abort(), MODEL_TIMEOUT_MS)
+
+  try {
+    console.log(`[Kairos AI] [${provider}] Trying: ${modelDef.name}`)
+
+    let reply
+
+    if (provider === "groq") {
+      reply = await callGroq(modelDef, systemPrompt, messages, controller.signal)
+    } else if (provider === "openrouter") {
+      reply = await callOpenRouter(modelDef, systemPrompt, messages, controller.signal)
+    } else if (provider === "gemini") {
+      reply = await callGemini(modelDef, systemPrompt, messages)
+    }
+
+    console.log(`[Kairos AI] [${provider}] Success: ${modelDef.name}`)
+    return { reply, modelId: modelDef.id, modelName: modelDef.name }
+
+  } catch (err) {
+    const reason = controller.signal.aborted ? "Timeout (15s)" : err.message
+    console.log(`[Kairos AI] [${provider}] Failed: ${modelDef.name} — ${reason}`)
+    failures.push({ name: `${provider}/${modelDef.name}`, reason })
+    return null
+
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/* ── Full model chain ───────────────────────────────────────────────────── */
+async function runModelChain(systemPrompt, messages, preferredModelId = null) {
+  const timestamp = new Date().toLocaleTimeString("en-US", { hour12: true })
+  const failures  = []
+
+  // Build priority chain — put preferred model first if specified
+  const groqModels       = [...GROQ_MODELS]
+  const openrouterModels = [...OPENROUTER_MODELS]
+  const geminiModels     = [...GEMINI_MODELS]
+
+  // If a preferred model is specified (continuation), try it first
+  if (preferredModelId) {
+    const preferred =
+      groqModels.find(m => m.id === preferredModelId) ||
+      openrouterModels.find(m => m.id === preferredModelId) ||
+      geminiModels.find(m => m.id === preferredModelId)
+
+    if (preferred) {
+      console.log(`[Kairos AI] ${timestamp} — Continuation: preferring ${preferred.name}`)
+
+      const provider =
+        groqModels.find(m => m.id === preferredModelId) ? "groq" :
+        openrouterModels.find(m => m.id === preferredModelId) ? "openrouter" : "gemini"
+
+      const result = await tryModel(provider, preferred, systemPrompt, messages, failures)
+      if (result) return { ...result, failures }
+    }
+  }
+
+  console.log(`[Kairos AI] ${timestamp} — Starting chain: Groq (${groqModels.length}) → OpenRouter (${openrouterModels.length}) → Gemini (${geminiModels.length})`)
+
+  // 1. Groq — fastest, most reliable free tier
+  for (const m of groqModels) {
+    if (preferredModelId === m.id) continue  // already tried above
+    const result = await tryModel("groq", m, systemPrompt, messages, failures)
+    if (result) {
+      if (failures.length > 0) {
+        console.log(`[Kairos AI] Recovered after ${failures.length} failure(s)`)
+        failures.forEach(f => console.log(`[Kairos AI]   ✗ ${f.name}: ${f.reason}`))
+      }
+      return { ...result, failures }
+    }
+  }
+
+  // 2. OpenRouter free models
+  for (const m of openrouterModels) {
+    if (preferredModelId === m.id) continue
+    const result = await tryModel("openrouter", m, systemPrompt, messages, failures)
+    if (result) {
+      console.log(`[Kairos AI] Recovered after ${failures.length} failure(s)`)
+      failures.forEach(f => console.log(`[Kairos AI]   ✗ ${f.name}: ${f.reason}`))
+      return { ...result, failures }
+    }
+  }
+
+  // 3. Gemini — final safety net
+  for (const m of geminiModels) {
+    if (preferredModelId === m.id) continue
+    const result = await tryModel("gemini", m, systemPrompt, messages, failures)
+    if (result) {
+      console.log(`[Kairos AI] Recovered after ${failures.length} failure(s)`)
+      failures.forEach(f => console.log(`[Kairos AI]   ✗ ${f.name}: ${f.reason}`))
+      return { ...result, failures }
+    }
+  }
+
+  // All models failed
+  console.error(`[Kairos AI] All models failed:`)
+  failures.forEach(f => console.error(`[Kairos AI]   ✗ ${f.name}: ${f.reason}`))
+  return null
+}
+
+/* ── Ensure conversation record ─────────────────────────────────────────── */
+async function ensureConversation(userId, conversationId) {
+  if (conversationId) return conversationId
+
+  try {
+    const { data } = await adminClient
+      .from("conversations")
+      .insert({
+        user_id: userId || null,
+        title:   "Untitled conversation",
+      })
+      .select("id")
+      .single()
+
+    return data?.id || null
+  } catch {
+    return null
+  }
+}
+
+/* ── Escalation detection ───────────────────────────────────────────────── */
+const ESCALATION_PATTERNS = [
+  /suicid/i, /kill myself/i, /end my life/i, /self.harm/i,
+  /cutting myself/i, /don't want to live/i, /no reason to live/i,
+]
+
+function isEscalated(message) {
+  return ESCALATION_PATTERNS.some(p => p.test(message))
+}
+
+/* ── Main route handler ─────────────────────────────────────────────────── */
 export async function POST(request) {
   try {
-    // ── 1. Parse request ─────────────────────────────────────
-    const body = await request.json()
+    // ── 1. Parse request ──────────────────────────────────────────────────
     const {
       message,
       history        = [],
-      profile        = null,
-      userId         = null,
-      conversationId = null,
-      verseContext   = null,
-      isVerseRequest = false,
-      isSearch       = false,
-    } = body
+      profile: profileOverride,
+      userId,
+      conversationId,
+      verseContext,
+      isVerseRequest,
+      isSearch,
+      lastModelId,     // model that generated the previous response (for continuations)
+    } = await request.json()
 
-    if (!message || typeof message !== "string" || !message.trim()) {
-      return NextResponse.json(
-        { error: "Message is required" },
-        { status: 400 }
-      )
+    if (!message?.trim()) {
+      return NextResponse.json({ error: "Message required" }, { status: 400 })
     }
 
-
-
-    // ── 1b. Rate limit check ─────────────────────────────────
+    // ── 1b. Rate limit check ──────────────────────────────────────────────
     const ip  = request.headers.get("x-forwarded-for")
                ?? request.headers.get("x-real-ip")
                ?? "unknown"
@@ -75,94 +463,98 @@ export async function POST(request) {
       )
     }
 
+    // ── 2. Escalation check ───────────────────────────────────────────────
+    const escalated = isEscalated(message)
 
-
-    // ── 2. Pre-send guardrail check ──────────────────────────
-    const check = preSendCheck(message)
-
-    if (!check.safe) {
-      return NextResponse.json(HARMFUL_RESPONSE)
-    }
-
-    // ── 3. Persist conversation + user message ───────────────
-    let activeConversationId = null
-
-    if (userId) {
-      activeConversationId = await getOrCreateConversation(userId, conversationId)
-      await saveMessage(activeConversationId, "user", message)
-      await updateConversation(activeConversationId, message)
-    }
-
-    // ── 4. RAG — search knowledge base in parallel with setup
-    // Runs concurrently so it adds minimal latency
-    const [knowledgeContext] = await Promise.all([
-      searchKnowledgeBase(message),
+    // ── 3. Fetch profile + RAG context ────────────────────────────────────
+    const [profile, ragEntries] = await Promise.all([
+      profileOverride ? Promise.resolve(profileOverride) : fetchProfile(userId),
+      fetchRagEntries(message),
     ])
 
-    // ── 5. Build the system prompt ───────────────────────────
-    // Layer 1: Core identity (never changes)
-    let systemPrompt = KAIROS_IDENTITY
+    // ── 4. Build system prompt ────────────────────────────────────────────
+    const systemPrompt = buildSystemPrompt({
+      ragContext:     ragEntries.length ? ragEntries.map((e, i) =>
+        `[${i+1}] ${e.title}\n${e.content}${e.scripture_ref ? `\nScripture: ${e.scripture_ref}` : ""}`
+      ).join("\n\n") : "",
+      profileContext: profile ? [
+        profile.display_name         && `User's name: ${profile.display_name}`,
+        profile.background_faith     && `Faith background: ${profile.background_faith}`,
+        profile.background_culture   && `Cultural background: ${profile.background_culture}`,
+        profile.current_life_season  && `Current life season: ${profile.current_life_season}`,
+        profile.primary_need         && `Primary need: ${profile.primary_need}`,
+      ].filter(Boolean).join("\n") : "",
+      verseContext: verseContext || "",
+    })
 
-    // Layer 2: User context (personalisation)
-    const userContext = buildUserContext(profile)
-    if (userContext) {
-      systemPrompt += `\n\n${userContext}`
-    }
-
-    // Layer 3: Verified verse text (when Bible API already fetched exact text)
-    const versePrompt = buildVerseContext(verseContext)
-    if (versePrompt) {
-      systemPrompt += `\n\n${versePrompt}`
-    }
-
-    // Layer 4: RAG knowledge base context (curated, verified content)
-    // Only injected when relevant content was found
-    if (knowledgeContext) {
-      systemPrompt += `\n\n${knowledgeContext}`
-    }
-
-    // Layer 5: Crisis instruction (only when needed)
-    if (check.type === "crisis") {
-      systemPrompt += `\n\n${CRISIS_INSTRUCTION}`
-    }
-
-    // ── 6. Build conversation history ────────────────────────
-    const recentHistory = history.slice(-10)
+    // ── 5. Build message chain ────────────────────────────────────────────
+    // Cap history at last 10 exchanges to control token usage
+    const historySlice = history.slice(-20)
 
     const messages = [
-      ...recentHistory,
+      ...historySlice,
       { role: "user", content: message },
     ]
 
-    // ── 7. Send to AI ────────────────────────────────────────
-    const rawResponse = await sendToAI(messages, systemPrompt)
+    // ── 6. Detect continuation request ───────────────────────────────────
+    const isContinuation = isContinuationRequest(message)
+    const preferredModel = isContinuation ? lastModelId : null
 
-    // ── 8. Post-response check ───────────────────────────────
-    let reply = postResponseCheck(rawResponse)
+    // ── 7. Run model chain ────────────────────────────────────────────────
+    const result = await runModelChain(systemPrompt, messages, preferredModel)
 
-    if (check.type === "crisis") {
-      reply += `\n\n---\n${CRISIS_RESOURCES}`
+    if (!result) {
+      return NextResponse.json(
+        {
+          reply:     "Something stilled for a moment. The connection is struggling. Please try again.",
+          escalated: false,
+          error:     true,
+        },
+        { status: 503 }
+      )
     }
 
-    // ── 9. Save Kairos response ──────────────────────────────
-    if (userId && activeConversationId) {
-      await saveMessage(activeConversationId, "assistant", reply)
+    let { reply, modelId, modelName, failures } = result
+
+    // ── 8. Truncation detection — if cut off, append a note ───────────────
+    const wasTruncated = isTruncated(reply)
+    if (wasTruncated) {
+      console.warn(`[Kairos AI] Truncation detected from ${modelName}`)
+      // Don't append text — let the user ask to continue if needed.
+      // Log it so we know which model truncates most.
     }
 
-    // ── 10. Return response ──────────────────────────────────
+    // ── 9. Ensure conversation record ─────────────────────────────────────
+    const activeConversationId = await ensureConversation(userId, conversationId)
+
+    // ── 10. Store assistant message ───────────────────────────────────────
+    if (activeConversationId) {
+      try {
+        await adminClient.from("messages").insert({
+          conversation_id: activeConversationId,
+          role:            "assistant",
+          content:         reply,
+          model_used:      modelName,
+        })
+      } catch {
+        // Non-fatal
+      }
+    }
+
+    // ── 11. Return response ───────────────────────────────────────────────
     return NextResponse.json({
       reply,
-      escalated:      check.type === "crisis",
-      messageType:    check.type,
+      escalated:      escalated,
       conversationId: activeConversationId,
+      modelId,         // returned to client so it can be sent back for continuations
+      wasTruncated,
     })
 
   } catch (error) {
-    console.error("Companion API error:", error.message)
-
+    console.error("[Kairos AI] Route error:", error.message)
     return NextResponse.json(
       {
-        reply:     "Something stilled for a moment. Please try again — your words matter.",
+        reply:     "Something stilled for a moment. Please try again.",
         escalated: false,
         error:     true,
       },

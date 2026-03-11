@@ -311,7 +311,7 @@ function SaveButton({ saved, saving, isAuthenticated, onSave }) {
 }
 
 /* ── Message Bubble ──────────────────────────────────────── */
-function Message({ role, content, isNew, verseData, onSave, saved, saving, isAuthenticated }) {
+function Message({ role, content, isNew, verseData, onSave, saved, saving, isAuthenticated, wasTruncated }) {
   const isKairos = role === "assistant"
 
   const renderContent = (text) => {
@@ -375,6 +375,20 @@ function Message({ role, content, isNew, verseData, onSave, saved, saving, isAut
       }}>
         {renderContent(content)}
 
+        {/* Truncation indicator */}
+        {wasTruncated && isKairos && (
+          <p style={{
+            fontFamily:  "var(--font-body)",
+            fontSize:    "0.7rem",
+            color:       "var(--color-muted)",
+            fontStyle:   "italic",
+            marginTop:   "var(--space-2)",
+            marginBottom: 0,
+          }}>
+            Response may be incomplete — you can ask Kairos to continue.
+          </p>
+        )}
+
         {/* Verified verse card */}
         {verseData && (
           <BibleVerse
@@ -412,6 +426,7 @@ export default function CompanionCore({ profile = null }) {
   const [savedMsgIds,    setSavedMsgIds]    = useState(new Set())
   const [savingMsgIdx,   setSavingMsgIdx]   = useState(null)
   const [showConsent,    setShowConsent]    = useState(false)
+  const [lastModelId,    setLastModelId]    = useState(null)   // tracks which model replied last (for continuations)
 
   const bottomRef   = useRef(null)
   const inputRef    = useRef(null)
@@ -546,6 +561,7 @@ export default function CompanionCore({ profile = null }) {
             : null,
           isVerseRequest: !!verseRef,
           isSearch,
+          lastModelId,    // so the route can prefer the same model for continuations
         }),
       })
 
@@ -556,11 +572,15 @@ export default function CompanionCore({ profile = null }) {
         console.log('[Kairos] Conversation started:', data.conversationId)
       }
 
+      // Track which model replied so continuations can use the same one
+      if (data.modelId) setLastModelId(data.modelId)
+
       const assistantMsg = {
-        role:      "assistant",
-        content:   data.reply || "Something stilled. Please try again.",
-        escalated: data.escalated || false,
-        verseData: verseData,
+        role:        "assistant",
+        content:     data.reply || "Something stilled. Please try again.",
+        escalated:   data.escalated || false,
+        verseData:   verseData,
+        wasTruncated: data.wasTruncated || false,
       }
 
       const finalMessages = [...updatedHistory, assistantMsg]
@@ -776,6 +796,7 @@ export default function CompanionCore({ profile = null }) {
             saved={savedMsgIds.has(i)}
             saving={savingMsgIdx === i}
             onSave={() => handleSave(i)}
+            wasTruncated={msg.wasTruncated || false}
           />
         ))}
 
