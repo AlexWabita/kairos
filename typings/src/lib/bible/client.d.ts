@@ -16,9 +16,22 @@
 const BASE_URL = "https://rest.api.bible/v1"
 
 // ── TRANSLATION MAP ───────────────────────────────────────────
-// rest.api.bible Bible IDs for common translations
 declare interface TRANSLATION_IDSType {
 	static WEB: any;
+}
+
+declare interface BIBLE_API_COM_NAMESType {
+	static GEN: any;
+}
+
+declare interface translationMapType {
+	static number: any;
+
+	static text: any;
+
+	static reference: Object;
+
+	static source: any;
 }
 
 declare interface translationMapType {

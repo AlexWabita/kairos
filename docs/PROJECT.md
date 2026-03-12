@@ -1,446 +1,301 @@
-# KAIROS — Project Memory Document
-> Version: 6.0.0 | Started: 2026 | Status: Phase 7E ✅ COMPLETE — Moving to Phase 8 (deferred) or Phase 9
+# KAIROS — Project Handoff Document
+> Last updated: Phase 7H in progress (Bible Reader)
+> Continue from: **Step 1 — paste the 5 files below in order**
 
 ---
 
-## ⚠️ HOW TO USE THIS DOCUMENT
-
-This is the **living memory** of the Kairos project.
-- Paste this ENTIRE document at the start of every new chat session
-- Claude will read it and continue exactly where we left off
-- Update it at the end of every productive session
-- Never delete past decisions — only add to them
-- This document IS the project brain
+## Stack
+- **Framework:** Next.js (App Router)
+- **Auth + DB:** Supabase
+- **Primary AI:** Groq
+- **Bible API:** rest.api.bible (primary) + bible-api.com (fallback)
+- **Styling:** Inline styles + CSS custom properties (tokens.css)
 
 ---
 
-## 1. THE VISION
-
-**One Sentence:**
-> Kairos is a universal, spiritually grounded life companion — built on Biblical truth — for anyone in the world who is seeking answers, healing, or direction, especially those who have been hurt by or are skeptical of organised religion.
-
-**The Problem We Are Solving:**
-Millions of people are spiritually hungry but burned, confused, or misled by hypocritical leaders, false gospels, and religious manipulation. They want truth but do not know who to trust. They will not walk into a church. They will not call a pastor. They are searching alone, at odd hours, full of questions and wounds. That person has nowhere safe to go.
-
-**Why AI:**
-- No agenda, no denomination
-- No judgment, no condemnation
-- Available 24/7 — especially at 3am when the questions hit hardest
-- Cannot be a hypocrite
-- Goes to them — they do not have to walk into a building
-- Always points to the Word, not to a man
-
----
-
-## 2. THE MISSION
-
-> To use AI not to replace the work of the Holy Spirit, but as a bridge — meeting every searching, hurting, and confused person exactly where they are, and pointing them toward truth, healing, and community.
-
-**The AI is the door. Not the destination.**
-
----
-
-## 3. THE FOUNDATION PRINCIPLES (Never Negotiable)
-
-1. **Biblical truth is the anchor** — every response is grounded in scripture, not opinion
-2. **No denomination** — Kairos serves no church, pastor, or religious institution
-3. **Humble, not preachy** — the product never condemns, never forces, always meets people where they are
-4. **The companion points away from itself** — every deep interaction moves the user toward scripture, community, or a real human
-5. **Trustworthy by design** — consistency, honesty, and zero manipulation in every interaction
-6. **Privacy is sacred** — user journeys and conversations are never exploited
-7. **Free at the core** — the basic product must always be accessible to anyone, anywhere, regardless of income
-
----
-
-## 4. WHO WE ARE BUILDING FOR
-
-**Primary User — The Wounded Seeker:**
-- Has been hurt by religion, hypocritical leaders, or false gospel
-- Still feels something pulling them spiritually
-- Will not go to a church but is searching online
-- Needs a safe, non-judgmental space to ask hard questions
-- Could be any background — Christian, Muslim, Hindu, atheist, agnostic
-
-**Secondary Users:**
-- New believers who received Christ but have no follow-up or discipleship
-- Existing Christians who feel spiritually dry or disconnected
-- Anyone confused by life — culturally, politically, emotionally, spiritually
-
-**Organisational Users (Future — Tier 3 monetization):**
-- Churches and ministries wanting to deploy Kairos for their community
-- NGOs doing faith-based counseling or outreach
-- Christian schools, universities, mission organisations
-These pay a small monthly fee. Their members always use it free.
-
----
-
-## 5. HOW KAIROS IS DIFFERENT FROM OTHER AI
-
-| | ChatGPT / Claude / Gemini | Kairos |
-|---|---|---|
-| Foundation | Neutral — no worldview | Biblical truth — clear conviction |
-| Purpose | Everything to everyone | One mission — truth and healing |
-| Hard questions | Diplomatically dodges | Engages honestly and humbly |
-| Memory | Session only | Knows your full journey |
-| Goal | Answer your question | Walk with you toward truth |
-| Feel | Chatbot | Trusted companion |
-| Scripture | Avoided or treated as one opinion | Natural, gentle, always exact via API |
-| Crisis | Generic safety disclaimer | Genuine human care + real resources |
-
----
-
-## 6. TECH STACK
-
-| Layer | Tool | Status |
-|---|---|---|
-| IDE | VS Code | ✅ Active |
-| Version Control | GitHub — AlexWabita/kairos (private) | ✅ main + dev branches |
-| Frontend | Next.js 16.1.6 (Turbopack) | ✅ |
-| Styling | Tailwind CSS + CSS Variables | ✅ |
-| Database & Auth | Supabase — eu-west-2 London | ✅ 7 tables live |
-| AI Primary | **Groq** (Llama 3.3 70B) | ✅ ~3s, free, 14,400 req/day |
-| AI Fallback | OpenRouter API | ✅ 4 model fallback |
-| AI Final Fallback | Google Gemini API | ✅ 3 model fallback |
-| Bible API Primary | rest.api.bible | ✅ Live |
-| Bible API Fallback | bible-api.com | ✅ Live |
-| Embeddings | OpenAI text-embedding-3-small | ✅ 1536 dims |
-| RAG | Supabase pgvector + match_rag_entries() | ✅ **54 entries** seeded |
-| Hosting | Vercel | 🔜 Phase 9 |
-
-**AI Model Chain (priority order, 15s timeout per model):**
-1. `groq/llama-3.3-70b-versatile` — Groq, ~3s ✅ PRIMARY
-2. `groq/llama-3.1-70b-versatile` — Groq fallback
-3. `groq/mixtral-8x7b-32768` — Groq fallback
-4. `stepfun-ai/step-3.5-flash` — OpenRouter free
-5. `qwen/qwen-2.5-72b-instruct:free` — OpenRouter free
-6. `mistralai/mistral-7b-instruct:free` — OpenRouter free
-7. `thudm/glm-4.5-air` — OpenRouter free (slow, last resort)
-8. `gemini-2.0-flash` — Google AI
-9. `gemini-1.5-flash` — Google AI
-10. `gemini-1.5-flash-8b` — Google AI final net
-
-**REMOVED from chain:** `openrouter/llama-3.3-70b` (70% failure rate), `openrouter/gpt-oss-120b` (hit daily free cap in single session).
-
-**Continuation tracking:** Route returns `modelId` with every response. Client sends `lastModelId` back on next request. Continuation phrases ("continue", "please finish", etc.) route to the same model first. Truncation detection: if response ends without terminal punctuation, `wasTruncated: true` is returned and the UI shows a subtle note.
-
-**Bible API:**
-- Base URL: `https://rest.api.bible/v1`
-- WEB Bible ID: `9879dbb7cfe39e4d-01` | KJV: `de4e12af7f28f599-02`
-- Fallback: `bible-api.com` — no auth, always available
-- Default translation: WEB — user can select WEB/KJV/ASV/BBE in companion header
-
-**RAG:**
-- Embeddings: OpenAI text-embedding-3-small, 1536 dimensions
-- DB function: `match_rag_entries()` (previously `match_knowledge_base()`)
-- 54 entries seeded (expanded from 30)
-- Threshold for search: messages with 4+ words
-- Seed command (dev only): `POST /api/admin/seed` — ⚠️ REMOVE BEFORE PROD
-
----
-
-## 7. ENVIRONMENT VARIABLES (.env.local)
+## Phase Map
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://zvleavbmqgxlybnmizst.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=[anon key]
-SUPABASE_SERVICE_ROLE_KEY=[service role key]
-GROQ_API_KEY=[key]           ← NEW — console.groq.com, free, no credit card
-OPENROUTER_API_KEY=[key]
-GEMINI_API_KEY=[key]
-OPENAI_API_KEY=[key]         ← RAG embeddings only (text-embedding-3-small)
-SCRIPTURE_API_KEY=[key]
+Phase 7E ✅  Model chain overhaul, identity hardening
+Phase 7F ✅  Settings page, theme system, accent colors, font pairings, ConfirmModal
+Phase 7G ✅  Journey: search, sort, filter, pin vs favourite, delete confirm, SaveMomentModal
+Phase 7H 🔄  In-App Bible Reader (IN PROGRESS — files not yet written)
+Phase 7I     Reading Plans + Guided Study
+Phase 8      Organisation Portal (deferred — 3 architecture questions unresolved)
+Phase 9      Launch
 ```
 
-> **GROQ_API_KEY** is required. Get it free at console.groq.com — no credit card needed. 14,400 req/day.
-> **JINA_API_KEY** is no longer used — embeddings migrated to OpenAI.
-
 ---
 
-## 8. SUPABASE DATABASE SCHEMA (Live)
+## Completed This Session (7F + 7G)
 
-Project URL: `https://zvleavbmqgxlybnmizst.supabase.co` — Region: eu-west-2
-All tables: RLS enabled, anon + authenticated roles have explicit grants.
+### Phase 7F — Settings System
 
-| Table | Purpose | Status |
-|---|---|---|
-| users | Anonymous + authenticated profiles | ✅ Live |
-| sessions | Anonymous session tracking | ✅ Live |
-| conversations | Conversation threads | ✅ Live + saving |
-| messages | Every message — user + Kairos | ✅ Live + saving |
-| journey_entries | Saved reflections, prayers, milestones | ✅ Live + saving |
-| organisations | Churches/ministries on paid plan | ✅ Live — portal Phase 8 |
-| rag_entries | RAG knowledge base — 54 entries | ✅ Live + seeded |
-
-**Extensions:** pgvector enabled
-
-**journey_entries columns:**
-| column | type | nullable |
-|---|---|---|
-| id | uuid | NO — gen_random_uuid() |
-| user_id | uuid | YES |
-| conversation_id | uuid | YES |
-| entry_type | text | YES — CHECK constraint: **reflection, prayer, milestone, question, scripture** |
-| content | text | NO |
-| is_pinned | boolean | YES — default false |
-| created_at | timestamptz | YES — default now() |
-| title | text | YES |
-| scripture_ref | text | YES |
-
-⚠️ **entry_type 'moment' does NOT exist** — this caused a bug. Valid values only: reflection, prayer, milestone, question, scripture.
-
----
-
-## 9. PHASES OF DEVELOPMENT
-
-### Phases 1–6 ✅ COMPLETE
-Foundation, Architecture, Design, Core Feature, Supabase Integration, Bible API + RAG + Auth — all done.
-
-### Phase 7 ✅ COMPLETE — Journey Saving + Account Page
-- [x] "Save this moment" button on every Kairos response
-- [x] Auth gate — anonymous users see "Sign in to save", authenticated see the button
-- [x] Saves to journey_entries — title (auto-extracted), content, scripture_ref, conversation_id, entry_type = 'reflection'
-- [x] savedMsgIds Set — prevents duplicate saves, button becomes starred confirmation
-- [x] sessionType state — 'anonymous' | 'authenticated' drives save button behaviour
-- [x] /api/journey/save route — admin client pattern, verifies user in DB before insert
-- [x] Account page — /src/app/account/page.jsx
-- [x] Account: email, display_name, saved moments count, member since date
-- [x] Account: change password (sends reset email), sign out, delete account
-- [x] DeleteConfirm modal — two-step confirmation before destructive action
-- [x] /api/account/delete route — service role deletes auth user
-- [x] Login page updated — migrateAnonymousSession() called after successful sign in
-- [x] extractTitle() utility — first sentence, max 60 chars
-
-### Phase 7B ✅ COMPLETE — Saved Moments Library
-- [x] /journey/saved page — full saved moments library
-- [x] List view — title, date, scripture_ref, is_pinned indicator
-- [x] Expand entry — full content inline
-- [x] Rename title inline
-- [x] Pin / unpin toggle (is_pinned column)
-- [x] Delete individual entry with confirmation
-- [x] Empty state — warm prompt to start a conversation
-
-### Phase 7C ✅ COMPLETE — Security Hardening
-- [x] Rate limiting on /api/ai/companion — 20 req/min per user, in-memory sliding window (src/lib/rateLimit.js)
-- [x] Privacy policy page — /privacy — plain language, what is stored, retention, deletion, no selling
-- [x] First-visit consent modal — shown once, stored in localStorage
-- [x] Data export — /api/account/export — downloads all journey entries as JSON
-- [x] JSON export linked from account page
-
-### Phase 7D ✅ COMPLETE — LLM Voice & RAG Expansion
-- [x] Prompt structure overhauled — answer-first, one question rule, pre-send checklist
-- [x] RAG expanded from 30 to 54 entries (new table: rag_entries, function: match_rag_entries())
-- [x] Kairos identity hardened in prompts.js
-
-### Phase 7E ✅ COMPLETE — Model Chain Overhaul + Identity Under Pressure
-- [x] Groq added as primary provider — Llama 3.3 70B, ~3s, free tier, 14,400 req/day
-- [x] 15-second per-model timeout — fail fast, hand off
-- [x] Removed unstable OpenRouter Llama free + GPT OSS 120B (hit daily cap)
-- [x] Added Qwen 2.5 72B and Mistral 7B as OpenRouter fallbacks
-- [x] Continuation model tracking — same model used for follow-up requests
-- [x] Truncation detection — UI shows note if response appears cut off
-- [x] GROUNDING UNDER PRESSURE section added to prompts.js
-- [x] Adversarial testing confirmed: Kairos now holds identity under sustained philosophical challenge
-- [x] Installed @google/generative-ai package (required for Gemini SDK)
-
-### Phase 8 — Organisation Portal ⚠️ DEFERRED — Architecture Questions Unresolved
-Before any code is written, these must be decided:
-1. What is an organisation? (church only, or also counselling centres, small groups, para-church?)
-2. What does an org admin need? (invite members, aggregate usage stats, billing?)
-3. Billing model? (per-seat, flat org subscription, or freemium with cap?)
-
-### Phase 9 — Launch 🔜 FUTURE
-- [ ] Vercel deployment — dev branch for preview, main for production
-- [ ] Response streaming — stream tokens to client for better perceived speed
-- [ ] Voice interface — speak to Kairos and hear responses
-- [ ] Multi-language support — at minimum Swahili
-- [ ] SEO — meta tags, Open Graph, sitemap, robots.txt
-- [ ] PWA — service worker, installable on mobile, offline fallback
-- [ ] Upgrade rate limiter to Upstash Redis (current in-memory resets on server restart)
-- [ ] Set up privacy contact email (currently placeholder in /privacy)
-- [ ] Remove /api/admin/seed and /api/bible/debug
-- [ ] Final security audit
-- [ ] Encryption at rest for message content (beyond Supabase infrastructure-level)
-- [ ] Uptime monitoring + error alerting
-
----
-
-## 10. CURRENT FILE STRUCTURE (Phase 7E complete)
-
-```
-kairos/
-├── docs/
-│   ├── PROJECT.md              ✅ v6.0.0
-│   ├── ARCHITECTURE.md         ✅
-│   └── DESIGN.md               ✅
-├── src/
-│   ├── app/
-│   │   ├── layout.jsx
-│   │   ├── page.jsx            ✅ Landing page
-│   │   ├── globals.css
-│   │   ├── loading.jsx
-│   │   ├── not-found.jsx
-│   │   ├── error.jsx
-│   │   ├── (auth)/
-│   │   │   ├── layout.jsx
-│   │   │   ├── login/page.jsx              ✅ + migrateAnonymousSession on login
-│   │   │   ├── register/page.jsx           ✅
-│   │   │   └── forgot-password/page.jsx    ✅
-│   │   ├── (main)/
-│   │   │   ├── layout.jsx
-│   │   │   └── journey/page.jsx            ✅ Companion page
-│   │   ├── account/
-│   │   │   └── page.jsx                    ✅ Identity, security, export, privacy link, danger zone
-│   │   ├── journey/
-│   │   │   └── saved/page.jsx              ✅ Saved moments library — NEW Phase 7B
-│   │   ├── privacy/
-│   │   │   └── page.jsx                    ✅ Privacy policy — NEW Phase 7C
-│   │   └── api/
-│   │       ├── ai/companion/route.js       ✅ Groq + OpenRouter + Gemini chain, rate limit, continuation tracking
-│   │       ├── bible/verse/route.js        ✅
-│   │       ├── bible/debug/route.js        ⚠️ REMOVE BEFORE PROD
-│   │       ├── auth/callback/route.js      ✅
-│   │       ├── journey/save/route.js       ✅ Admin client pattern
-│   │       ├── account/delete/route.js     ✅ Service role auth delete
-│   │       ├── account/export/route.js     ✅ JSON data export — NEW Phase 7C
-│   │       └── admin/seed/route.js         ⚠️ REMOVE BEFORE PROD
-│   ├── components/
-│   │   ├── companion/
-│   │   │   ├── CompanionCore.jsx           ✅ Save, auth gate, lastModelId state, wasTruncated UI
-│   │   │   └── BibleVerse.jsx              ✅
-│   │   ├── landing/Hero.jsx                ✅
-│   │   └── shared/
-│   │       ├── Navbar.jsx                  ✅ Auth-aware
-│   │       └── Footer.jsx                  ✅
-│   └── lib/
-│       ├── ai/
-│       │   ├── prompts.js                  ✅ Identity + GROUNDING UNDER PRESSURE + RAG/profile builders
-│       │   └── guardrails.js               ✅
-│       ├── bible/client.js                 ✅
-│       ├── rateLimit.js                    ✅ In-memory 20 req/min — NEW Phase 7C
-│       └── supabase/
-│           ├── client.js                   ✅ Browser client
-│           ├── server.js                   ✅ async createSupabaseServerClient() — ALWAYS AWAIT
-│           ├── auth.js                     ✅ signOut()
-│           ├── sessions.js                 ✅ initKairosSession(), migrateAnonymousSession(authUserId)
-│           └── conversations.js            ✅
-├── middleware.js                            ✅ At project root — not inside src/app
-├── .env.local                               ✅ 8 keys — never committed
-└── package.json                             ✅ Next.js 16.1.6
+**SQL migration (already run):**
+```sql
+ALTER TABLE public.users
+ADD COLUMN IF NOT EXISTS settings JSONB DEFAULT '{}'::jsonb;
 ```
 
-> **Removed:** `src/lib/ai/client.js`, `src/lib/rag/` directory, `src/lib/supabase/admin.js` — functionality folded into route files directly.
+**New files created:**
+| File | Path |
+|---|---|
+| Settings utility | `src/lib/settings.js` |
+| Settings context | `src/context/SettingsContext.jsx` |
+| Confirm modal | `src/components/shared/ConfirmModal.jsx` |
+| Settings page | `src/app/settings/page.jsx` |
+
+**Modified files:**
+| File | Changes |
+|---|---|
+| `src/styles/tokens.css` | Added `--color-accent-*` variables + `[data-theme="light"]` block |
+| `src/app/layout.jsx` | Google Fonts, SettingsProvider, anti-FOUC script, `suppressHydrationWarning` on `<html>` |
+| `src/components/shared/Navbar.jsx` | Settings link, sign-out ConfirmModal |
+| `src/app/account/page.jsx` | ConfirmModal for delete + sign-out, Settings link |
+| `src/components/companion/CompanionCore.jsx` | Alignment fix, translation wired to settings |
+
+**Settings defaults:**
+```js
+{
+  theme:            "dark",       // light = "Coming Soon"
+  accentColor:      "covenant",   // 7 palette options
+  fontFamily:       "standard",   // 3 font pairings
+  bibleTranslation: "WEB",
+  language:         "en",         // sw = "Coming Soon"
+}
+```
+
+**Accent colours (7):** covenant (#6366F1), stillwaters (#0EA5E9), crimsongrace (#E11D48), olivebranch (#65A30D), dawn (#F59E0B), dusk (#7C3AED), selah (#64748B)
+
+**Font pairings (3):** standard (Cormorant Garamond + Nunito), scholar (Playfair Display + Lato), pilgrim (Cormorant Garamond + Source Sans 3)
+
+**Key fix — accent colour visibility:** `applySettings()` overrides `--color-gold-bright`, `--color-gold-warm`, `--color-gold-glow`, `--color-gold-subtle`, `--shadow-input` with accent hex values. Brand gradients never touched.
+
+**Valid spacing tokens:** `--space-1, 2, 3, 4, 5, 6, 8, 10, 16, 24` — there is NO `--space-7`, `--space-9`, etc. Never use undefined tokens.
 
 ---
 
-## 11. DECISIONS LOG (Sessions 1–9)
+### Phase 7G — Journey / Saved Moments
 
-| Session | Decision | Reason |
-|---|---|---|
-| 1 | Web-based, Next.js, Supabase, name Kairos | Foundation decisions |
-| 4 | Dual API fallback chain | Zero downtime risk |
-| 4 | Anonymous first | Remove all barriers for wounded seekers |
-| 5 | GitHub private, eu-west-2, pgvector, conversationId in state | Infrastructure decisions |
-| 6 | rest.api.bible — correct base URL | Dashboard confirmed this |
-| 6 | WEB as default translation | Modern, public domain, accessible |
-| 6 | stripMarkdown() in guardrails | Models ignore formatting instructions |
-| 6 | Jina AI for embeddings | Gemini embeddings blocked in Kenya; Jina is free + global |
-| 6 | RAG threshold: 4 word minimum | 8 was too high |
-| 6 | Auth callback handles PKCE + OTP | Supabase sends token_hash by default |
-| 7 | entry_type = 'reflection' | Matched existing DB check constraint; semantically accurate |
-| 7 | Admin client for /api/journey/save | Server cookie session unreliable for API routes; userId passed from client and verified in DB |
-| 7 | await createSupabaseServerClient() | Function is async due to await cookies() — all callers must await |
-| 7 | extractTitle() — first sentence, max 60 chars | Auto-title without requiring user input |
-| 8 | Rate limiter in-memory (rateLimit.js) | Fast to implement for MVP; Upstash Redis upgrade required before multi-instance prod |
-| 8 | Privacy consent modal — localStorage | Simple, no DB needed, respects intent |
-| 8 | Data export as JSON (not PDF) | Simpler, more reliable, standard format |
-| 9 | Groq as primary AI provider | Same Llama 3.3 70B model hosted directly — ~3s vs 30s+ on OpenRouter free |
-| 9 | 15s per-model timeout | Fail fast and hand off — prevents hanging on slow providers |
-| 9 | Removed OpenRouter Llama free + GPT OSS 120B | 70% failure rate and daily cap hit in single session |
-| 9 | Continuation model tracking | Voice consistency across multi-turn / split responses |
-| 9 | GROUNDING UNDER PRESSURE in prompts.js | Adversarial testing showed Kairos adopting challenger's godless frame; now holds identity under pressure |
-| 9 | Switched embeddings to OpenAI text-embedding-3-small | More reliable; Jina had integration issues at scale |
-| 9 | Renamed knowledge_base → rag_entries, match_knowledge_base → match_rag_entries | Cleaner naming, reflects actual purpose |
+**SQL migration (already run):**
+```sql
+ALTER TABLE public.journey_entries
+ADD COLUMN IF NOT EXISTS is_favourite BOOLEAN DEFAULT false;
+```
 
----
+**Journey entries table columns (confirmed):**
+`id, user_id, conversation_id, entry_type, context, is_pinned, is_favourite, created_at, title, scripture_ref`
 
-## 12. KNOWN ISSUES / WATCH LIST
+**Files replaced/created:**
+| File | Path |
+|---|---|
+| Saved moments page (full rewrite) | `src/app/journey/saved/page.jsx` |
+| Save moment modal (new) | `src/components/companion/SaveMomentModal.jsx` |
+| Companion core (updated) | `src/components/companion/CompanionCore.jsx` |
+| Journey save route (updated) | `src/app/api/journey/save/route.js` |
 
-| Issue | Status | Notes |
-|---|---|---|
-| Gemini billing Kenya (OR_BACR2_44) | Open | Groq now primary so Gemini is last resort; not urgent |
-| GET /undefined 404 | Minor | Middleware redirect with null URL; cosmetic |
-| Slow cold-start compile (15-20s) | Cosmetic | Turbopack first-compile; subsequent requests fast |
-| Rate limiter resets on server restart | Phase 9 | Upgrade to Upstash Redis before multi-instance deployment |
-| Privacy contact email placeholder | Phase 9 | privacy@kairos.app referenced in /privacy but no inbox exists yet |
-| No response streaming | Phase 9 | Full response waits before displaying; streaming would improve UX |
-| /api/admin/seed in codebase | REMOVE BEFORE PROD | Public access would allow anyone to overwrite the knowledge base |
-| /api/bible/debug in codebase | REMOVE BEFORE PROD | Exposes internal API info |
-| Phase 8 architecture unresolved | Deferred | Three questions must be answered before any org portal code is written |
+**What was built:**
+- Real-time search (title + content + scripture_ref)
+- Sort: Newest / Oldest / Pinned first / A→Z / Favourites
+- Filter: All / Reflection / Prayer / Milestone / Question / Scripture
+- **Pin** (map marker) = keeps at top when sorted by Pinned, gold left border
+- **Favourite** (heart) = personal mark, soft red left border, ♥ in meta row
+- Delete requires ConfirmModal (danger variant) — no immediate deletion
+- Overflow `⋯` menu replaces 4 inline icon buttons (44px touch targets)
+- TypeBadge on every card showing entry type
+- `SaveMomentModal` intercepts save before any API call:
+  - Title field pre-filled via `suggestTitle()` (strips filler openers)
+  - Entry type auto-detected via `detectType()` (prayer/milestone/question/scripture signals)
+  - User edits both before confirming
+- Route now accepts `entry_type` from client, validates server-side
+
+**Save flow:**
+1. User clicks "Save this moment"
+2. Modal opens — title pre-filled, type auto-detected
+3. User edits title and/or type
+4. User clicks SAVE MOMENT → API fires → modal closes → star confirmation
 
 ---
 
-## 13. SESSION LOG
+## Phase 7H — Bible Reader (IN PROGRESS)
 
-| Session | What We Did | Next |
-|---|---|---|
-| 1 | Vision, mission, principles, tech stack, name | Architecture |
-| 2 | DB schema, AI logic, guardrails, user flows | Design |
-| 3 | Design language, foundation files, monetization | Core feature |
-| 4 | Landing page, Companion built, AI live, first conversation | Supabase |
-| 5 | GitHub, Supabase migration, anonymous sessions, conversation saving | Phase 6 |
-| 6 | Bible API, RAG (30 entries seeded), email auth, Navbar session awareness | Phase 7 |
-| 7 | Journey saving, account page, session migration on login, CIA Triad audit | Phase 7B + 7C |
-| 8 | Saved moments library, rate limiting, privacy policy, consent modal, data export | Phase 7D |
-| 9 | Prompt overhaul, RAG to 54 entries, Groq primary, model chain, continuation tracking, grounding under pressure | Phase 8 / 9 |
+### What was decided before session ended
 
----
+**No API calls needed for navigation** — 66 books and chapter counts are hardcoded static data in the client. Zero plan limitation risk.
 
-## 14. PRIVACY & SECURITY ASSESSMENT (CIA Triad)
+**Chapter fetching strategy:**
+- Primary: `bible-api.com` — returns clean `verses: [{verse, text}]` array
+- Fallback: `rest.api.bible` passage endpoint — returns text blob, parsed into verses
 
-### Confidentiality
-**Have:** RLS on all tables, users see only their own data, anonymous sessions isolated by token, no ads, no data selling by design, privacy policy page live, consent modal on first visit, data export available.
-**Need:** Privacy contact email inbox (placeholder only), consideration of message content encryption beyond infrastructure level.
+**"Ask Kairos about this" button** — writes verse context to `sessionStorage`, navigates to `/journey`. CompanionCore checks on mount and pre-fills input.
 
-### Integrity
-**Have:** Auth token verification via Supabase, service role key server-side only, user IDs verified in DB before writes, RLS prevents cross-user writes, rate limiting on companion API.
-**Need:** Input sanitization audit, audit logging (future).
+**Translation support:** WEB, KJV, ASV, BBE (same 4 as companion)
 
-### Availability
-**Have:** 10-model AI fallback chain, dual Bible API fallback, Supabase managed infrastructure, Groq primary with 14,400 req/day free tier.
-**Need:** Vercel deployment, uptime monitoring, error alerting, graceful degradation UI if all AI providers fail, Upstash Redis for rate limiter persistence.
+### 5 files to write FIRST in the new chat (in this order)
+
+> **IMPORTANT FOR NEW CLAUDE:** Do not write any of these from memory. Ask the user to confirm or share the existing files first where noted. Start writing immediately — the plan below is complete.
 
 ---
 
-## 15. MONETIZATION
+#### File 1 — `src/lib/bible/client.js` (REPLACE existing)
 
-**Tier 1 — Individual (Always Free):** Full access, no credit card ever.
-**Tier 2 — Voluntary:** "Keep the light on for others" — optional donation after meaningful interactions.
-**Tier 3 — Organisations (Small Monthly Fee):** Churches/ministries/NGOs. Their members always free.
+The updated client was partially written in the previous session. It adds:
+- `BIBLE_BOOKS` array export — 66 books with `{id, name, chapters, testament}`
+- `BIBLE_API_COM_NAMES` map — book IDs to bible-api.com URL names
+- `fetchChapter(bookId, chapter, translation)` export — returns `{reference, verses: [{number, text}], translation, source}`
+- `parseVerseText()` helper — parses rest.api.bible text blob into verse array
+- All existing `fetchVerse`, `searchBible`, `getAvailableTranslations` preserved unchanged
 
-Implement after Phase 7 when real users exist. Phase 8 architecture questions must be resolved first.
-
----
-
-## 16. HOW TO START THE NEXT CHAT
-
-Paste this at the start of the new chat:
+**Before writing:** Ask user to paste the current `src/lib/bible/client.js` to confirm the base — it was shared in the previous session but confirm nothing changed.
 
 ---
 
-I am building Kairos — a Biblical AI life companion. You are my senior development partner and have been building this with me from the beginning. Read this entire PROJECT.md carefully, then continue exactly where we left off — same tone, same standards, same workflow. Do not assume file contents. Ask me to paste any file you need before writing code.
+#### File 2 — `src/app/api/bible/chapter/route.js` (NEW)
 
-[PASTE ENTIRE PROJECT.md HERE]
+```
+GET /api/bible/chapter?book=JHN&chapter=3&translation=WEB
+```
 
-We completed Phase 7E. The MVP is fully functional end-to-end.
+Returns:
+```json
+{
+  "success": true,
+  "reference": "John 3",
+  "verses": [{"number": 1, "text": "..."}],
+  "translation": "WEB",
+  "source": "bible-api.com"
+}
+```
 
-**Current situation:**
-- Phase 8 (Organisation Portal) is deferred — three architecture questions are unresolved (see Phase 8 in Section 9)
-- Phase 9 (Launch) is next in priority
-
-**What I need from you first:**
-Before writing any code, confirm what we are working on this session and whether you need any existing files pasted.
+Calls `fetchChapter()` from the updated client. Validates `book` against `BIBLE_BOOKS`. Returns 400 if invalid, 500 on fetch failure.
 
 ---
 
-*"For such a time as this." — Esther 4:14*
-*"He has made everything beautiful in its time." — Ecclesiastes 3:11*
+#### File 3 — `src/app/bible/page.jsx` (NEW)
+
+**Layout:** Two-panel on desktop (sidebar + reading pane), single panel on mobile with a slide-in sheet for book/chapter selection.
+
+**Sidebar / Book selector:**
+- Two tabs: OLD TESTAMENT / NEW TESTAMENT
+- Scrollable list of books, grouped by testament
+- Click book → shows chapter grid (1…N)
+- Click chapter → loads it in reading pane
+- Remembers last position in `localStorage` (`kairos_bible_pos`)
+
+**Reading pane:**
+- Header: Book name + Chapter number, translation picker
+- Each verse rendered as: verse number (gold, small) + verse text
+- Tapping/clicking a verse highlights it and shows two action buttons:
+  - **Copy** — copies `"verse text — Book Chapter:Verse (TRANSLATION)"` to clipboard
+  - **Ask Kairos** — writes context to `sessionStorage` key `kairos_verse_context`, navigates to `/journey`
+- Prev / Next chapter navigation buttons at bottom
+- Loading state: "Opening the Word…" in heading italic style
+
+**State:**
+```js
+selectedBook    // BIBLE_BOOKS entry
+selectedChapter // number
+chapterData     // { reference, verses, translation, source } | null
+loading         // boolean
+error           // string | null
+highlightedVerse // number | null
+translation     // "WEB" | "KJV" | "ASV" | "BBE"
+activeTab       // "OT" | "NT"
+```
+
+**No auth required** — Bible reader is fully public, no login gate.
+
+---
+
+#### File 4 — Update `src/components/companion/CompanionCore.jsx`
+
+Add this block inside the `useEffect` that runs on mount (after `initKairosSession`):
+
+```js
+// Check for verse context from Bible reader
+const verseCtx = sessionStorage.getItem("kairos_verse_context")
+if (verseCtx) {
+  sessionStorage.removeItem("kairos_verse_context")
+  setInput(verseCtx)
+  setStarted(true)
+}
+```
+
+No other changes to CompanionCore. **Before writing:** Ask user to paste the current CompanionCore so the block is inserted in the right place — do not rewrite the whole file from memory.
+
+---
+
+#### File 5 — Add Bible Reader link to Navbar
+
+Add a "Bible" nav link to `src/components/shared/Navbar.jsx` pointing to `/bible`. Position it between Journey and Settings in the nav order.
+
+**Before writing:** Ask user to paste current `Navbar.jsx`.
+
+---
+
+## Key Architecture Decisions (standing)
+
+| Decision | Reason |
+|---|---|
+| Light mode = Coming Soon | Components have hardcoded rgba values; full CSS variable migration is a separate pass |
+| Accent overrides gold variables | All components reference gold vars — no rewrites needed |
+| `--font-display` (Cinzel) never overridden | Brand identity fixed |
+| Valid spacing tokens: 1,2,3,4,5,6,8,10,16,24 | No space-7 or space-9 — will resolve to zero |
+| bible-api.com is chapter primary | Returns clean verse array; rest.api.bible returns blob |
+| Book/chapter counts are hardcoded | 66 books never change; eliminates API plan risk |
+| sessionStorage for verse→companion context | Ephemeral, no DB needed, cleared on read |
+| Phase 8 (Org Portal) deferred | 3 architecture questions unresolved |
+
+---
+
+## Database — Current Table State
+
+### `users`
+Standard auth columns + `settings JSONB DEFAULT '{}'`
+
+### `journey_entries`
+`id, user_id, conversation_id, entry_type, context, is_pinned, is_favourite, created_at, title, scripture_ref`
+
+**Valid entry_type values:** `reflection | prayer | milestone | question | scripture`
+
+### `sessions`
+`id, user_id, session_token, device_hint, created_at, expires_at`
+
+---
+
+## Bible API
+
+**rest.api.bible** (primary for verse lookup + search)
+- Env var: `SCRIPTURE_API_KEY`
+- Starter plan (free) + 3 licensed Bibles: NLT, NIV, AMP
+- Translation IDs: WEB `9879dbb7cfe39e4d-01`, KJV `de4e12af7f28f599-02`, ASV `685d1470fe4d5c3b-01`, BBE `40072c4a5ade2ef3-01`
+
+**bible-api.com** (fallback for verses, primary for chapter fetch)
+- No auth required
+- Supports: web, kjv, asv, bbe
+- Chapter URL pattern: `https://bible-api.com/{book-name}+{chapter}?translation={t}`
+- Returns `{ reference, verses: [{book_id, book_name, chapter, verse, text}] }`
+
+---
+
+## Prompt for New Chat
+
+Paste this at the start of the new conversation, then attach this PROJECT.md file:
+
+---
+
+> You are helping me continue building **Kairos** — a Biblical AI life companion app built with Next.js, Supabase, and Groq.
+>
+> I have attached PROJECT.md which contains the full project state, all decisions made, and the exact continuation plan. Please read it fully before responding.
+>
+> We are at **Phase 7H — Bible Reader**. The previous session ended mid-phase with 5 files partially planned but not yet written to code.
+>
+> Your first task is to write those 5 files in the order listed in the PROJECT.md under "5 files to write FIRST". Before writing each file, follow the instructions noted — some require me to paste existing files first so you do not rewrite them from memory.
+>
+> Rules that always apply:
+> - Never use CSS token values that are not in the valid spacing scale (1,2,3,4,5,6,8,10,16,24)
+> - Never use `--space-7`, `--space-9` or any undefined token
+> - Never assume file contents — always ask me to paste a file before modifying it
+> - All buttons and touch targets minimum 44px height
+> - No localStorage or sessionStorage in artifacts
+> - Commits happen at the end of each phase
