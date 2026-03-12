@@ -1,6 +1,6 @@
 # KAIROS — Project Handoff Document
-> Last updated: Phase 7H in progress (Bible Reader)
-> Continue from: **Step 1 — paste the 5 files below in order**
+> Last updated: Phase 7H complete, Phase 7I pending discussion
+> Continue from: **Read this file fully, then follow the "Prompt for New Chat" section at the bottom**
 
 ---
 
@@ -8,7 +8,7 @@
 - **Framework:** Next.js (App Router)
 - **Auth + DB:** Supabase
 - **Primary AI:** Groq
-- **Bible API:** rest.api.bible (primary) + bible-api.com (fallback)
+- **Bible API:** bible-api.com (primary for chapters) + rest.api.bible (fallback + verse search)
 - **Styling:** Inline styles + CSS custom properties (tokens.css)
 
 ---
@@ -19,221 +19,144 @@
 Phase 7E ✅  Model chain overhaul, identity hardening
 Phase 7F ✅  Settings page, theme system, accent colors, font pairings, ConfirmModal
 Phase 7G ✅  Journey: search, sort, filter, pin vs favourite, delete confirm, SaveMomentModal
-Phase 7H 🔄  In-App Bible Reader (IN PROGRESS — files not yet written)
-Phase 7I     Reading Plans + Guided Study
+Phase 7H ✅  In-App Bible Reader (COMPLETE)
+Phase 7I 🔄  Reading Plans + Guided Study (NEXT — discuss before writing any code)
 Phase 8      Organisation Portal (deferred — 3 architecture questions unresolved)
 Phase 9      Launch
 ```
 
 ---
 
-## Completed This Session (7F + 7G)
+## Completed This Session (7H — Bible Reader)
 
-### Phase 7F — Settings System
+### SQL migrations run
+No new migrations were required for Phase 7H.
+Bible reader is fully public (no auth gate).
+Notes save through existing `journey_entries` table.
 
-**SQL migration (already run):**
-```sql
-ALTER TABLE public.users
-ADD COLUMN IF NOT EXISTS settings JSONB DEFAULT '{}'::jsonb;
-```
+---
 
-**New files created:**
-| File | Path |
+### New Files Created
+
+| File | Purpose |
 |---|---|
-| Settings utility | `src/lib/settings.js` |
-| Settings context | `src/context/SettingsContext.jsx` |
-| Confirm modal | `src/components/shared/ConfirmModal.jsx` |
-| Settings page | `src/app/settings/page.jsx` |
+| `src/lib/bible/client.js` | Updated — added `BIBLE_BOOKS`, `BIBLE_API_COM_NAMES`, `fetchChapter()`, `parseVerseText()` |
+| `src/app/api/bible/chapter/route.js` | GET `/api/bible/chapter?book=JHN&chapter=3&translation=WEB` |
+| `src/app/bible/page.jsx` | Full Bible reader page (see details below) |
 
-**Modified files:**
+### Modified Files
+
 | File | Changes |
 |---|---|
-| `src/styles/tokens.css` | Added `--color-accent-*` variables + `[data-theme="light"]` block |
-| `src/app/layout.jsx` | Google Fonts, SettingsProvider, anti-FOUC script, `suppressHydrationWarning` on `<html>` |
-| `src/components/shared/Navbar.jsx` | Settings link, sign-out ConfirmModal |
-| `src/app/account/page.jsx` | ConfirmModal for delete + sign-out, Settings link |
-| `src/components/companion/CompanionCore.jsx` | Alignment fix, translation wired to settings |
+| `src/components/companion/CompanionCore.jsx` | Added `sessionStorage` verse context check on mount |
+| `src/components/shared/Navbar.jsx` | Added Bible link between Journey and Settings in `navItems` array |
+| `src/styles/tokens.css` | Added semantic alias variables to `:root` and `[data-theme="light"]` |
 
-**Settings defaults:**
+---
+
+### Phase 7H — Feature Details
+
+#### `src/lib/bible/client.js`
+- `BIBLE_BOOKS` — exported array of 66 books, each `{id, name, chapters, testament}`
+- `BIBLE_API_COM_NAMES` — maps book IDs to URL-safe names for bible-api.com
+- `fetchChapter(bookId, chapter, translation)` — primary: bible-api.com, fallback: rest.api.bible
+- `parseVerseText()` — parses rest.api.bible plain-text blob into `[{number, text}]`
+- All existing exports (`fetchVerse`, `searchBible`, `getAvailableTranslations`) preserved unchanged
+
+#### `src/app/api/bible/chapter/route.js`
+- `GET /api/bible/chapter?book=JHN&chapter=3&translation=WEB`
+- Validates: book against `BIBLE_BOOKS`, chapter range per book, translation in `[WEB, KJV, ASV, BBE]`
+- Returns `{ success, reference, verses: [{number, text}], translation, source }`
+- Returns 400 for invalid params, 500 on fetch failure
+
+#### `src/app/bible/page.jsx` — Full feature list
+**Navigation:**
+- Two-panel desktop (sidebar + reading pane), mobile slide-in sidebar
+- OT / NT tabs → book list → chapter grid (all hardcoded, zero API calls)
+- Last position persisted via `localStorage` key `kairos_bible_pos`
+- Prev / Next chapter navigation with cross-book boundaries (Genesis→Exodus, etc.)
+- Defaults to John 1 on first visit
+
+**Multi-verse selection:**
+- Tap any verse to enter selection mode — all verses show selection checkboxes
+- Tap additional verses to add to selection, tap again to deselect
+- Clearing selection: tap × in toolbar, or change chapter
+- Session-only (not persisted to DB) — by product design decision
+
+**Floating action toolbar:**
+- Slides up from bottom on first selection, fully hidden (`-200px`) when no selection
+- Shows: `N verses ×` | Highlight | Copy | Note | Ask Kairos
+- Mobile: `flexWrap: "wrap"`, `width: "min(520px, calc(100vw - 2rem))"`, label text hidden on very small screens via `.bible-toolbar-actions` class
+
+**Highlight:**
+- Session-only gold tint on highlighted verses
+- Button label toggles "Highlight" / "Remove" based on whether all selected verses are already highlighted
+
+**Copy (multi-verse):**
+- Builds: `[1] verse text [2] verse text\n— Book Chapter:1–2 (TRANSLATION)`
+- Contiguous range uses em-dash (1–3), non-contiguous uses comma list (1, 3, 5)
+
+**Note drawer:**
+- Slides up above toolbar when Note button active
+- Shows verse range reference in header
+- Textarea for user's reflection
+- Flows through `SaveMomentModal` — user sets title and entry type before saving
+- Saves to `journey_entries` with `entry_type: "scripture"` auto-detected
+- "Save to Journey" disabled and labelled "Sign in to save" for unauthenticated users
+
+**Ask Kairos (multi-verse):**
+- Builds: `I'd like to reflect on Book Chapter:1–3 (TRANSLATION):\n\n1. verse\n2. verse`
+- Writes to `sessionStorage` key `kairos_verse_context`
+- Navigates to `/journey` — CompanionCore reads and clears on mount
+
+**Display settings panel (Aa):**
+- Slides in from right, backdrop overlay behind it
+- Translation: WEB / KJV / ASV / BBE (duplicated from header for discoverability)
+- Text size: Small / Default / Large (actual `A` rendered at each size)
+- Line spacing: Tight / Normal / Spacious
+
+**Auth fix (critical):**
+- Bible page fetches `users.id` (internal profile ID) via `auth_id` lookup
+- Save route expects `users.id` not Supabase auth UUID
+- Without this fix notes saved silently with 401 and never appeared in Journey
+
+**Background transparency fix:**
+- Added semantic alias tokens to `tokens.css` (see below)
+- Sidebar, settings panel, note drawer use hardcoded hex values as fallback safety
+
+---
+
+### tokens.css additions
+
+Added inside `:root {}` and `[data-theme="light"]`:
+
+```css
+/* ── SEMANTIC ALIASES (used by Bible reader + future components) ── */
+--color-bg-primary:     var(--color-void);
+--color-bg-secondary:   var(--color-deep);
+--color-bg-tertiary:    var(--color-surface);
+--color-border-subtle:  var(--color-border);
+--color-text-primary:   var(--color-divine);
+--color-text-secondary: var(--color-soft);
+--color-text-muted:     var(--color-muted);
+```
+
+---
+
+### Navbar navItems (current order)
 ```js
-{
-  theme:            "dark",       // light = "Coming Soon"
-  accentColor:      "covenant",   // 7 palette options
-  fontFamily:       "standard",   // 3 font pairings
-  bibleTranslation: "WEB",
-  language:         "en",         // sw = "Coming Soon"
-}
+const navItems = [
+  { label: "About",        href: "/#about"       },
+  { label: "How It Works", href: "/#how-it-works" },
+  { label: "Journey",      href: "/journey"       },
+  { label: "Bible",        href: "/bible"         },
+  { label: "Settings",     href: "/settings"      },
+]
 ```
 
-**Accent colours (7):** covenant (#6366F1), stillwaters (#0EA5E9), crimsongrace (#E11D48), olivebranch (#65A30D), dawn (#F59E0B), dusk (#7C3AED), selah (#64748B)
-
-**Font pairings (3):** standard (Cormorant Garamond + Nunito), scholar (Playfair Display + Lato), pilgrim (Cormorant Garamond + Source Sans 3)
-
-**Key fix — accent colour visibility:** `applySettings()` overrides `--color-gold-bright`, `--color-gold-warm`, `--color-gold-glow`, `--color-gold-subtle`, `--shadow-input` with accent hex values. Brand gradients never touched.
-
-**Valid spacing tokens:** `--space-1, 2, 3, 4, 5, 6, 8, 10, 16, 24` — there is NO `--space-7`, `--space-9`, etc. Never use undefined tokens.
-
 ---
 
-### Phase 7G — Journey / Saved Moments
-
-**SQL migration (already run):**
-```sql
-ALTER TABLE public.journey_entries
-ADD COLUMN IF NOT EXISTS is_favourite BOOLEAN DEFAULT false;
-```
-
-**Journey entries table columns (confirmed):**
-`id, user_id, conversation_id, entry_type, context, is_pinned, is_favourite, created_at, title, scripture_ref`
-
-**Files replaced/created:**
-| File | Path |
-|---|---|
-| Saved moments page (full rewrite) | `src/app/journey/saved/page.jsx` |
-| Save moment modal (new) | `src/components/companion/SaveMomentModal.jsx` |
-| Companion core (updated) | `src/components/companion/CompanionCore.jsx` |
-| Journey save route (updated) | `src/app/api/journey/save/route.js` |
-
-**What was built:**
-- Real-time search (title + content + scripture_ref)
-- Sort: Newest / Oldest / Pinned first / A→Z / Favourites
-- Filter: All / Reflection / Prayer / Milestone / Question / Scripture
-- **Pin** (map marker) = keeps at top when sorted by Pinned, gold left border
-- **Favourite** (heart) = personal mark, soft red left border, ♥ in meta row
-- Delete requires ConfirmModal (danger variant) — no immediate deletion
-- Overflow `⋯` menu replaces 4 inline icon buttons (44px touch targets)
-- TypeBadge on every card showing entry type
-- `SaveMomentModal` intercepts save before any API call:
-  - Title field pre-filled via `suggestTitle()` (strips filler openers)
-  - Entry type auto-detected via `detectType()` (prayer/milestone/question/scripture signals)
-  - User edits both before confirming
-- Route now accepts `entry_type` from client, validates server-side
-
-**Save flow:**
-1. User clicks "Save this moment"
-2. Modal opens — title pre-filled, type auto-detected
-3. User edits title and/or type
-4. User clicks SAVE MOMENT → API fires → modal closes → star confirmation
-
----
-
-## Phase 7H — Bible Reader (IN PROGRESS)
-
-### What was decided before session ended
-
-**No API calls needed for navigation** — 66 books and chapter counts are hardcoded static data in the client. Zero plan limitation risk.
-
-**Chapter fetching strategy:**
-- Primary: `bible-api.com` — returns clean `verses: [{verse, text}]` array
-- Fallback: `rest.api.bible` passage endpoint — returns text blob, parsed into verses
-
-**"Ask Kairos about this" button** — writes verse context to `sessionStorage`, navigates to `/journey`. CompanionCore checks on mount and pre-fills input.
-
-**Translation support:** WEB, KJV, ASV, BBE (same 4 as companion)
-
-### 5 files to write FIRST in the new chat (in this order)
-
-> **IMPORTANT FOR NEW CLAUDE:** Do not write any of these from memory. Ask the user to confirm or share the existing files first where noted. Start writing immediately — the plan below is complete.
-
----
-
-#### File 1 — `src/lib/bible/client.js` (REPLACE existing)
-
-The updated client was partially written in the previous session. It adds:
-- `BIBLE_BOOKS` array export — 66 books with `{id, name, chapters, testament}`
-- `BIBLE_API_COM_NAMES` map — book IDs to bible-api.com URL names
-- `fetchChapter(bookId, chapter, translation)` export — returns `{reference, verses: [{number, text}], translation, source}`
-- `parseVerseText()` helper — parses rest.api.bible text blob into verse array
-- All existing `fetchVerse`, `searchBible`, `getAvailableTranslations` preserved unchanged
-
-**Before writing:** Ask user to paste the current `src/lib/bible/client.js` to confirm the base — it was shared in the previous session but confirm nothing changed.
-
----
-
-#### File 2 — `src/app/api/bible/chapter/route.js` (NEW)
-
-```
-GET /api/bible/chapter?book=JHN&chapter=3&translation=WEB
-```
-
-Returns:
-```json
-{
-  "success": true,
-  "reference": "John 3",
-  "verses": [{"number": 1, "text": "..."}],
-  "translation": "WEB",
-  "source": "bible-api.com"
-}
-```
-
-Calls `fetchChapter()` from the updated client. Validates `book` against `BIBLE_BOOKS`. Returns 400 if invalid, 500 on fetch failure.
-
----
-
-#### File 3 — `src/app/bible/page.jsx` (NEW)
-
-**Layout:** Two-panel on desktop (sidebar + reading pane), single panel on mobile with a slide-in sheet for book/chapter selection.
-
-**Sidebar / Book selector:**
-- Two tabs: OLD TESTAMENT / NEW TESTAMENT
-- Scrollable list of books, grouped by testament
-- Click book → shows chapter grid (1…N)
-- Click chapter → loads it in reading pane
-- Remembers last position in `localStorage` (`kairos_bible_pos`)
-
-**Reading pane:**
-- Header: Book name + Chapter number, translation picker
-- Each verse rendered as: verse number (gold, small) + verse text
-- Tapping/clicking a verse highlights it and shows two action buttons:
-  - **Copy** — copies `"verse text — Book Chapter:Verse (TRANSLATION)"` to clipboard
-  - **Ask Kairos** — writes context to `sessionStorage` key `kairos_verse_context`, navigates to `/journey`
-- Prev / Next chapter navigation buttons at bottom
-- Loading state: "Opening the Word…" in heading italic style
-
-**State:**
-```js
-selectedBook    // BIBLE_BOOKS entry
-selectedChapter // number
-chapterData     // { reference, verses, translation, source } | null
-loading         // boolean
-error           // string | null
-highlightedVerse // number | null
-translation     // "WEB" | "KJV" | "ASV" | "BBE"
-activeTab       // "OT" | "NT"
-```
-
-**No auth required** — Bible reader is fully public, no login gate.
-
----
-
-#### File 4 — Update `src/components/companion/CompanionCore.jsx`
-
-Add this block inside the `useEffect` that runs on mount (after `initKairosSession`):
-
-```js
-// Check for verse context from Bible reader
-const verseCtx = sessionStorage.getItem("kairos_verse_context")
-if (verseCtx) {
-  sessionStorage.removeItem("kairos_verse_context")
-  setInput(verseCtx)
-  setStarted(true)
-}
-```
-
-No other changes to CompanionCore. **Before writing:** Ask user to paste the current CompanionCore so the block is inserted in the right place — do not rewrite the whole file from memory.
-
----
-
-#### File 5 — Add Bible Reader link to Navbar
-
-Add a "Bible" nav link to `src/components/shared/Navbar.jsx` pointing to `/bible`. Position it between Journey and Settings in the nav order.
-
-**Before writing:** Ask user to paste current `Navbar.jsx`.
-
----
-
-## Key Architecture Decisions (standing)
+## Key Architecture Decisions (standing + new)
 
 | Decision | Reason |
 |---|---|
@@ -244,6 +167,10 @@ Add a "Bible" nav link to `src/components/shared/Navbar.jsx` pointing to `/bible
 | bible-api.com is chapter primary | Returns clean verse array; rest.api.bible returns blob |
 | Book/chapter counts are hardcoded | 66 books never change; eliminates API plan risk |
 | sessionStorage for verse→companion context | Ephemeral, no DB needed, cleared on read |
+| Bible highlights = session-only | Product is a companion not a study tool; DB overhead not justified yet |
+| Bible notes → SaveMomentModal flow | Intentional save philosophy consistent with Journey; zero new infrastructure |
+| Bible page uses internal profile ID | Save route expects `users.id` not Supabase auth UUID — fetched via `auth_id` lookup |
+| Semantic alias tokens in tokens.css | Prevents transparent panels when CSS variables undefined in inline styles |
 | Phase 8 (Org Portal) deferred | 3 architecture questions unresolved |
 
 ---
@@ -258,6 +185,8 @@ Standard auth columns + `settings JSONB DEFAULT '{}'`
 
 **Valid entry_type values:** `reflection | prayer | milestone | question | scripture`
 
+**Note:** `conversation_id` is nullable — Bible notes save without one. The saved page queries all entries by `user_id` only, so this is safe.
+
 ### `sessions`
 `id, user_id, session_token, device_hint, created_at, expires_at`
 
@@ -265,16 +194,133 @@ Standard auth columns + `settings JSONB DEFAULT '{}'`
 
 ## Bible API
 
-**rest.api.bible** (primary for verse lookup + search)
+**rest.api.bible** (verse lookup + search + chapter fallback)
 - Env var: `SCRIPTURE_API_KEY`
-- Starter plan (free) + 3 licensed Bibles: NLT, NIV, AMP
 - Translation IDs: WEB `9879dbb7cfe39e4d-01`, KJV `de4e12af7f28f599-02`, ASV `685d1470fe4d5c3b-01`, BBE `40072c4a5ade2ef3-01`
 
-**bible-api.com** (fallback for verses, primary for chapter fetch)
+**bible-api.com** (primary chapter fetch)
 - No auth required
 - Supports: web, kjv, asv, bbe
-- Chapter URL pattern: `https://bible-api.com/{book-name}+{chapter}?translation={t}`
+- Chapter URL: `https://bible-api.com/{book-name}+{chapter}?translation={t}`
 - Returns `{ reference, verses: [{book_id, book_name, chapter, verse, text}] }`
+
+---
+
+## File Structure (current — relevant files only)
+
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── ai/
+│   │   │   └── companion/route.js
+│   │   ├── bible/
+│   │   │   ├── chapter/route.js        ← NEW 7H
+│   │   │   └── verse/route.js
+│   │   └── journey/
+│   │       └── save/route.js
+│   ├── account/page.jsx
+│   ├── bible/
+│   │   └── page.jsx                    ← NEW 7H
+│   ├── journey/
+│   │   ├── page.jsx
+│   │   └── saved/page.jsx
+│   ├── settings/page.jsx
+│   ├── layout.jsx
+│   └── globals.css
+├── components/
+│   ├── companion/
+│   │   ├── CompanionCore.jsx           ← UPDATED 7H
+│   │   ├── BibleVerse.jsx
+│   │   └── SaveMomentModal.jsx
+│   └── shared/
+│       ├── ConfirmModal.jsx
+│       └── Navbar.jsx                  ← UPDATED 7H
+├── context/
+│   └── SettingsContext.jsx
+├── lib/
+│   ├── bible/
+│   │   └── client.js                   ← UPDATED 7H
+│   ├── supabase/
+│   │   ├── client.js
+│   │   ├── auth.js
+│   │   └── sessions.js
+│   └── settings.js
+└── styles/
+    └── tokens.css                      ← UPDATED 7H
+```
+
+---
+
+## Phase 7I — Reading Plans + Guided Study (NEXT)
+
+### Status: DISCUSSION REQUIRED before any code is written
+
+This is the first thing to do in the new chat. The previous session ended with the decision to discuss and align on the professional approach before writing anything.
+
+### What the phase map says
+**Reading Plans** — structured, time-based Bible reading schedules
+**Guided Study** — deeper AI-led engagement with a topic or book
+
+### Why these need discussion first
+Reading Plans and Guided Study sound related but are architecturally different:
+- Reading Plans are **sequential, date-aware, progress-tracked**
+- Guided Study is more **conversational, Kairos-led, topic-driven**
+
+They may share a DB table or need separate ones. The AI involvement level differs. The UI patterns differ. Getting this wrong creates rework.
+
+### Questions the new chat must answer BEFORE writing code
+
+1. **Reading Plans — curated or user-created?**
+   Are these plans Kairos ships (e.g. "Read the Bible in a year"), plans users build themselves, or both? This determines whether plan definitions live in the DB or in static files.
+
+2. **Guided Study — structured lessons or AI conversation?**
+   Is this a set curriculum with fixed content per session, or is Kairos dynamically generating study content based on a chosen topic? Or a hybrid?
+
+3. **Progress tracking — passive or active?**
+   Does Kairos remind users about incomplete plans (push/email), or does the user simply check their own progress when they open the app?
+
+4. **Social dimension — personal only or group?**
+   Is Phase 7I strictly personal, or does group study tie into Phase 8's Organisation Portal? If group study is in scope here, the schema needs to account for it now.
+
+5. **Entry point — where does the user discover and start plans?**
+   Dedicated `/plans` page? Inside the Bible reader? From the Journey page?
+
+### The new chat should:
+1. Paste this PROJECT.md
+2. Claude reads it fully and acknowledges the phase state
+3. Claude asks the 5 questions above (or any additional ones) and waits for answers
+4. Only after answers are confirmed does Claude propose DB schema + file plan
+5. Only after schema + file plan are confirmed does Claude write any code
+
+---
+
+## Settings Defaults (Phase 7F)
+
+```js
+{
+  theme:            "dark",       // light = "Coming Soon"
+  accentColor:      "covenant",   // 7 palette options
+  fontFamily:       "standard",   // 3 font pairings
+  bibleTranslation: "WEB",
+  language:         "en",         // sw = "Coming Soon"
+}
+```
+
+**Accent colours (7):** covenant (#6366F1), stillwaters (#0EA5E9), crimsongrace (#E11D48), olivebranch (#65A30D), dawn (#F59E0B), dusk (#7C3AED), selah (#64748B)
+
+**Font pairings (3):** standard (Cormorant Garamond + Nunito), scholar (Playfair Display + Lato), pilgrim (Cormorant Garamond + Source Sans 3)
+
+---
+
+## Rules That Always Apply
+
+- Never use CSS token values not in the valid spacing scale (1,2,3,4,5,6,8,10,16,24)
+- Never use `--space-7`, `--space-9` or any undefined token
+- Never assume file contents — always ask the user to paste a file before modifying it
+- All buttons and touch targets minimum 44px height
+- Commits happen at the end of each phase with full `git add && git commit -m && git push -u origin dev` command
+- Never rewrite a file from memory — confirm existing contents first
 
 ---
 
@@ -286,16 +332,16 @@ Paste this at the start of the new conversation, then attach this PROJECT.md fil
 
 > You are helping me continue building **Kairos** — a Biblical AI life companion app built with Next.js, Supabase, and Groq.
 >
-> I have attached PROJECT.md which contains the full project state, all decisions made, and the exact continuation plan. Please read it fully before responding.
+> I have attached PROJECT.md which contains the full project state, all architecture decisions, completed phases, and the exact continuation plan. Please read it fully before responding.
 >
-> We are at **Phase 7H — Bible Reader**. The previous session ended mid-phase with 5 files partially planned but not yet written to code.
+> We are moving into **Phase 7I — Reading Plans + Guided Study**.
 >
-> Your first task is to write those 5 files in the order listed in the PROJECT.md under "5 files to write FIRST". Before writing each file, follow the instructions noted — some require me to paste existing files first so you do not rewrite them from memory.
+> **Before writing a single line of code**, your first task is to discuss and align on the approach. The PROJECT.md lists 5 questions under "Phase 7I — Questions the new chat must answer". Ask those questions first, listen to my answers, propose a DB schema and file plan, wait for my confirmation, and only then begin writing code.
 >
 > Rules that always apply:
-> - Never use CSS token values that are not in the valid spacing scale (1,2,3,4,5,6,8,10,16,24)
+> - Never use CSS token values not in the valid spacing scale (1,2,3,4,5,6,8,10,16,24)
 > - Never use `--space-7`, `--space-9` or any undefined token
 > - Never assume file contents — always ask me to paste a file before modifying it
 > - All buttons and touch targets minimum 44px height
-> - No localStorage or sessionStorage in artifacts
+> - No guessing — confirm before acting
 > - Commits happen at the end of each phase
