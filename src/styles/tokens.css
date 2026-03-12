@@ -136,6 +136,15 @@
   --color-border:       #d4c9a8;
   --color-border-hover: #b8a870;
 
+  /* ── SEMANTIC ALIASES (used by Bible reader + future components) ── */
+  --color-bg-primary:     var(--color-void);
+  --color-bg-secondary:   var(--color-deep);
+  --color-bg-tertiary:    var(--color-surface);
+  --color-border-subtle:  var(--color-border);
+  --color-text-primary:   var(--color-divine);
+  --color-text-secondary: var(--color-soft);
+  --color-text-muted:     var(--color-muted);
+
   /* Text — warm dark browns */
   --color-divine:       #1a1208;
   --color-soft:         #3d2d10;

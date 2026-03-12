@@ -448,6 +448,16 @@ export default function CompanionCore({ profile = null }) {
         setSessionType(session.type)
       }
     })
+
+    // Check for verse context passed from Bible reader
+    try {
+      const verseCtx = sessionStorage.getItem("kairos_verse_context")
+      if (verseCtx) {
+        sessionStorage.removeItem("kairos_verse_context")
+        setInput(verseCtx)
+        setStarted(true)
+      }
+    } catch (_) {}
   }, [])
 
   useEffect(() => {
