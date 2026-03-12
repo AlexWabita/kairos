@@ -89,13 +89,22 @@ export default function BiblePage() {
 
   // ── Auth check ────────────────────────────────────────────
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user && !user.is_anonymous) {
-        setUserId(user.id)
-        setIsAuthenticated(true)
-      }
-    })
-  }, [])
+      supabase.auth.getUser().then(async ({ data: { user } })   => {
+        if (user && !user.is_anonymous) {
+          // Fetch internal profile ID — save route expects   users.id not auth UUID
+          const { data: profile } = await supabase
+            .from("users")
+            .select("id")
+            .eq("auth_id", user.id)
+            .maybeSingle()
+  
+          if (profile) {
+            setUserId(profile.id)
+            setIsAuthenticated(true)
+          }
+        }
+      })
+    }, [])
 
   // ── Restore last position on mount ────────────────────────
   useEffect(() => {
