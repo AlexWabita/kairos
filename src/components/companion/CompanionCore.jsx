@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { initKairosSession }  from "@/lib/supabase/sessions"
 import { useSettings }        from "@/context/SettingsContext"
+import { getTodaysVerse }     from "@/lib/bible/daily-verses"
 import BibleVerse             from "./BibleVerse"
 import SaveMomentModal        from "./SaveMomentModal"
 
@@ -301,6 +302,255 @@ function SaveButton({ saved, isAuthenticated, onSave }) {
   )
 }
 
+/* ── Verse of the Day Card ───────────────────────────────── */
+function DailyVerseCard({ verse, onReflect }) {
+  if (!verse) return null
+
+  const bibleHref = `/bible?ref=${encodeURIComponent(verse.ref)}`
+  const reflectPrompt = `I'd like to reflect on today's verse — ${verse.ref}${verse.text ? `: "${verse.text}"` : ""}. What does this mean for my life today?`
+
+  return (
+    <div style={{
+      background:   "linear-gradient(135deg, rgba(20,29,53,0.9) 0%, rgba(13,20,40,0.9) 100%)",
+      border:       "1px solid rgba(240,192,96,0.25)",
+      borderLeft:   "2px solid var(--color-gold-warm)",
+      borderRadius: "var(--radius-xl)",
+      padding:      "var(--space-5) var(--space-6)",
+      marginBottom: "var(--space-4)",
+      animation:    "fadeUp 0.6s var(--ease-divine) forwards",
+    }}>
+      {/* Label */}
+      <p style={{
+        fontFamily:    "var(--font-display)",
+        fontSize:      "0.55rem",
+        letterSpacing: "0.25em",
+        textTransform: "uppercase",
+        color:         "var(--color-gold-warm)",
+        marginBottom:  "var(--space-4)",
+        opacity:       0.8,
+      }}>
+        Verse of the Day
+      </p>
+
+      {/* Verse text or loading state */}
+      {verse.text ? (
+        <p style={{
+          fontFamily:   "var(--font-heading)",
+          fontSize:     "clamp(1rem, 2.5vw, 1.15rem)",
+          fontWeight:   300,
+          fontStyle:    "italic",
+          color:        "var(--color-divine)",
+          lineHeight:   "var(--leading-relaxed)",
+          marginBottom: "var(--space-2)",
+        }}>
+          &ldquo;{verse.text}&rdquo;
+        </p>
+      ) : (
+        <p style={{
+          fontFamily:   "var(--font-heading)",
+          fontSize:     "0.9rem",
+          fontStyle:    "italic",
+          color:        "var(--color-muted)",
+          marginBottom: "var(--space-2)",
+        }}>
+          Loading verse…
+        </p>
+      )}
+
+      {/* Reference */}
+      <p style={{
+        fontFamily:    "var(--font-body)",
+        fontSize:      "0.7rem",
+        letterSpacing: "0.1em",
+        color:         "var(--color-gold-warm)",
+        marginBottom:  "var(--space-3)",
+        opacity:       0.85,
+      }}>
+        — {verse.ref}
+      </p>
+
+      {/* Devotional thought */}
+      <p style={{
+        fontFamily:   "var(--font-body)",
+        fontSize:     "0.82rem",
+        color:        "var(--color-soft)",
+        lineHeight:   "var(--leading-relaxed)",
+        marginBottom: "var(--space-5)",
+        opacity:      0.85,
+      }}>
+        {verse.thought}
+      </p>
+
+      {/* Actions */}
+      <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
+        <button
+          onClick={() => onReflect(reflectPrompt)}
+          style={{
+            background:    "var(--gradient-gold)",
+            border:        "none",
+            borderRadius:  "var(--radius-full)",
+            padding:       "0.5rem 1.25rem",
+            color:         "#060912",
+            fontFamily:    "var(--font-display)",
+            fontSize:      "0.62rem",
+            letterSpacing: "0.12em",
+            cursor:        "pointer",
+            boxShadow:     "var(--shadow-gold-sm)",
+            minHeight:     "44px",
+            transition:    "opacity 0.2s ease",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.88")}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+        >
+          REFLECT WITH KAIROS
+        </button>
+        <a
+          href={bibleHref}
+          style={{
+            background:     "transparent",
+            border:         "1px solid var(--color-border)",
+            borderRadius:   "var(--radius-full)",
+            padding:        "0.5rem 1.25rem",
+            color:          "var(--color-muted)",
+            fontFamily:     "var(--font-display)",
+            fontSize:       "0.62rem",
+            letterSpacing:  "0.12em",
+            textDecoration: "none",
+            display:        "inline-flex",
+            alignItems:     "center",
+            minHeight:      "44px",
+            transition:     "all 0.2s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "var(--color-gold-warm)"
+            e.currentTarget.style.color       = "var(--color-gold-warm)"
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "var(--color-border)"
+            e.currentTarget.style.color       = "var(--color-muted)"
+          }}
+        >
+          OPEN IN BIBLE
+        </a>
+      </div>
+    </div>
+  )
+}
+
+/* ── Active Plan Card ────────────────────────────────────── */
+function ActivePlanCard({ plan }) {
+  if (!plan || !plan.enrollment) return null
+
+  const { current_day } = plan.enrollment
+  const totalDays   = plan.total_days || plan.day_count || 1
+  const progress    = Math.min(((current_day - 1) / totalDays) * 100, 100)
+  const href        = `/plans/${plan.id}/day/${current_day}`
+  const isCompleted = plan.enrollment.status === 'completed'
+
+  if (isCompleted) return null
+
+  return (
+    <div style={{
+      background:   "linear-gradient(135deg, rgba(20,29,53,0.7) 0%, rgba(13,20,40,0.7) 100%)",
+      border:       "1px solid var(--color-border)",
+      borderRadius: "var(--radius-xl)",
+      padding:      "var(--space-4) var(--space-6)",
+      marginBottom: "var(--space-4)",
+      animation:    "fadeUp 0.7s var(--ease-divine) forwards",
+      display:      "flex",
+      alignItems:   "center",
+      gap:          "var(--space-4)",
+    }}>
+      {/* Text */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{
+          fontFamily:    "var(--font-display)",
+          fontSize:      "0.55rem",
+          letterSpacing: "0.2em",
+          textTransform: "uppercase",
+          color:         "var(--color-muted)",
+          marginBottom:  "var(--space-1)",
+        }}>
+          Today's Plan
+        </p>
+        <p style={{
+          fontFamily:   "var(--font-heading)",
+          fontSize:     "0.9rem",
+          fontWeight:   300,
+          color:        "var(--color-divine)",
+          whiteSpace:   "nowrap",
+          overflow:     "hidden",
+          textOverflow: "ellipsis",
+          marginBottom: "var(--space-2)",
+        }}>
+          {plan.name}
+        </p>
+
+        {/* Progress bar */}
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+          <div style={{
+            flex:         1,
+            height:       "3px",
+            background:   "rgba(255,255,255,0.06)",
+            borderRadius: "var(--radius-full)",
+            overflow:     "hidden",
+          }}>
+            <div style={{
+              height:       "100%",
+              width:        `${progress}%`,
+              background:   "var(--gradient-gold)",
+              borderRadius: "var(--radius-full)",
+              transition:   "width 0.6s ease",
+            }} />
+          </div>
+          <span style={{
+            fontFamily:    "var(--font-body)",
+            fontSize:      "0.65rem",
+            color:         "var(--color-muted)",
+            whiteSpace:    "nowrap",
+            letterSpacing: "0.04em",
+            flexShrink:    0,
+          }}>
+            Day {current_day} of {totalDays}
+          </span>
+        </div>
+      </div>
+
+      {/* Continue button */}
+      <a
+        href={href}
+        style={{
+          background:     "transparent",
+          border:         "1px solid rgba(240,192,96,0.3)",
+          borderRadius:   "var(--radius-full)",
+          padding:        "0.5rem 1rem",
+          color:          "var(--color-gold-warm)",
+          fontFamily:     "var(--font-display)",
+          fontSize:       "0.6rem",
+          letterSpacing:  "0.12em",
+          textDecoration: "none",
+          display:        "inline-flex",
+          alignItems:     "center",
+          minHeight:      "44px",
+          whiteSpace:     "nowrap",
+          flexShrink:     0,
+          transition:     "all 0.2s ease",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background   = "rgba(240,192,96,0.1)"
+          e.currentTarget.style.borderColor  = "var(--color-gold-warm)"
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background   = "transparent"
+          e.currentTarget.style.borderColor  = "rgba(240,192,96,0.3)"
+        }}
+      >
+        CONTINUE
+      </a>
+    </div>
+  )
+}
+
 /* ── Message Bubble ──────────────────────────────────────── */
 function Message({ role, content, isNew, verseData, onSave, saved, isAuthenticated, wasTruncated }) {
   const isKairos = role === "assistant"
@@ -415,9 +665,12 @@ export default function CompanionCore({ profile = null }) {
   const [showConsent,    setShowConsent]    = useState(false)
   const [lastModelId,    setLastModelId]    = useState(null)
 
+  // ── Daily cards state ─────────────────────────────────────
+  const [votd,       setVotd]       = useState(null)   // { ref, thought, text }
+  const [activePlan, setActivePlan] = useState(null)   // plan object with enrollment
+
   // ── Save modal state ──────────────────────────────────────
-  // pendingSave holds the message index waiting for modal confirm
-  const [pendingSave,  setPendingSave]  = useState(null)   // number | null
+  const [pendingSave,  setPendingSave]  = useState(null)
   const [savingModal,  setSavingModal]  = useState(false)
 
   const bottomRef   = useRef(null)
@@ -441,6 +694,7 @@ export default function CompanionCore({ profile = null }) {
     setShowConsent(false)
   }
 
+  // ── Init session + verse context from Bible reader ────────
   useEffect(() => {
     initKairosSession().then((session) => {
       if (session?.user) {
@@ -449,7 +703,6 @@ export default function CompanionCore({ profile = null }) {
       }
     })
 
-    // Check for verse context passed from Bible reader
     try {
       const verseCtx = sessionStorage.getItem("kairos_verse_context")
       if (verseCtx) {
@@ -459,6 +712,39 @@ export default function CompanionCore({ profile = null }) {
       }
     } catch (_) {}
   }, [])
+
+  // ── Fetch Verse of the Day on mount ───────────────────────
+  useEffect(() => {
+    const { ref, thought } = getTodaysVerse()
+    // Set ref + thought immediately so card renders even before API responds
+    setVotd({ ref, thought, text: null })
+
+    fetch(`/api/bible/verse?ref=${encodeURIComponent(ref)}&translation=WEB`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          setVotd({ ref, thought, text: data.text })
+        }
+      })
+      .catch(() => {
+        // Card still shows with ref + thought, just no verse text
+      })
+  }, [])
+
+  // ── Fetch active plan (authenticated users only) ──────────
+  useEffect(() => {
+    if (!kairosUser || sessionType !== "authenticated") return
+
+    fetch(`/api/plans?userId=${kairosUser.id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const active = (data.plans || []).find(
+          (p) => p.enrollment?.status === "active"
+        )
+        if (active) setActivePlan(active)
+      })
+      .catch(() => {})
+  }, [kairosUser, sessionType])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -482,14 +768,12 @@ export default function CompanionCore({ profile = null }) {
     return null
   }
 
-  // ── Open the save modal — does NOT call API yet ───────────
   const handleSave = (msgIndex) => {
     const msg = messages[msgIndex]
     if (!msg || savedMsgIds.has(msgIndex)) return
     setPendingSave(msgIndex)
   }
 
-  // ── Called when user confirms in the modal ────────────────
   const handleSaveConfirm = async ({ title, entry_type }) => {
     const msgIndex = pendingSave
     if (msgIndex === null) return
@@ -519,7 +803,6 @@ export default function CompanionCore({ profile = null }) {
 
       if (data.success) {
         setSavedMsgIds((prev) => new Set([...prev, msgIndex]))
-        console.log("[Kairos] Moment saved:", data.id)
       } else {
         console.error("[Kairos] Save failed:", data.error)
       }
@@ -529,6 +812,20 @@ export default function CompanionCore({ profile = null }) {
       setSavingModal(false)
       setPendingSave(null)
     }
+  }
+
+  // ── Reflect with Kairos from VotD card ───────────────────
+  const handleReflectFromVerse = (prompt) => {
+    setInput(prompt)
+    setStarted(true)
+    setTimeout(() => {
+      inputRef.current?.focus()
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto"
+        textareaRef.current.style.height =
+          Math.min(textareaRef.current.scrollHeight, 160) + "px"
+      }
+    }, 50)
   }
 
   const handleSend = async () => {
@@ -612,7 +909,6 @@ export default function CompanionCore({ profile = null }) {
     }
   }
 
-  // The message currently pending save (for passing to modal)
   const pendingMsg = pendingSave !== null ? messages[pendingSave] : null
 
   return (
@@ -626,7 +922,6 @@ export default function CompanionCore({ profile = null }) {
     }}>
       {showConsent && <ConsentModal onAccept={handleConsentAccept} />}
 
-      {/* ── Save moment modal ───────────────────────────────── */}
       <SaveMomentModal
         isOpen={pendingSave !== null}
         content={pendingMsg?.content || ""}
@@ -727,82 +1022,92 @@ export default function CompanionCore({ profile = null }) {
         margin:        "0 auto",
         paddingBottom: "var(--space-6)",
       }}>
+
+        {/* ── Welcome / daily cards (shown before any conversation) ── */}
         {!started && messages.length === 0 && (
           <div style={{
-            textAlign:  "center",
-            paddingTop: "var(--space-16)",
+            paddingTop: "var(--space-10)",
             animation:  "sacredEnter 1s var(--ease-divine) forwards",
           }}>
-            <p style={{
-              fontFamily:    "var(--font-display)",
-              fontSize:      "0.7rem",
-              letterSpacing: "0.3em",
-              textTransform: "uppercase",
-              color:         "var(--color-gold-warm)",
-              marginBottom:  "var(--space-5)",
-            }}>
-              Your appointed moment
-            </p>
-            <h2 style={{
-              fontFamily:   "var(--font-heading)",
-              fontSize:     "clamp(1.8rem, 4vw, 3rem)",
-              fontWeight:   300,
-              color:        "var(--color-divine)",
-              lineHeight:   1.4,
-              marginBottom: "var(--space-10)",
-            }}>
-              What are you carrying today?
-            </h2>
+            {/* Verse of the Day */}
+            <DailyVerseCard verse={votd} onReflect={handleReflectFromVerse} />
 
-            <div style={{
-              display:        "flex",
-              flexWrap:       "wrap",
-              gap:            "var(--space-3)",
-              justifyContent: "center",
-              maxWidth:       "600px",
-              margin:         "0 auto",
-            }}>
-              {[
-                "I have questions about faith I'm afraid to ask",
-                "I've been hurt by the church",
-                "I don't know if God is real",
-                "I'm going through something really hard",
-                "I'm from a different religion and I'm curious",
-                "I just feel lost",
-              ].map((prompt) => (
-                <button
-                  key={prompt}
-                  onClick={() => {
-                    setInput(prompt)
-                    inputRef.current?.focus()
-                  }}
-                  style={{
-                    background:   "rgba(20,29,53,0.8)",
-                    border:       "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-full)",
-                    padding:      "var(--space-2) var(--space-4)",
-                    color:        "var(--color-soft)",
-                    fontFamily:   "var(--font-body)",
-                    fontSize:     "0.8rem",
-                    cursor:       "pointer",
-                    transition:   "all var(--duration-fast) var(--ease-sacred)",
-                    textAlign:    "left",
-                    minHeight:    "44px",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "var(--color-gold-warm)"
-                    e.currentTarget.style.color       = "var(--color-gold-warm)"
-                    e.currentTarget.style.background  = "rgba(240,192,96,0.08)"
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "var(--color-border)"
-                    e.currentTarget.style.color       = "var(--color-soft)"
-                    e.currentTarget.style.background  = "rgba(20,29,53,0.8)"
-                  }}
-                >
-                  {prompt}
-                </button>
-              ))}
+            {/* Active plan (authenticated users only) */}
+            <ActivePlanCard plan={activePlan} />
+
+            {/* Companion prompt */}
+            <div style={{ textAlign: "center", paddingTop: "var(--space-6)" }}>
+              <p style={{
+                fontFamily:    "var(--font-display)",
+                fontSize:      "0.7rem",
+                letterSpacing: "0.3em",
+                textTransform: "uppercase",
+                color:         "var(--color-gold-warm)",
+                marginBottom:  "var(--space-5)",
+              }}>
+                Your appointed moment
+              </p>
+              <h2 style={{
+                fontFamily:   "var(--font-heading)",
+                fontSize:     "clamp(1.8rem, 4vw, 3rem)",
+                fontWeight:   300,
+                color:        "var(--color-divine)",
+                lineHeight:   1.4,
+                marginBottom: "var(--space-10)",
+              }}>
+                What are you carrying today?
+              </h2>
+
+              <div style={{
+                display:        "flex",
+                flexWrap:       "wrap",
+                gap:            "var(--space-3)",
+                justifyContent: "center",
+                maxWidth:       "600px",
+                margin:         "0 auto",
+              }}>
+                {[
+                  "I have questions about faith I'm afraid to ask",
+                  "I've been hurt by the church",
+                  "I don't know if God is real",
+                  "I'm going through something really hard",
+                  "I'm from a different religion and I'm curious",
+                  "I just feel lost",
+                ].map((prompt) => (
+                  <button
+                    key={prompt}
+                    onClick={() => {
+                      setInput(prompt)
+                      inputRef.current?.focus()
+                    }}
+                    style={{
+                      background:   "rgba(20,29,53,0.8)",
+                      border:       "1px solid var(--color-border)",
+                      borderRadius: "var(--radius-full)",
+                      padding:      "var(--space-2) var(--space-4)",
+                      color:        "var(--color-soft)",
+                      fontFamily:   "var(--font-body)",
+                      fontSize:     "0.8rem",
+                      cursor:       "pointer",
+                      transition:   "all var(--duration-fast) var(--ease-sacred)",
+                      textAlign:    "left",
+                      minHeight:    "44px",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "var(--color-gold-warm)"
+                      e.currentTarget.style.color       = "var(--color-gold-warm)"
+                      e.currentTarget.style.background  = "rgba(240,192,96,0.08)"
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "var(--color-border)"
+                      e.currentTarget.style.color       = "var(--color-soft)"
+                      e.currentTarget.style.background  = "rgba(20,29,53,0.8)"
+                    }}
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}

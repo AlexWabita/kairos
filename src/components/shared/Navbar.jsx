@@ -65,6 +65,7 @@ export default function Navbar() {
     { label: "How It Works", href: "/#how-it-works"  },
     { label: "Journey",      href: "/journey"        },
     { label: "Bible",        href: "/bible"          },
+    { label: "Plans",        href: "/plans"          },
     { label: "Settings",     href: "/settings"       },
   ]
 
