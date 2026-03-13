@@ -1,5 +1,5 @@
 # KAIROS — Project Handoff Document
-> Last updated: Phase 7H complete, Phase 7I pending discussion
+> Last updated: Phase 7I complete
 > Continue from: **Read this file fully, then follow the "Prompt for New Chat" section at the bottom**
 
 ---
@@ -19,20 +19,49 @@
 Phase 7E ✅  Model chain overhaul, identity hardening
 Phase 7F ✅  Settings page, theme system, accent colors, font pairings, ConfirmModal
 Phase 7G ✅  Journey: search, sort, filter, pin vs favourite, delete confirm, SaveMomentModal
-Phase 7H ✅  In-App Bible Reader (COMPLETE)
-Phase 7I 🔄  Reading Plans + Guided Study (NEXT — discuss before writing any code)
+Phase 7H ✅  In-App Bible Reader
+Phase 7I ✅  Reading Plans + Guided Study + Daily Verse + Notes to Journey
 Phase 8      Organisation Portal (deferred — 3 architecture questions unresolved)
 Phase 9      Launch
 ```
 
 ---
 
-## Completed This Session (7H — Bible Reader)
+## Completed This Session (7I — Reading Plans + Guided Study)
 
-### SQL migrations run
-No new migrations were required for Phase 7H.
-Bible reader is fully public (no auth gate).
-Notes save through existing `journey_entries` table.
+### SQL Migration
+File: `supabase/migrations/004_reading_plans.sql` — run in Supabase dashboard.
+
+**4 tables created:**
+
+| Table | Purpose |
+|---|---|
+| `reading_plans` | Plan definitions (curated + user-created, `is_curated` flag) |
+| `plan_days` | Pre-authored day content per plan |
+| `user_plans` | Enrollment tracking (`current_day`, `status`, `group_id` nullable hook for Phase 8, `catch_up_used_at`) |
+| `user_plan_progress` | Completed days with optional `kairos_reflection` |
+
+RLS enabled on all 4 tables with appropriate policies.
+
+---
+
+### Seed Data
+File: `src/lib/plans/seed.js` — run via `node -r dotenv/config src/lib/plans/seed.js`
+
+**8 curated plans seeded (557 total days):**
+
+| Plan | Days |
+|---|---|
+| New Believer Foundation | 7 |
+| Overcoming Anxiety | 14 |
+| Identity in Christ | 10 |
+| Prayer & Fasting | 7 |
+| Healing & Forgiveness | 10 |
+| Walking in Purpose | 14 |
+| 30 Days in the Psalms | 30 |
+| Bible in 365 Days | 365 |
+
+Seed uses `SUPABASE_SERVICE_ROLE_KEY` to bypass RLS. Inserts in batches of 50.
 
 ---
 
@@ -40,137 +69,96 @@ Notes save through existing `journey_entries` table.
 
 | File | Purpose |
 |---|---|
-| `src/lib/bible/client.js` | Updated — added `BIBLE_BOOKS`, `BIBLE_API_COM_NAMES`, `fetchChapter()`, `parseVerseText()` |
-| `src/app/api/bible/chapter/route.js` | GET `/api/bible/chapter?book=JHN&chapter=3&translation=WEB` |
-| `src/app/bible/page.jsx` | Full Bible reader page (see details below) |
+| `src/lib/bible/daily-verses.js` | 60 curated verse refs + devotional thoughts, `getTodaysVerse()` cycles by day of year |
+| `src/lib/plans/seed.js` | One-time seed script for 8 curated plans |
+| `src/app/api/plans/route.js` | `GET` all plans with enrollment state · `POST` enroll user |
+| `src/app/api/plans/[id]/route.js` | `GET` single plan + all days enriched with completion state |
+| `src/app/api/plans/progress/route.js` | `POST` actions: `complete` (mark day done + save notes to Journey) · `catch_up` (jump to max(completed)+1) |
+| `src/app/plans/page.jsx` | Discovery page — grid of all plans, category filter, enrollment filter, active plans strip |
+| `src/app/plans/[id]/page.jsx` | Plan detail — header, progress bar, Catch Me Up button, day list with locked/unlocked/completed states |
+| `src/app/plans/[id]/day/[day]/page.jsx` | Day reading — devotional, scripture pills, reflection prompt, prayer prompt, personal notes, Complete Day CTA, Reflect with Kairos |
 
 ### Modified Files
 
 | File | Changes |
 |---|---|
-| `src/components/companion/CompanionCore.jsx` | Added `sessionStorage` verse context check on mount |
-| `src/components/shared/Navbar.jsx` | Added Bible link between Journey and Settings in `navItems` array |
-| `src/styles/tokens.css` | Added semantic alias variables to `:root` and `[data-theme="light"]` |
+| `src/components/companion/CompanionCore.jsx` | Added Verse of the Day card + Active Plan card above companion welcome prompt |
+| `src/components/shared/Navbar.jsx` | Added Plans link between Bible and Settings in `navItems` |
+| `src/app/api/plans/progress/route.js` | Option B: personal notes from day page saved to `journey_entries` on day completion |
 
 ---
 
-### Phase 7H — Feature Details
+### Phase 7I — Feature Details
 
-#### `src/lib/bible/client.js`
-- `BIBLE_BOOKS` — exported array of 66 books, each `{id, name, chapters, testament}`
-- `BIBLE_API_COM_NAMES` — maps book IDs to URL-safe names for bible-api.com
-- `fetchChapter(bookId, chapter, translation)` — primary: bible-api.com, fallback: rest.api.bible
-- `parseVerseText()` — parses rest.api.bible plain-text blob into `[{number, text}]`
-- All existing exports (`fetchVerse`, `searchBible`, `getAvailableTranslations`) preserved unchanged
+#### Daily Verse (Verse of the Day)
+- `getTodaysVerse()` returns `{ ref, thought }` indexed by day-of-year mod 60
+- On mount, `CompanionCore` fetches verse text from `/api/bible/verse` and shows the card
+- Card shows: verse text, reference, 2-line devotional thought, "Reflect with Kairos" button (pre-loads prompt into companion), "Open in Bible" link
+- Always visible to all users (no auth required)
+- Disappears once a conversation starts
 
-#### `src/app/api/bible/chapter/route.js`
-- `GET /api/bible/chapter?book=JHN&chapter=3&translation=WEB`
-- Validates: book against `BIBLE_BOOKS`, chapter range per book, translation in `[WEB, KJV, ASV, BBE]`
-- Returns `{ success, reference, verses: [{number, text}], translation, source }`
-- Returns 400 for invalid params, 500 on fetch failure
+#### Active Plan Card
+- Shown on the Journey page above the companion welcome prompt
+- Only visible to authenticated users who have an active plan enrollment
+- Shows: plan name, progress bar, Day X of Y, "Continue" button → `/plans/[id]/day/[current_day]`
+- Hidden once conversation starts
 
-#### `src/app/bible/page.jsx` — Full feature list
-**Navigation:**
-- Two-panel desktop (sidebar + reading pane), mobile slide-in sidebar
-- OT / NT tabs → book list → chapter grid (all hardcoded, zero API calls)
-- Last position persisted via `localStorage` key `kairos_bible_pos`
-- Prev / Next chapter navigation with cross-book boundaries (Genesis→Exodus, etc.)
-- Defaults to John 1 on first visit
+#### Option B — Notes to Journey
+- Personal notes written on a day page are saved to `journey_entries` on "Complete Day"
+- Entry title: `Day {N}: {day title}` (e.g. "Day 7: The Weight You Are Carrying")
+- Entry type: `scripture`
+- Scripture ref: day's scripture refs joined as string
+- Day completion always succeeds even if Journey save fails (non-blocking)
+- After completion, inline confirmation: "Completed · Notes saved to Journey"
 
-**Multi-verse selection:**
-- Tap any verse to enter selection mode — all verses show selection checkboxes
-- Tap additional verses to add to selection, tap again to deselect
-- Clearing selection: tap × in toolbar, or change chapter
-- Session-only (not persisted to DB) — by product design decision
+#### Catch Me Up
+- Button on plan detail page, only shown if user is behind (current_day < latest completed + 1)
+- Calls `POST /api/plans/progress` with `action: "catch_up"`
+- Moves `current_day` to `max(completed) + 1` without creating false completions
+- Records `catch_up_used_at` timestamp on `user_plans`
 
-**Floating action toolbar:**
-- Slides up from bottom on first selection, fully hidden (`-200px`) when no selection
-- Shows: `N verses ×` | Highlight | Copy | Note | Ask Kairos
-- Mobile: `flexWrap: "wrap"`, `width: "min(520px, calc(100vw - 2rem))"`, label text hidden on very small screens via `.bible-toolbar-actions` class
+#### Reading Plan Architecture Decisions
 
-**Highlight:**
-- Session-only gold tint on highlighted verses
-- Button label toggles "Highlight" / "Remove" based on whether all selected verses are already highlighted
-
-**Copy (multi-verse):**
-- Builds: `[1] verse text [2] verse text\n— Book Chapter:1–2 (TRANSLATION)`
-- Contiguous range uses em-dash (1–3), non-contiguous uses comma list (1, 3, 5)
-
-**Note drawer:**
-- Slides up above toolbar when Note button active
-- Shows verse range reference in header
-- Textarea for user's reflection
-- Flows through `SaveMomentModal` — user sets title and entry type before saving
-- Saves to `journey_entries` with `entry_type: "scripture"` auto-detected
-- "Save to Journey" disabled and labelled "Sign in to save" for unauthenticated users
-
-**Ask Kairos (multi-verse):**
-- Builds: `I'd like to reflect on Book Chapter:1–3 (TRANSLATION):\n\n1. verse\n2. verse`
-- Writes to `sessionStorage` key `kairos_verse_context`
-- Navigates to `/journey` — CompanionCore reads and clears on mount
-
-**Display settings panel (Aa):**
-- Slides in from right, backdrop overlay behind it
-- Translation: WEB / KJV / ASV / BBE (duplicated from header for discoverability)
-- Text size: Small / Default / Large (actual `A` rendered at each size)
-- Line spacing: Tight / Normal / Spacious
-
-**Auth fix (critical):**
-- Bible page fetches `users.id` (internal profile ID) via `auth_id` lookup
-- Save route expects `users.id` not Supabase auth UUID
-- Without this fix notes saved silently with 401 and never appeared in Journey
-
-**Background transparency fix:**
-- Added semantic alias tokens to `tokens.css` (see below)
-- Sidebar, settings panel, note drawer use hardcoded hex values as fallback safety
+| Decision | Detail |
+|---|---|
+| Plans | Both curated (Kairos-original) + user-created, same schema, `is_curated` flag |
+| AI involvement | Pre-authored content; Kairos invoked ON DEMAND only via "Reflect with Kairos" button |
+| Social | Strictly personal for Phase 7I; `group_id` nullable column added as Phase 8 hook |
+| Content | Original Kairos-authored plans, not borrowed from YouVersion |
+| Voice/tone | Intimate & Conversational as base + Reverent & Contemplative as texture |
 
 ---
 
-### tokens.css additions
-
-Added inside `:root {}` and `[data-theme="light"]`:
-
-```css
-/* ── SEMANTIC ALIASES (used by Bible reader + future components) ── */
---color-bg-primary:     var(--color-void);
---color-bg-secondary:   var(--color-deep);
---color-bg-tertiary:    var(--color-surface);
---color-border-subtle:  var(--color-border);
---color-text-primary:   var(--color-divine);
---color-text-secondary: var(--color-soft);
---color-text-muted:     var(--color-muted);
-```
-
----
-
-### Navbar navItems (current order)
+## Navbar navItems (current order)
 ```js
 const navItems = [
-  { label: "About",        href: "/#about"       },
-  { label: "How It Works", href: "/#how-it-works" },
-  { label: "Journey",      href: "/journey"       },
-  { label: "Bible",        href: "/bible"         },
-  { label: "Settings",     href: "/settings"      },
+  { label: "About",        href: "/#about"        },
+  { label: "How It Works", href: "/#how-it-works"  },
+  { label: "Journey",      href: "/journey"        },
+  { label: "Bible",        href: "/bible"          },
+  { label: "Plans",        href: "/plans"          },
+  { label: "Settings",     href: "/settings"       },
 ]
 ```
 
 ---
 
-## Key Architecture Decisions (standing + new)
+## Key Architecture Decisions (all standing)
 
 | Decision | Reason |
 |---|---|
 | Light mode = Coming Soon | Components have hardcoded rgba values; full CSS variable migration is a separate pass |
 | Accent overrides gold variables | All components reference gold vars — no rewrites needed |
 | `--font-display` (Cinzel) never overridden | Brand identity fixed |
-| Valid spacing tokens: 1,2,3,4,5,6,8,10,16,24 | No space-7 or space-9 — will resolve to zero |
+| Valid spacing tokens: 1,2,3,4,5,6,8,10,16,24 | No `--space-7` or `--space-9` — will resolve to zero |
 | bible-api.com is chapter primary | Returns clean verse array; rest.api.bible returns blob |
 | Book/chapter counts are hardcoded | 66 books never change; eliminates API plan risk |
 | sessionStorage for verse→companion context | Ephemeral, no DB needed, cleared on read |
 | Bible highlights = session-only | Product is a companion not a study tool; DB overhead not justified yet |
-| Bible notes → SaveMomentModal flow | Intentional save philosophy consistent with Journey; zero new infrastructure |
+| Bible notes → SaveMomentModal flow | Intentional save philosophy consistent with Journey |
 | Bible page uses internal profile ID | Save route expects `users.id` not Supabase auth UUID — fetched via `auth_id` lookup |
 | Semantic alias tokens in tokens.css | Prevents transparent panels when CSS variables undefined in inline styles |
+| Plan progress API — non-blocking Journey save | Day completion must always succeed; Journey entry failure is logged, not thrown |
 | Phase 8 (Org Portal) deferred | 3 architecture questions unresolved |
 
 ---
@@ -181,14 +169,25 @@ const navItems = [
 Standard auth columns + `settings JSONB DEFAULT '{}'`
 
 ### `journey_entries`
-`id, user_id, conversation_id, entry_type, context, is_pinned, is_favourite, created_at, title, scripture_ref`
+`id, user_id, conversation_id, entry_type, context, is_pinned, is_favourite, created_at, title, scripture_ref, content`
 
 **Valid entry_type values:** `reflection | prayer | milestone | question | scripture`
 
-**Note:** `conversation_id` is nullable — Bible notes save without one. The saved page queries all entries by `user_id` only, so this is safe.
-
 ### `sessions`
 `id, user_id, session_token, device_hint, created_at, expires_at`
+
+### `reading_plans`
+`id, title, description, category, duration_days, is_curated, author_name, cover_color, created_at`
+
+### `plan_days`
+`id, plan_id, day_number, title, scripture_refs (text[]), devotional_text, reflection_prompt, prayer_prompt, created_at`
+
+### `user_plans`
+`id, user_id, plan_id, current_day, status (active|completed|paused), started_at, completed_at, catch_up_used_at, group_id (nullable — Phase 8 hook)`
+
+### `user_plan_progress`
+`id, user_plan_id, day_number, completed_at, kairos_reflection (nullable), created_at`
+Unique constraint: `(user_plan_id, day_number)`
 
 ---
 
@@ -202,7 +201,6 @@ Standard auth columns + `settings JSONB DEFAULT '{}'`
 - No auth required
 - Supports: web, kjv, asv, bbe
 - Chapter URL: `https://bible-api.com/{book-name}+{chapter}?translation={t}`
-- Returns `{ reference, verses: [{book_id, book_name, chapter, verse, text}] }`
 
 ---
 
@@ -213,85 +211,134 @@ src/
 ├── app/
 │   ├── api/
 │   │   ├── ai/
-│   │   │   └── companion/route.js
+│   │   │   ├── companion/route.js
+│   │   │   └── guidance/route.js
 │   │   ├── bible/
-│   │   │   ├── chapter/route.js        ← NEW 7H
+│   │   │   ├── chapter/route.js
+│   │   │   ├── debug/route.js
 │   │   │   └── verse/route.js
-│   │   └── journey/
-│   │       └── save/route.js
+│   │   ├── journey/
+│   │   │   └── save/route.js
+│   │   ├── plans/
+│   │   │   ├── [id]/route.js           ← 7I
+│   │   │   ├── progress/route.js       ← 7I
+│   │   │   └── route.js                ← 7I
+│   │   ├── account/
+│   │   │   ├── delete/route.js
+│   │   │   └── export/route.js
+│   │   ├── admin/seed/route.js
+│   │   ├── auth/
+│   │   │   ├── callback/route.js
+│   │   │   └── route.js
+│   │   └── user/
+│   │       ├── journey/route.js
+│   │       └── profile/route.js
+│   ├── (auth)/
+│   │   ├── layout.jsx
+│   │   ├── forgot-password/page.jsx
+│   │   ├── login/page.jsx
+│   │   └── register/page.jsx
 │   ├── account/page.jsx
-│   ├── bible/
-│   │   └── page.jsx                    ← NEW 7H
+│   ├── bible/page.jsx
 │   ├── journey/
-│   │   ├── page.jsx
 │   │   └── saved/page.jsx
+│   ├── plans/
+│   │   ├── page.jsx                    ← 7I
+│   │   ├── [id]/page.jsx               ← 7I
+│   │   └── [id]/day/[day]/page.jsx     ← 7I
+│   ├── privacy/page.jsx
 │   ├── settings/page.jsx
+│   ├── error.jsx
+│   ├── globals.css
 │   ├── layout.jsx
-│   └── globals.css
+│   ├── loading.jsx
+│   ├── not-found.jsx
+│   └── page.jsx
 ├── components/
 │   ├── companion/
-│   │   ├── CompanionCore.jsx           ← UPDATED 7H
 │   │   ├── BibleVerse.jsx
+│   │   ├── CompanionCore.jsx           ← UPDATED 7I
+│   │   ├── CompanionPrompt.jsx
+│   │   ├── CompanionResponse.jsx
+│   │   ├── CompanionVoice.jsx
 │   │   └── SaveMomentModal.jsx
-│   └── shared/
-│       ├── ConfirmModal.jsx
-│       └── Navbar.jsx                  ← UPDATED 7H
+│   ├── journey/
+│   │   ├── JourneyEntry.jsx
+│   │   ├── JourneyMap.jsx
+│   │   └── JourneyTimeline.jsx
+│   ├── landing/
+│   │   ├── About.jsx
+│   │   ├── Hero.jsx
+│   │   ├── HowItWorks.jsx
+│   │   └── Testimonials.jsx
+│   ├── shared/
+│   │   ├── ConfirmModal.jsx
+│   │   ├── Footer.jsx
+│   │   ├── Navbar.jsx                  ← UPDATED 7I
+│   │   ├── SEOHead.jsx
+│   │   └── Sidebar.jsx
+│   └── ui/
+│       ├── Avatar.jsx
+│       ├── Button.jsx
+│       ├── Card.jsx
+│       ├── Input.jsx
+│       ├── Loader.jsx
+│       └── Modal.jsx
 ├── context/
-│   └── SettingsContext.jsx
+│   ├── CompanionContext.jsx
+│   ├── JourneyContext.jsx
+│   ├── SettingsContext.jsx
+│   └── UserContext.jsx
+├── hooks/
+│   ├── useAuth.js
+│   ├── useCompanion.js
+│   ├── useJourney.js
+│   └── useVoice.js
 ├── lib/
-│   ├── bible/
-│   │   └── client.js                   ← UPDATED 7H
-│   ├── supabase/
+│   ├── ai/
 │   │   ├── client.js
+│   │   ├── context.js
+│   │   ├── guardrails.js
+│   │   └── prompts.js
+│   ├── bible/
+│   │   ├── client.js
+│   │   └── daily-verses.js             ← NEW 7I
+│   ├── constants/
+│   │   ├── languages.js
+│   │   ├── scripture.js
+│   │   └── topics.js
+│   ├── plans/
+│   │   └── seed.js                     ← NEW 7I
+│   ├── rag/
+│   │   ├── embeddings.js
+│   │   └── search.js
+│   ├── supabase/
+│   │   ├── admin.js
 │   │   ├── auth.js
+│   │   ├── client.js
+│   │   ├── conversations.js
+│   │   ├── middleware.js
+│   │   ├── server.js
 │   │   └── sessions.js
+│   ├── utils/
+│   │   ├── formatters.js
+│   │   ├── helpers.js
+│   │   └── validators.js
+│   ├── rateLimit.js
 │   └── settings.js
 └── styles/
-    └── tokens.css                      ← UPDATED 7H
+    ├── animations.css
+    ├── tokens.css
+    └── typography.css
+
+supabase/
+├── migrations/
+│   ├── 001_initial_schema.sql
+│   ├── 002_user_profiles.sql
+│   ├── 003_journeys.sql
+│   └── 004_reading_plans.sql           ← NEW 7I
+└── seed.sql
 ```
-
----
-
-## Phase 7I — Reading Plans + Guided Study (NEXT)
-
-### Status: DISCUSSION REQUIRED before any code is written
-
-This is the first thing to do in the new chat. The previous session ended with the decision to discuss and align on the professional approach before writing anything.
-
-### What the phase map says
-**Reading Plans** — structured, time-based Bible reading schedules
-**Guided Study** — deeper AI-led engagement with a topic or book
-
-### Why these need discussion first
-Reading Plans and Guided Study sound related but are architecturally different:
-- Reading Plans are **sequential, date-aware, progress-tracked**
-- Guided Study is more **conversational, Kairos-led, topic-driven**
-
-They may share a DB table or need separate ones. The AI involvement level differs. The UI patterns differ. Getting this wrong creates rework.
-
-### Questions the new chat must answer BEFORE writing code
-
-1. **Reading Plans — curated or user-created?**
-   Are these plans Kairos ships (e.g. "Read the Bible in a year"), plans users build themselves, or both? This determines whether plan definitions live in the DB or in static files.
-
-2. **Guided Study — structured lessons or AI conversation?**
-   Is this a set curriculum with fixed content per session, or is Kairos dynamically generating study content based on a chosen topic? Or a hybrid?
-
-3. **Progress tracking — passive or active?**
-   Does Kairos remind users about incomplete plans (push/email), or does the user simply check their own progress when they open the app?
-
-4. **Social dimension — personal only or group?**
-   Is Phase 7I strictly personal, or does group study tie into Phase 8's Organisation Portal? If group study is in scope here, the schema needs to account for it now.
-
-5. **Entry point — where does the user discover and start plans?**
-   Dedicated `/plans` page? Inside the Bible reader? From the Journey page?
-
-### The new chat should:
-1. Paste this PROJECT.md
-2. Claude reads it fully and acknowledges the phase state
-3. Claude asks the 5 questions above (or any additional ones) and waits for answers
-4. Only after answers are confirmed does Claude propose DB schema + file plan
-5. Only after schema + file plan are confirmed does Claude write any code
 
 ---
 
@@ -321,6 +368,28 @@ They may share a DB table or need separate ones. The AI involvement level differ
 - All buttons and touch targets minimum 44px height
 - Commits happen at the end of each phase with full `git add && git commit -m && git push -u origin dev` command
 - Never rewrite a file from memory — confirm existing contents first
+- Always provide PowerShell commands for file/folder creation
+
+---
+
+## Phase 8 — Organisation Portal (NEXT MAJOR PHASE)
+
+**Status: Deferred — 3 architecture questions unresolved**
+
+### What Phase 8 covers
+- Organisation accounts (churches, small groups, ministries)
+- Admin portal for org leaders — create group plans, assign members, view progress
+- Group reading plan support (the `group_id` nullable column on `user_plans` is already in place as a hook)
+
+### Unresolved questions before any code is written
+
+1. **Org↔User relationship** — Is a user a member of one org or many? Does leaving an org delete their personal journey data or only group data?
+
+2. **Group plan ownership** — When an org admin assigns a plan to a group, does each member get their own `user_plans` row (personal progress), or is progress tracked at group level? Both? What happens when a member leaves the group mid-plan?
+
+3. **Auth separation** — Do org admins log in through the same Supabase auth or a separate admin path? Is there a superadmin (Kairos staff) tier above org admins?
+
+These must be answered and a DB schema confirmed before any Phase 8 code is written.
 
 ---
 
@@ -334,9 +403,9 @@ Paste this at the start of the new conversation, then attach this PROJECT.md fil
 >
 > I have attached PROJECT.md which contains the full project state, all architecture decisions, completed phases, and the exact continuation plan. Please read it fully before responding.
 >
-> We are moving into **Phase 7I — Reading Plans + Guided Study**.
+> Phase 7I is complete. We are moving into **Phase 8 — Organisation Portal**, or we may choose to do pre-launch polish work first (bug fixes, performance, SEO, empty states, error handling).
 >
-> **Before writing a single line of code**, your first task is to discuss and align on the approach. The PROJECT.md lists 5 questions under "Phase 7I — Questions the new chat must answer". Ask those questions first, listen to my answers, propose a DB schema and file plan, wait for my confirmation, and only then begin writing code.
+> **Before writing a single line of code**, your first task is to ask me what we are tackling next and align on the approach. If Phase 8, review the 3 unresolved architecture questions in PROJECT.md and ask me to answer them before proposing any schema or writing any code.
 >
 > Rules that always apply:
 > - Never use CSS token values not in the valid spacing scale (1,2,3,4,5,6,8,10,16,24)
@@ -345,3 +414,4 @@ Paste this at the start of the new conversation, then attach this PROJECT.md fil
 > - All buttons and touch targets minimum 44px height
 > - No guessing — confirm before acting
 > - Commits happen at the end of each phase
+> - Always provide PowerShell commands for file/folder creation
