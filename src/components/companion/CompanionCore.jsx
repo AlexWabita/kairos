@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { initKairosSession }  from "@/lib/supabase/sessions"
 import { useSettings }        from "@/context/SettingsContext"
 import { useAuthState }       from "@/hooks/useAuthState"
 import { getTodaysVerse }     from "@/lib/bible/daily-verses"
@@ -578,7 +577,7 @@ function Message({ role, content, isNew, verseData, onSave, onSignInToSave, save
 export default function CompanionCore({ profile = null }) {
   const { settings, updateSetting } = useSettings()
 
-  // ✅ Reactive auth — replaces one-shot initKairosSession for auth state
+  // ✅ Reactive auth — single source of truth for session state
   const { isAuth, profileId, loading: authLoading } = useAuthState()
 
   const [messages,       setMessages]       = useState([])
@@ -619,10 +618,8 @@ export default function CompanionCore({ profile = null }) {
     setShowConsent(false)
   }
 
-  // Session init (for conversationId seeding only — not auth state)
+  // Restore verse context from Bible reader handoff
   useEffect(() => {
-    initKairosSession().then(() => {})
-
     try {
       const verseCtx = sessionStorage.getItem("kairos_verse_context")
       if (verseCtx) {
