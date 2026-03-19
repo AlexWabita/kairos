@@ -1,13 +1,15 @@
 "use client"
 
-import { useState }          from "react"
-import { useRouter }         from "next/navigation"
-import { signIn }            from "@/lib/supabase/auth"
-import { supabase }          from "@/lib/supabase/client"
+import { useState, Suspense }    from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { signIn }                from "@/lib/supabase/auth"
+import { supabase }              from "@/lib/supabase/client"
 import { migrateAnonymousSession } from "@/lib/supabase/sessions"
 
-export default function LoginPage() {
-  const router = useRouter()
+function LoginForm() {
+  const router       = useRouter()
+  const searchParams = useSearchParams()
+  const returnTo     = searchParams.get("returnTo") || "/journey"
 
   const [email,    setEmail]    = useState("")
   const [password, setPassword] = useState("")
@@ -34,11 +36,11 @@ export default function LoginPage() {
         await migrateAnonymousSession(authUser.id)
       }
     } catch (migrationErr) {
-      // Non-fatal — log and continue
-      console.warn('[Kairos] Migration skipped:', migrationErr.message)
+      console.warn("[Kairos] Migration skipped:", migrationErr.message)
     }
 
-    router.push("/journey")
+    // Go back to where the user came from — not always /journey
+    router.push(returnTo)
     router.refresh()
   }
 
@@ -88,12 +90,7 @@ export default function LoginPage() {
           padding:      "var(--space-3) var(--space-4)",
           marginBottom: "var(--space-5)",
         }}>
-          <p style={{
-            fontFamily: "var(--font-body)",
-            fontSize:   "0.8rem",
-            color:      "#f08080",
-            margin:     0,
-          }}>
+          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "#f08080", margin: 0 }}>
             {error}
           </p>
         </div>
@@ -193,9 +190,7 @@ export default function LoginPage() {
         style={{
           width:         "100%",
           padding:       "var(--space-4)",
-          background:    email && password && !loading
-            ? "var(--gradient-gold)"
-            : "var(--color-surface)",
+          background:    email && password && !loading ? "var(--gradient-gold)" : "var(--color-surface)",
           border:        "1px solid var(--color-border)",
           borderRadius:  "var(--radius-lg)",
           color:         email && password && !loading ? "#060912" : "var(--color-muted)",
@@ -219,10 +214,7 @@ export default function LoginPage() {
         marginTop:  "var(--space-6)",
       }}>
         New here?{" "}
-        <a href="/register" style={{
-          color:          "var(--color-gold-warm)",
-          textDecoration: "none",
-        }}>
+        <a href="/register" style={{ color: "var(--color-gold-warm)", textDecoration: "none" }}>
           Begin your journey
         </a>
       </p>
@@ -235,13 +227,18 @@ export default function LoginPage() {
         color:      "var(--color-faint)",
         marginTop:  "var(--space-3)",
       }}>
-        <a href="/journey" style={{
-          color:          "var(--color-faint)",
-          textDecoration: "none",
-        }}>
+        <a href="/journey" style={{ color: "var(--color-faint)", textDecoration: "none" }}>
           Continue without signing in →
         </a>
       </p>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   )
 }
