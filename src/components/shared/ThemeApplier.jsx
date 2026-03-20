@@ -3,87 +3,161 @@
 import { useEffect } from "react"
 import { useSettings } from "@/context/SettingsContext"
 
-/*
-  ThemeApplier — place this inside the root layout, inside the SettingsProvider.
-  It watches settings.theme and does two things:
-    1. Sets data-theme on <html> so CSS [data-theme="light"] selectors fire
-    2. Injects a <style id="kairos-theme"> tag with CSS variable overrides
-       so every page in the app responds to the theme instantly.
-
-  Usage in src/app/layout.jsx:
-    <SettingsProvider>
-      <ThemeApplier />
-      {children}
-    </SettingsProvider>
-*/
-
 /* ── Light theme CSS variable overrides ── */
 const LIGHT_CSS = `
   :root, [data-theme="light"] {
-    --color-void:         #f0ede6;
-    --color-deep:         #e8e4dc;
-    --color-surface:      #ffffff;
-    --color-elevated:     #f7f5f0;
-    --color-border:       rgba(0,0,0,0.09);
-    --color-border-subtle:rgba(0,0,0,0.06);
+    --color-void:          #f0ede6;
+    --color-deep:          #e8e4dc;
+    --color-surface:       #ffffff;
+    --color-elevated:      #f7f5f0;
+    --color-border:        rgba(0,0,0,0.09);
+    --color-border-subtle: rgba(0,0,0,0.06);
 
-    --color-divine:       #1a1826;
-    --color-soft:         #2e2c3a;
-    --color-muted:        #5a5870;
-    --color-faint:        #8a889a;
+    --color-divine:        #1a1826;
+    --color-soft:          #2e2c3a;
+    --color-muted:         #5a5870;
+    --color-faint:         #8a889a;
 
-    --color-gold-warm:    #b8860a;
-    --color-gold-deep:    #a07608;
-    --color-gold-subtle:  rgba(184,134,10,0.1);
+    --color-gold-warm:     #b8860a;
+    --color-gold-deep:     #a07608;
+    --color-gold-subtle:   rgba(184,134,10,0.1);
 
-    --gradient-hero:      linear-gradient(160deg, #f0ede6 0%, #e4e0d8 100%);
-    --gradient-text:      linear-gradient(135deg, #b8860a 0%, #d4a830 100%);
-    --gradient-gold:      linear-gradient(135deg, #c8980e 0%, #e0b820 100%);
-    --gradient-glow:      radial-gradient(ellipse at center, rgba(184,134,10,0.08) 0%, transparent 70%);
+    --gradient-hero:       linear-gradient(160deg, #f0ede6 0%, #e4e0d8 100%);
+    --gradient-text:       linear-gradient(135deg, #b8860a 0%, #d4a830 100%);
+    --gradient-gold:       linear-gradient(135deg, #c8980e 0%, #e0b820 100%);
+    --gradient-glow:       radial-gradient(ellipse at center, rgba(184,134,10,0.08) 0%, transparent 70%);
 
-    --shadow-card:        0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
-    --shadow-gold-sm:     0 2px 12px rgba(184,134,10,0.25);
-    --shadow-gold-md:     0 4px 24px rgba(184,134,10,0.3);
-    --shadow-deep:        0 8px 32px rgba(0,0,0,0.1);
+    --shadow-card:         0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+    --shadow-gold-sm:      0 2px 12px rgba(184,134,10,0.25);
+    --shadow-gold-md:      0 4px 24px rgba(184,134,10,0.3);
+    --shadow-deep:         0 8px 32px rgba(0,0,0,0.1);
 
     color-scheme: light;
   }
 
-  /* Ensure select option backgrounds work in light mode */
-  [data-theme="light"] select option { background: #f0ede6; color: #1a1826; }
+  /* ── Select options ── */
+  [data-theme="light"] select option {
+    background: #f0ede6;
+    color: #1a1826;
+  }
 
-  /* Scrollbar in light mode */
-  [data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); }
+  /* ── Scrollbar ── */
+  [data-theme="light"] ::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.12);
+  }
+
+  /* ════════════════════════════════════════════════
+     LANDING PAGE — hardcoded rgba(255,255,255,x)
+     overrides. These components use inline styles
+     so we target their CSS class names instead.
+  ════════════════════════════════════════════════ */
+
+  /* ── FAQ section ── */
+  [data-theme="light"] #faq {
+    background: #e8e4dc !important;
+  }
+  [data-theme="light"] #faq button span {
+    color: var(--color-soft) !important;
+  }
+  [data-theme="light"] #faq button[aria-expanded="true"] span {
+    color: var(--color-divine) !important;
+  }
+  [data-theme="light"] #faq .faq-answer p {
+    color: var(--color-muted) !important;
+  }
+  /* FAQ sticky header text */
+  [data-theme="light"] .faq-header h2 {
+    color: var(--color-divine) !important;
+  }
+  [data-theme="light"] .faq-header p {
+    color: var(--color-muted) !important;
+  }
+
+  /* ── App page sidebar + surfaces that use hardcoded dark values ── */
+  [data-theme="light"] aside {
+    background: rgba(0,0,0,0.02) !important;
+    border-right-color: var(--color-border) !important;
+  }
+
+  /* ── Companion chat bubbles ── */
+  [data-theme="light"] .companion-bubble-user {
+    background: rgba(0,0,0,0.05) !important;
+    border-color: rgba(0,0,0,0.08) !important;
+    color: var(--color-divine) !important;
+  }
+  [data-theme="light"] .companion-bubble-ai {
+    background: rgba(0,0,0,0.03) !important;
+    border-color: rgba(0,0,0,0.06) !important;
+    color: var(--color-divine) !important;
+  }
+
+  /* ── Card surfaces that use hardcoded rgba(20,29,53) etc. ── */
+  [data-theme="light"] .kairos-card {
+    background: #ffffff !important;
+    border-color: rgba(0,0,0,0.08) !important;
+  }
+
+  /* ── Mobile nav bar ── */
+  [data-theme="light"] .pd-mobile-nav,
+  [data-theme="light"] .dp-mobile-nav,
+  [data-theme="light"] .js-mobile-nav {
+    background: rgba(240,237,230,0.95) !important;
+    border-top-color: rgba(0,0,0,0.08) !important;
+  }
+
+  /* ── Homepage nav overlay (mobile menu) ── */
+  [data-theme="light"] .hn-mobile-menu {
+    background: rgba(240,237,230,0.98) !important;
+  }
+  [data-theme="light"] .hn-mobile-menu a,
+  [data-theme="light"] .hn-mobile-menu button {
+    color: var(--color-soft) !important;
+    border-color: rgba(0,0,0,0.07) !important;
+  }
+
+  /* ── Textarea / input in light mode ── */
+  [data-theme="light"] textarea,
+  [data-theme="light"] input[type="text"],
+  [data-theme="light"] input[type="email"],
+  [data-theme="light"] select {
+    background: #ffffff !important;
+    color: var(--color-divine) !important;
+    border-color: rgba(0,0,0,0.12) !important;
+  }
+  [data-theme="light"] textarea::placeholder,
+  [data-theme="light"] input::placeholder {
+    color: var(--color-faint) !important;
+  }
 `
 
 /* ── Dark theme (restores defaults) ── */
 const DARK_CSS = `
   :root, [data-theme="dark"] {
-    --color-void:         #060912;
-    --color-deep:         #0a0d18;
-    --color-surface:      rgba(13,20,40,0.8);
-    --color-elevated:     rgba(20,29,53,0.8);
-    --color-border:       rgba(255,255,255,0.08);
-    --color-border-subtle:rgba(255,255,255,0.05);
+    --color-void:          #060912;
+    --color-deep:          #0a0d18;
+    --color-surface:       rgba(13,20,40,0.8);
+    --color-elevated:      rgba(20,29,53,0.8);
+    --color-border:        rgba(255,255,255,0.08);
+    --color-border-subtle: rgba(255,255,255,0.05);
 
-    --color-divine:       rgba(255,255,255,0.92);
-    --color-soft:         rgba(255,255,255,0.72);
-    --color-muted:        rgba(255,255,255,0.42);
-    --color-faint:        rgba(255,255,255,0.22);
+    --color-divine:        rgba(255,255,255,0.92);
+    --color-soft:          rgba(255,255,255,0.72);
+    --color-muted:         rgba(255,255,255,0.42);
+    --color-faint:         rgba(255,255,255,0.22);
 
-    --color-gold-warm:    #f0c060;
-    --color-gold-deep:    #d4a040;
-    --color-gold-subtle:  rgba(240,192,96,0.08);
+    --color-gold-warm:     #f0c060;
+    --color-gold-deep:     #d4a040;
+    --color-gold-subtle:   rgba(240,192,96,0.08);
 
-    --gradient-hero:      linear-gradient(160deg, #060912 0%, #0d1428 100%);
-    --gradient-text:      linear-gradient(135deg, #f0c060 0%, #d4a040 100%);
-    --gradient-gold:      linear-gradient(135deg, #f0c060 0%, #d4903a 100%);
-    --gradient-glow:      radial-gradient(ellipse at center, rgba(240,192,96,0.06) 0%, transparent 70%);
+    --gradient-hero:       linear-gradient(160deg, #060912 0%, #0d1428 100%);
+    --gradient-text:       linear-gradient(135deg, #f0c060 0%, #d4a040 100%);
+    --gradient-gold:       linear-gradient(135deg, #f0c060 0%, #d4903a 100%);
+    --gradient-glow:       radial-gradient(ellipse at center, rgba(240,192,96,0.06) 0%, transparent 70%);
 
-    --shadow-card:        0 1px 3px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2);
-    --shadow-gold-sm:     0 2px 12px rgba(240,192,96,0.2);
-    --shadow-gold-md:     0 4px 24px rgba(240,192,96,0.25);
-    --shadow-deep:        0 8px 48px rgba(0,0,0,0.6);
+    --shadow-card:         0 1px 3px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2);
+    --shadow-gold-sm:      0 2px 12px rgba(240,192,96,0.2);
+    --shadow-gold-md:      0 4px 24px rgba(240,192,96,0.25);
+    --shadow-deep:         0 8px 48px rgba(0,0,0,0.6);
 
     color-scheme: dark;
   }
@@ -108,7 +182,7 @@ const FONT_CSS = {
 
 /* ── Accent colour overrides ── */
 const ACCENT_CSS = {
-  gold: "",   // default — no override needed
+  gold: "",
   blue: `
     :root {
       --color-gold-warm:   #60b4f0;
@@ -161,14 +235,14 @@ export default function ThemeApplier() {
   useEffect(() => {
     const root = document.documentElement
 
-    /* ── 1. Apply data-theme attribute ── */
+    /* ── 1. Resolve theme ── */
     const resolvedTheme = settings.theme === "system"
       ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
       : (settings.theme || "dark")
 
     root.setAttribute("data-theme", resolvedTheme)
 
-    /* ── 2. Inject CSS variable overrides ── */
+    /* ── 2. Inject CSS ── */
     let tag = document.getElementById("kairos-theme")
     if (!tag) {
       tag = document.createElement("style")
@@ -184,7 +258,7 @@ export default function ThemeApplier() {
 
   }, [settings.theme, settings.readingFont, settings.accentColor])
 
-  /* Also react to system preference changes when theme = "system" */
+  /* ── React to OS preference when theme = "system" ── */
   useEffect(() => {
     if (settings.theme !== "system") return
     const mq = window.matchMedia("(prefers-color-scheme: light)")
@@ -195,5 +269,5 @@ export default function ThemeApplier() {
     return () => mq.removeEventListener("change", handler)
   }, [settings.theme])
 
-  return null  // renders nothing
+  return null
 }

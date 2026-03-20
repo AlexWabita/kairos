@@ -65,36 +65,48 @@ function FAQItem({ q, a, index, inView }) {
   return (
     <div style={{
       borderBottom: "1px solid rgba(255,255,255,0.05)",
-      opacity: inView ? 1 : 0,
-      transform: inView ? "translateY(0)" : "translateY(14px)",
-      transition: `opacity 0.5s ease ${0.03 * index}s, transform 0.5s ease ${0.03 * index}s`,
+      opacity:      inView ? 1 : 0,
+      transform:    inView ? "translateY(0)" : "translateY(14px)",
+      transition:   `opacity 0.5s ease ${0.03 * index}s, transform 0.5s ease ${0.03 * index}s`,
     }}>
       <button
         onClick={() => setOpen(v => !v)}
         aria-expanded={open}
         style={{
-          width: "100%", background: "none", border: "none",
-          padding: "20px 0",
-          display: "flex", alignItems: "center",
-          justifyContent: "space-between", gap: 16,
-          cursor: "pointer", textAlign: "left", minHeight: "44px",
+          width:          "100%",
+          background:     "none",
+          border:         "none",
+          padding:        "20px 0",
+          display:        "flex",
+          alignItems:     "center",
+          justifyContent: "space-between",
+          gap:            16,
+          cursor:         "pointer",
+          textAlign:      "left",
+          minHeight:      "44px",
         }}
       >
         <span style={{
-          fontFamily: "var(--font-body)",
-          fontSize: "0.92rem",
-          color: open ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.55)",
-          lineHeight: 1.5, fontWeight: open ? 500 : 400,
-          transition: "color 0.2s ease",
+          fontFamily:  "var(--font-body)",
+          fontSize:    "0.92rem",
+          color:       open ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.55)",
+          lineHeight:  1.5,
+          fontWeight:  open ? 500 : 400,
+          transition:  "color 0.2s ease",
         }}>
           {q}
         </span>
         <div style={{
-          flexShrink: 0, width: 24, height: 24, borderRadius: "50%",
-          border: `1px solid ${open ? "rgba(240,192,96,0.4)" : "rgba(255,255,255,0.1)"}`,
-          background: open ? "rgba(240,192,96,0.08)" : "transparent",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          transition: "all 0.2s ease",
+          flexShrink:  0,
+          width:       24,
+          height:      24,
+          borderRadius: "50%",
+          border:      `1px solid ${open ? "rgba(240,192,96,0.4)" : "rgba(255,255,255,0.1)"}`,
+          background:  open ? "rgba(240,192,96,0.08)" : "transparent",
+          display:     "flex",
+          alignItems:  "center",
+          justifyContent: "center",
+          transition:  "all 0.2s ease",
         }}>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
             stroke={open ? "rgba(240,192,96,0.9)" : "rgba(255,255,255,0.3)"}
@@ -108,8 +120,10 @@ function FAQItem({ q, a, index, inView }) {
       <div style={{ overflow: "hidden", height: `${height}px`, transition: "height 0.3s ease" }}>
         <div ref={bodyRef} style={{ paddingBottom: 20 }}>
           <p style={{
-            color: "rgba(255,255,255,0.38)", fontSize: "0.88rem",
-            lineHeight: 1.85, maxWidth: "600px",
+            color:    "rgba(255,255,255,0.38)",
+            fontSize: "0.88rem",
+            lineHeight: 1.85,
+            maxWidth: "600px",
           }}>
             {a}
           </p>
@@ -121,68 +135,84 @@ function FAQItem({ q, a, index, inView }) {
 
 export default function FAQ() {
   const [headerRef, headerIn] = useInView(0.1)
-  const [bodyRef, bodyIn]     = useInView(0.04)
+  const [bodyRef,   bodyIn]   = useInView(0.04)
 
   return (
     <section
       id="faq"
       style={{
         background: "#0a0c14",
-        padding: "120px 24px",
-        position: "relative", overflow: "hidden",
+        padding:    "120px 24px",
+        position:   "relative",
+        overflow:   "hidden",
       }}
     >
       <div className="kairos-container">
         <div className="faq-layout" style={{
-          display: "grid",
+          display:             "grid",
           gridTemplateColumns: "260px 1fr",
-          gap: "80px",
-          alignItems: "flex-start",
+          gap:                 "80px",
+          alignItems:          "flex-start",
         }}>
 
-          {/* Sticky header */}
-          <div ref={headerRef} style={{ position: "sticky", top: "88px" }}>
+          {/* Sticky header — sticky only on desktop */}
+          <div ref={headerRef} className="faq-header">
             <p style={{
-              fontFamily: "var(--font-display)", fontSize: "0.58rem",
-              letterSpacing: "0.28em", textTransform: "uppercase",
-              color: "rgba(240,192,96,0.7)", marginBottom: 18,
-              opacity: headerIn ? 1 : 0,
-              transform: headerIn ? "translateY(0)" : "translateY(12px)",
-              transition: "opacity 0.6s ease, transform 0.6s ease",
+              fontFamily:    "var(--font-display)",
+              fontSize:      "0.58rem",
+              letterSpacing: "0.28em",
+              textTransform: "uppercase",
+              color:         "rgba(240,192,96,0.7)",
+              marginBottom:  18,
+              opacity:       headerIn ? 1 : 0,
+              transform:     headerIn ? "translateY(0)" : "translateY(12px)",
+              transition:    "opacity 0.6s ease, transform 0.6s ease",
             }}>
               Common Questions
             </p>
             <h2 style={{
-              fontFamily: "var(--font-heading)",
-              fontSize: "clamp(1.4rem, 2vw, 2rem)",
-              fontWeight: 300, color: "rgba(255,255,255,0.88)",
-              lineHeight: 1.3, marginBottom: 16,
-              opacity: headerIn ? 1 : 0,
-              transform: headerIn ? "translateY(0)" : "translateY(16px)",
-              transition: "opacity 0.7s ease 0.1s, transform 0.7s ease 0.1s",
+              fontFamily:  "var(--font-heading)",
+              fontSize:    "clamp(1.4rem, 2vw, 2rem)",
+              fontWeight:  300,
+              color:       "rgba(255,255,255,0.88)",
+              lineHeight:  1.3,
+              marginBottom: 16,
+              opacity:     headerIn ? 1 : 0,
+              transform:   headerIn ? "translateY(0)" : "translateY(16px)",
+              transition:  "opacity 0.7s ease 0.1s, transform 0.7s ease 0.1s",
             }}>
               Everything
               <br />
               <em style={{ color: "var(--color-gold-warm)" }}>you're wondering.</em>
             </h2>
             <p style={{
-              color: "rgba(255,255,255,0.28)", fontSize: "0.82rem",
-              lineHeight: 1.7, marginBottom: 24,
-              opacity: headerIn ? 1 : 0,
+              color:      "rgba(255,255,255,0.28)",
+              fontSize:   "0.82rem",
+              lineHeight: 1.7,
+              marginBottom: 24,
+              opacity:    headerIn ? 1 : 0,
               transition: "opacity 0.7s ease 0.2s",
             }}>
               Don't see your question?
               <br />Ask us directly below.
             </p>
-            <a href="#contact" style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              color: "rgba(240,192,96,0.7)", fontSize: "0.72rem",
-              fontFamily: "var(--font-display)", letterSpacing: "0.12em",
-              textDecoration: "none", textTransform: "uppercase",
-              opacity: headerIn ? 1 : 0, transition: "opacity 0.7s ease 0.3s",
-            }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--color-gold-warm)" }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(240,192,96,0.7)" }}
+            <a
+              href="#contact"
+              style={{
+                display:        "inline-flex",
+                alignItems:     "center",
+                gap:            6,
+                color:          "rgba(240,192,96,0.7)",
+                fontSize:       "0.72rem",
+                fontFamily:     "var(--font-display)",
+                letterSpacing:  "0.12em",
+                textDecoration: "none",
+                textTransform:  "uppercase",
+                opacity:        headerIn ? 1 : 0,
+                transition:     "opacity 0.7s ease 0.3s",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = "var(--color-gold-warm)" }}
+              onMouseLeave={e => { e.currentTarget.style.color = "rgba(240,192,96,0.7)" }}
             >
               Contact us →
             </a>
@@ -199,8 +229,22 @@ export default function FAQ() {
       </div>
 
       <style>{`
+        /* Desktop: sticky header */
+        .faq-header {
+          position: sticky;
+          top: 88px;
+        }
+
+        /* Mobile: single column, no sticky (prevents overlap) */
         @media (max-width: 820px) {
-          .faq-layout { grid-template-columns: 1fr !important; gap: 40px !important; }
+          .faq-layout {
+            grid-template-columns: 1fr !important;
+            gap: 40px !important;
+          }
+          .faq-header {
+            position: static !important;
+            top: auto !important;
+          }
         }
       `}</style>
     </section>

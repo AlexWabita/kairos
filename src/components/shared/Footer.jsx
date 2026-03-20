@@ -2,11 +2,11 @@
 
 const footerLinks = {
   Product: [
-    { label: "Companion",     href: "/journey"        },
-    { label: "Bible Reader",  href: "/bible"           },
-    { label: "My Journey",    href: "/journey/saved"   },
-    { label: "Reading Plans", href: "/plans"           },
-    { label: "Settings",      href: "/settings"        },
+    { label: "Companion",     href: "/journey"       },
+    { label: "Bible Reader",  href: "/bible"          },
+    { label: "My Journey",    href: "/journey/saved"  },
+    { label: "Reading Plans", href: "/plans"          },
+    { label: "Settings",      href: "/settings"       },
   ],
   Company: [
     { label: "About Kairos",   href: "#about"        },
@@ -41,9 +41,9 @@ export default function Footer() {
 
       <footer
         style={{
-          background:  "var(--color-void)",
-          borderTop:   "1px solid var(--color-border)",
-          padding:     "var(--space-10) var(--space-5) var(--space-8)",
+          background: "var(--color-void)",
+          borderTop:  "1px solid var(--color-border)",
+          padding:    "var(--space-10) var(--space-5) var(--space-8)",
         }}
       >
         <div
@@ -89,7 +89,7 @@ export default function Footer() {
           {Object.entries(footerLinks).map(([col, links]) => (
             <div key={col}>
               <p className="footer-col-label">{col}</p>
-              {links.map((l) => (
+              {links.map(l => (
                 <a key={l.href} href={l.href} className="footer-link">
                   {l.label}
                 </a>
@@ -101,8 +101,8 @@ export default function Footer() {
           <div>
             <p className="footer-col-label">Connect</p>
             <a href="#contact" className="footer-link">Send Feedback</a>
-            <a href="mailto:hello@kairos.app" className="footer-link">
-              hello@kairos.app
+            <a href="mailto:kairos.app.official@gmail.com" className="footer-link">
+              kairos.app.official@gmail.com
             </a>
             <p
               style={{

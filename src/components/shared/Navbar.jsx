@@ -1,21 +1,24 @@
 "use client"
 
-import { useState, useEffect }  from "react"
-import Link                      from "next/link"
-import Image                     from "next/image"
-import { usePathname }           from "next/navigation"
-import { supabase }              from "@/lib/supabase/client"
-import { signOut }               from "@/lib/supabase/auth"
-import ConfirmModal              from "@/components/shared/ConfirmModal"
+import { useState, useEffect } from "react"
+import Link                     from "next/link"
+import Image                    from "next/image"
+import { supabase }             from "@/lib/supabase/client"
+import { signOut }              from "@/lib/supabase/auth"
+import ConfirmModal             from "@/components/shared/ConfirmModal"
 
-/* ─────────────────────────────────────────────────────────────
-   APP LINKS ONLY — homepage has its own HomepageNavbar.jsx
-───────────────────────────────────────────────────────────── */
+const MARKETING_LINKS = [
+  { label: "About",        href: "/#about"        },
+  { label: "Features",     href: "/#features"     },
+  { label: "How It Works", href: "/#how-it-works" },
+  { label: "Testimonials", href: "/#testimonials" },
+  { label: "FAQ",          href: "/#faq"          },
+]
+
 const APP_LINKS = [
-  { label: "Companion", href: "/journey"       },
-  { label: "Saved",     href: "/journey/saved" },
-  { label: "Bible",     href: "/bible"         },
-  { label: "Plans",     href: "/plans"         },
+  { label: "Companion", href: "/journey" },
+  { label: "Bible",     href: "/bible"   },
+  { label: "Plans",     href: "/plans"   },
 ]
 
 function getInitials(name) {
@@ -26,52 +29,30 @@ function getInitials(name) {
     : parts[0][0].toUpperCase()
 }
 
-export default function Navbar() {
-  const pathname = usePathname()
-
+export default function HomepageNavbar() {
+  const [scrolled,           setScrolled]          = useState(false)
   const [menuOpen,           setMenuOpen]           = useState(false)
   const [user,               setUser]               = useState(null)
-  const [userName,           setUserName]            = useState(null)
-  const [showSignOutConfirm, setShowSignOutConfirm]  = useState(false)
-  const [signOutLoading,     setSignOutLoading]      = useState(false)
-  const [theme,              setTheme]               = useState("dark")
+  const [userName,           setUserName]           = useState(null)
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
+  const [signOutLoading,     setSignOutLoading]     = useState(false)
 
-  /* ── Read theme from app settings ── */
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("kairos_settings")
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        setTheme(parsed.theme || "dark")
-      }
-    } catch (_) {}
-
-    // Stay in sync if settings change in another tab / component
-    const onStorage = (e) => {
-      if (e.key === "kairos_settings") {
-        try {
-          const parsed = JSON.parse(e.newValue)
-          setTheme(parsed?.theme || "dark")
-        } catch (_) {}
-      }
-    }
-    window.addEventListener("storage", onStorage)
-    return () => window.removeEventListener("storage", onStorage)
+    const onScroll = () => setScrolled(window.scrollY > 60)
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
   }, [])
 
-  /* ── Lock body scroll when mobile menu open ── */
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : ""
     return () => { document.body.style.overflow = "" }
   }, [menuOpen])
 
-  /* ── Auth state ── */
   useEffect(() => {
     const resolve = (u) => {
       if (u && !u.is_anonymous) {
         setUser(u)
-        const name = u.user_metadata?.full_name || u.email?.split("@")[0] || "Friend"
-        setUserName(name)
+        setUserName(u.user_metadata?.full_name || u.email?.split("@")[0] || "Friend")
       } else {
         setUser(null)
         setUserName(null)
@@ -92,22 +73,9 @@ export default function Navbar() {
     window.location.href = "/"
   }
 
-  /* ── Exact-match active check — prevents /journey matching /journey/saved ── */
-  const isActive = (href) => pathname === href
-
   const initials      = getInitials(userName)
   const firstNameOnly = userName?.split(" ")[0] || null
-
-  /* ── Theme-derived colours ── */
-  const isLight = theme === "light"
-  const bg          = isLight ? "rgba(240,238,232,0.92)" : "rgba(10,12,20,0.82)"
-  const bgOpen      = isLight ? "rgba(240,238,232,0.99)" : "rgba(10,12,20,0.99)"
-  const border      = isLight ? "rgba(0,0,0,0.09)"       : "rgba(255,255,255,0.09)"
-  const textMuted   = isLight ? "rgba(0,0,0,0.45)"       : "rgba(255,255,255,0.4)"
-  const textActive  = isLight ? "rgba(0,0,0,0.88)"       : "rgba(255,255,255,0.88)"
-  const activeBg    = isLight ? "rgba(0,0,0,0.07)"       : "rgba(255,255,255,0.07)"
-  const hoverBg     = isLight ? "rgba(0,0,0,0.05)"       : "rgba(255,255,255,0.05)"
-  const hamburgerBg = isLight ? "rgba(0,0,0,0.55)"       : "rgba(255,255,255,0.6)"
+  const showPill      = scrolled || menuOpen
 
   return (
     <>
@@ -124,35 +92,43 @@ export default function Navbar() {
         loading={signOutLoading}
       />
 
-      {/* ════════════════════════════════════════════════════
-          FLOATING PILL NAV
-          Centred, max-width 880px, hovers 12px from top.
-          Does NOT touch the left/right viewport edges.
-      ════════════════════════════════════════════════════ */}
+      {/* ── Nav bar ── */}
       <nav
+        className={menuOpen ? "hn-nav hn-nav-open" : "hn-nav"}
         style={{
-          position:       "fixed",
-          top:            "12px",
-          left:           "50%",
-          transform:      "translateX(-50%)",
-          width:          "calc(100% - 32px)",
-          maxWidth:       "880px",
-          zIndex:         "var(--z-nav, 200)",
-          height:         "56px",
-          padding:        "0 16px",
-          display:        "flex",
-          alignItems:     "center",
-          justifyContent: "space-between",
-          gap:            12,
-          background:     bg,
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          border:         `1px solid ${border}`,
-          borderRadius:   "16px",
-          boxShadow:      isLight
-            ? "0 4px 24px rgba(0,0,0,0.08)"
-            : "0 4px 24px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.05) inset",
-          transition:     "background 0.3s ease, border-color 0.3s ease",
+          position:             "fixed",
+          top:                  showPill ? "12px" : "0",
+          left:                 showPill ? "50%" : "0",
+          right:                showPill ? "auto" : "0",
+          transform:            showPill ? "translateX(-50%)" : "none",
+          width:                showPill ? "calc(100% - 32px)" : "100%",
+          maxWidth:             showPill ? "920px" : "none",
+          zIndex:               200,
+          height:               "64px",
+          padding:              "0 24px",
+          display:              "flex",
+          alignItems:           "center",
+          justifyContent:       "space-between",
+          gap:                  16,
+          background:           showPill ? "rgba(8,10,18,0.88)" : "transparent",
+          backdropFilter:       showPill ? "blur(24px)" : "none",
+          WebkitBackdropFilter: showPill ? "blur(24px)" : "none",
+          border:               showPill
+            ? "1px solid rgba(255,255,255,0.08)"
+            : "1px solid transparent",
+          borderRadius:         showPill ? "16px" : "0",
+          boxShadow:            showPill ? "0 4px 28px rgba(0,0,0,0.4)" : "none",
+          transition: [
+            "top 0.35s cubic-bezier(0.4,0,0.2,1)",
+            "left 0.35s cubic-bezier(0.4,0,0.2,1)",
+            "width 0.35s cubic-bezier(0.4,0,0.2,1)",
+            "max-width 0.35s cubic-bezier(0.4,0,0.2,1)",
+            "transform 0.35s cubic-bezier(0.4,0,0.2,1)",
+            "background 0.35s ease",
+            "border-color 0.35s ease",
+            "border-radius 0.35s ease",
+            "box-shadow 0.35s ease",
+          ].join(", "),
         }}
       >
 
@@ -161,17 +137,17 @@ export default function Navbar() {
           <Image
             src="/images/logo-full.png"
             alt="Kairos"
-            width={110}
-            height={36}
+            width={120}
+            height={40}
             priority
             style={{
               objectFit:      "contain",
               objectPosition: "left center",
               display:        "block",
-              maxHeight:      "32px",
+              maxHeight:      "34px",
               width:          "auto",
-              maxWidth:       "100px",
-              mixBlendMode:   isLight ? "multiply" : "screen",
+              maxWidth:       "108px",
+              mixBlendMode:   "screen",
             }}
             onError={(e) => {
               e.currentTarget.style.display = "none"
@@ -181,143 +157,133 @@ export default function Navbar() {
           <span style={{
             display:              "none",
             fontFamily:           "var(--font-display)",
-            fontSize:             "1rem",
+            fontSize:             "1.05rem",
             letterSpacing:        "0.22em",
             background:           "var(--gradient-text)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor:  "transparent",
             backgroundClip:       "text",
-          }}>
-            KAIROS
-          </span>
+          }}>KAIROS</span>
         </Link>
 
-        {/* ── Desktop links (centred) ── */}
-        <div className="nb-desktop" style={{
-          display:        "flex",
-          alignItems:     "center",
-          gap:            2,
-          flex:           1,
-          justifyContent: "center",
+        {/* ── Desktop marketing links ── */}
+        <div className="hn-desktop" style={{
+          display:         "flex",
+          alignItems:      "center",
+          gap:             2,
+          flex:            1,
+          justifyContent:  "center",
         }}>
-          {APP_LINKS.map((item) => {
-            const active = isActive(item.href)
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                style={{
-                  fontFamily:     "var(--font-body)",
-                  fontSize:       "0.82rem",
-                  color:          active ? textActive : textMuted,
-                  textDecoration: "none",
-                  padding:        "6px 13px",
-                  borderRadius:   "10px",
-                  background:     active ? activeBg : "transparent",
-                  transition:     "all 0.15s ease",
-                  whiteSpace:     "nowrap",
-                  letterSpacing:  "0.01em",
-                  fontWeight:     active ? 500 : 400,
-                }}
-                onMouseEnter={(e) => {
-                  if (!active) {
-                    e.currentTarget.style.color      = isLight ? "rgba(0,0,0,0.7)"        : "rgba(255,255,255,0.75)"
-                    e.currentTarget.style.background = hoverBg
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!active) {
-                    e.currentTarget.style.color      = textMuted
-                    e.currentTarget.style.background = "transparent"
-                  }
-                }}
-              >
-                {item.label}
-              </Link>
-            )
-          })}
+          {MARKETING_LINKS.map(item => (
+            <a
+              key={item.href}
+              href={item.href}
+              style={{
+                fontFamily:     "var(--font-body)",
+                fontSize:       "0.82rem",
+                color:          scrolled ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.55)",
+                textDecoration: "none",
+                padding:        "6px 12px",
+                borderRadius:   "10px",
+                transition:     "all 0.15s ease",
+                whiteSpace:     "nowrap",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = "rgba(255,255,255,0.9)"; e.currentTarget.style.background = "rgba(255,255,255,0.06)" }}
+              onMouseLeave={e => { e.currentTarget.style.color = scrolled ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.55)"; e.currentTarget.style.background = "transparent" }}
+            >
+              {item.label}
+            </a>
+          ))}
         </div>
 
-        {/* ── Desktop auth ── */}
-        <div className="nb-desktop" style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        {/* ── Desktop auth / CTA ── */}
+        <div className="hn-desktop" style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           {user ? (
             <>
-              {/* Avatar chip → /account */}
-              <Link
-                href="/account"
-                title="Your account"
-                style={{
-                  display:        "flex",
-                  alignItems:     "center",
-                  gap:            7,
-                  padding:        "4px 12px 4px 4px",
-                  borderRadius:   100,
-                  background:     hoverBg,
-                  border:         `1px solid ${border}`,
-                  textDecoration: "none",
-                  transition:     "all 0.15s ease",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(240,192,96,0.4)"; e.currentTarget.style.background = "rgba(240,192,96,0.06)" }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = border; e.currentTarget.style.background = hoverBg }}
+              <Link href="/account" style={{
+                display:    "flex",
+                alignItems: "center",
+                gap:        7,
+                padding:    "4px 12px 4px 4px",
+                borderRadius: 100,
+                background:   "rgba(255,255,255,0.05)",
+                border:       "1px solid rgba(255,255,255,0.09)",
+                textDecoration: "none",
+                transition:   "all 0.15s ease",
+              }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(240,192,96,0.4)"; e.currentTarget.style.background = "rgba(240,192,96,0.06)" }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.09)"; e.currentTarget.style.background = "rgba(255,255,255,0.05)" }}
               >
                 <div style={{
-                  width:          26, height: 26, borderRadius: "50%",
+                  width:          26,
+                  height:         26,
+                  borderRadius:   "50%",
                   background:     "linear-gradient(135deg,rgba(240,192,96,0.28) 0%,rgba(240,150,60,0.28) 100%)",
                   border:         "1px solid rgba(240,192,96,0.35)",
-                  display:        "flex", alignItems: "center", justifyContent: "center",
+                  display:        "flex",
+                  alignItems:     "center",
+                  justifyContent: "center",
                   fontFamily:     "var(--font-display)",
-                  fontSize:       "0.52rem", letterSpacing: "0.04em",
-                  color:          "var(--color-gold-warm)", flexShrink: 0,
+                  fontSize:       "0.52rem",
+                  color:          "var(--color-gold-warm)",
+                  flexShrink:     0,
                 }}>
                   {initials}
                 </div>
-                <span style={{
-                  fontFamily: "var(--font-body)", fontSize: "0.78rem",
-                  color: isLight ? "rgba(0,0,0,0.65)" : "rgba(255,255,255,0.65)",
-                  maxWidth: "90px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>
+                <span style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "rgba(255,255,255,0.65)", maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {firstNameOnly}
                 </span>
               </Link>
-
-              {/* Sign out */}
-              <button
-                onClick={() => setShowSignOutConfirm(true)}
-                style={{
-                  background: "transparent", border: `1px solid ${border}`,
-                  borderRadius: 100, padding: "5px 13px",
-                  color: textMuted, fontFamily: "var(--font-body)",
-                  fontSize: "0.78rem", cursor: "pointer",
-                  transition: "all 0.15s ease", whiteSpace: "nowrap", minHeight: "32px",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(240,80,80,0.45)"; e.currentTarget.style.color = "#f08080" }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = border; e.currentTarget.style.color = textMuted }}
+              <Link href="/journey" style={{
+                fontFamily:     "var(--font-display)",
+                fontSize:       "0.6rem",
+                letterSpacing:  "0.14em",
+                color:          "#060912",
+                textDecoration: "none",
+                padding:        "7px 16px",
+                borderRadius:   100,
+                background:     "var(--gradient-gold)",
+                boxShadow:      "var(--shadow-gold-sm)",
+                whiteSpace:     "nowrap",
+                transition:     "opacity 0.15s ease",
+              }}
+                onMouseEnter={e => { e.currentTarget.style.opacity = "0.85" }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = "1" }}
               >
-                Sign out
-              </button>
+                OPEN
+              </Link>
             </>
           ) : (
             <>
               <Link href="/login" style={{
-                fontFamily: "var(--font-body)", fontSize: "0.82rem",
-                color: textMuted, textDecoration: "none",
-                padding: "5px 13px", borderRadius: 100, transition: "color 0.15s ease",
+                fontFamily:     "var(--font-body)",
+                fontSize:       "0.82rem",
+                color:          "rgba(255,255,255,0.45)",
+                textDecoration: "none",
+                padding:        "5px 13px",
+                borderRadius:   100,
+                transition:     "color 0.15s ease",
               }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = textActive }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = textMuted }}
+                onMouseEnter={e => { e.currentTarget.style.color = "rgba(255,255,255,0.85)" }}
+                onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.45)" }}
               >
                 Sign in
               </Link>
               <Link href="/journey" style={{
-                fontFamily: "var(--font-display)", fontSize: "0.6rem",
-                letterSpacing: "0.14em", color: "#060912",
-                textDecoration: "none", padding: "7px 16px",
-                borderRadius: 100, background: "var(--gradient-gold)",
-                boxShadow: "var(--shadow-gold-sm)", whiteSpace: "nowrap",
-                transition: "opacity 0.15s ease",
+                fontFamily:     "var(--font-display)",
+                fontSize:       "0.6rem",
+                letterSpacing:  "0.14em",
+                color:          "#060912",
+                textDecoration: "none",
+                padding:        "8px 18px",
+                borderRadius:   100,
+                background:     "var(--gradient-gold)",
+                boxShadow:      "var(--shadow-gold-sm)",
+                whiteSpace:     "nowrap",
+                transition:     "opacity 0.15s ease",
               }}
-                onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85" }}
-                onMouseLeave={(e) => { e.currentTarget.style.opacity = "1" }}
+                onMouseEnter={e => { e.currentTarget.style.opacity = "0.85" }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = "1" }}
               >
                 BEGIN
               </Link>
@@ -327,155 +293,242 @@ export default function Navbar() {
 
         {/* ── Hamburger ── */}
         <button
-          className="nb-hamburger"
+          className="hn-hamburger"
           onClick={() => setMenuOpen(v => !v)}
           aria-label={menuOpen ? "Close menu" : "Open menu"}
           aria-expanded={menuOpen}
           style={{
-            display: "none", flexDirection: "column",
-            justifyContent: "center", alignItems: "center",
-            width: "40px", height: "40px",
-            background: "transparent", border: "none",
-            cursor: "pointer", zIndex: 500, position: "relative",
-            padding: 0, flexShrink: 0,
+            display:        "none",
+            flexDirection:  "column",
+            justifyContent: "center",
+            alignItems:     "center",
+            width:          "40px",
+            height:         "40px",
+            background:     "transparent",
+            border:         "none",
+            cursor:         "pointer",
+            zIndex:         500,
+            position:       "relative",
+            padding:        0,
+            flexShrink:     0,
           }}
         >
           {[
-            { transform: menuOpen ? "rotate(45deg)" : "translateY(-5px)", opacity: 1            },
-            { transform: "none",                                           opacity: menuOpen?0:1 },
-            { transform: menuOpen ? "rotate(-45deg)" : "translateY(5px)", opacity: 1            },
+            { transform: menuOpen ? "rotate(45deg)"  : "translateY(-5px)", opacity: 1             },
+            { transform: "none",                                            opacity: menuOpen ? 0 : 1 },
+            { transform: menuOpen ? "rotate(-45deg)" : "translateY(5px)",  opacity: 1             },
           ].map((s, i) => (
             <span key={i} style={{
-              display: "block", position: "absolute",
-              width: "18px", height: "1.5px",
-              background: hamburgerBg, borderRadius: "2px",
-              transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)",
+              display:      "block",
+              position:     "absolute",
+              width:        "18px",
+              height:       "1.5px",
+              background:   "rgba(255,255,255,0.7)",
+              borderRadius: "2px",
+              transition:   "all 0.25s cubic-bezier(0.4,0,0.2,1)",
               ...s,
             }} />
           ))}
         </button>
 
-        {/* ── Mobile full-screen menu ── */}
+        {/* ── Mobile full-screen overlay ── */}
         <div
-          className="nb-mobile-menu"
+          className="hn-mobile-menu"
           style={{
-            position:        "fixed",
-            inset:           0,
-            background:      bgOpen,
-            backdropFilter:  "blur(28px)",
+            position:             "fixed",
+            inset:                0,
+            background:           "rgba(6,9,18,0.98)",
+            backdropFilter:       "blur(28px)",
             WebkitBackdropFilter: "blur(28px)",
-            zIndex:          400,
-            display:         "flex",
-            flexDirection:   "column",
-            padding:         "84px 28px 36px",
-            opacity:         menuOpen ? 1 : 0,
-            pointerEvents:   menuOpen ? "all" : "none",
-            transition:      "opacity 0.25s ease",
+            zIndex:               400,
+            display:              "flex",
+            flexDirection:        "column",
+            padding:              "88px 28px 36px",
+            opacity:              menuOpen ? 1 : 0,
+            pointerEvents:        menuOpen ? "all" : "none",
+            transition:           "opacity 0.25s ease",
           }}
         >
-          {/* Ambient glow */}
           <div aria-hidden="true" style={{
-            position: "absolute", bottom: "12%", right: "4%",
-            width: 260, height: 260,
-            background: "radial-gradient(circle, rgba(240,192,96,0.07) 0%, transparent 70%)",
-            borderRadius: "50%", pointerEvents: "none",
+            position:     "absolute",
+            bottom:       "10%",
+            right:        "5%",
+            width:        260,
+            height:       260,
+            background:   "radial-gradient(circle, rgba(240,192,96,0.07) 0%, transparent 70%)",
+            borderRadius: "50%",
+            pointerEvents: "none",
           }} />
 
-          {/* Nav links */}
           <div style={{ flex: 1 }}>
-            {APP_LINKS.map((item, i) => {
-              const active = isActive(item.href)
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMenuOpen(false)}
-                  style={{
-                    display:         "block",
-                    fontFamily:      "var(--font-heading)",
-                    fontSize:        "clamp(1.5rem, 6vw, 2rem)",
-                    fontWeight:      300,
-                    color:           active ? "var(--color-gold-warm)" : textActive,
-                    textDecoration:  "none",
-                    padding:         "13px 0",
-                    borderBottom:    `1px solid ${border}`,
-                    opacity:         menuOpen ? 1 : 0,
-                    transform:       menuOpen ? "translateX(0)" : "translateX(-14px)",
-                    transition:      "opacity 0.3s ease, transform 0.3s ease, color 0.15s ease",
-                    transitionDelay: menuOpen ? `${i * 50 + 60}ms` : "0ms",
-                    lineHeight:      1.2,
-                  }}
-                  onMouseEnter={(e) => { if (!active) e.currentTarget.style.color = "var(--color-gold-warm)" }}
-                  onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = textActive }}
-                >
-                  {item.label}
-                </Link>
-              )
-            })}
+            <p style={{
+              fontFamily:     "var(--font-display)",
+              fontSize:       "0.5rem",
+              letterSpacing:  "0.2em",
+              textTransform:  "uppercase",
+              color:          "rgba(255,255,255,0.2)",
+              marginBottom:   6,
+              opacity:        menuOpen ? 1 : 0,
+              transition:     "opacity 0.3s ease",
+              transitionDelay: "40ms",
+            }}>
+              Explore
+            </p>
+            {MARKETING_LINKS.map((item, i) => (
+              <a
+                key={item.href}
+                href={item.href}
+                onClick={() => setMenuOpen(false)}
+                style={{
+                  display:         "block",
+                  fontFamily:      "var(--font-heading)",
+                  fontSize:        "clamp(1.3rem, 5vw, 1.7rem)",
+                  fontWeight:      300,
+                  color:           "rgba(255,255,255,0.65)",
+                  textDecoration:  "none",
+                  padding:         "10px 0",
+                  borderBottom:    "1px solid rgba(255,255,255,0.05)",
+                  opacity:         menuOpen ? 1 : 0,
+                  transform:       menuOpen ? "translateX(0)" : "translateX(-14px)",
+                  transition:      "opacity 0.3s ease, transform 0.3s ease, color 0.15s ease",
+                  transitionDelay: menuOpen ? `${i * 45 + 60}ms` : "0ms",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = "rgba(255,255,255,0.9)" }}
+                onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.65)" }}
+              >
+                {item.label}
+              </a>
+            ))}
+
+            <p style={{
+              fontFamily:      "var(--font-display)",
+              fontSize:        "0.5rem",
+              letterSpacing:   "0.2em",
+              textTransform:   "uppercase",
+              color:           "rgba(255,255,255,0.2)",
+              marginTop:       20,
+              marginBottom:    6,
+              opacity:         menuOpen ? 1 : 0,
+              transition:      "opacity 0.3s ease",
+              transitionDelay: menuOpen ? `${MARKETING_LINKS.length * 45 + 60}ms` : "0ms",
+            }}>
+              The App
+            </p>
+            {APP_LINKS.map((item, i) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMenuOpen(false)}
+                style={{
+                  display:         "block",
+                  fontFamily:      "var(--font-heading)",
+                  fontSize:        "clamp(1.3rem, 5vw, 1.7rem)",
+                  fontWeight:      300,
+                  color:           "rgba(255,255,255,0.55)",
+                  textDecoration:  "none",
+                  padding:         "10px 0",
+                  borderBottom:    "1px solid rgba(255,255,255,0.05)",
+                  opacity:         menuOpen ? 1 : 0,
+                  transform:       menuOpen ? "translateX(0)" : "translateX(-14px)",
+                  transition:      "opacity 0.3s ease, transform 0.3s ease, color 0.15s ease",
+                  transitionDelay: menuOpen ? `${(MARKETING_LINKS.length + i) * 45 + 80}ms` : "0ms",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = "var(--color-gold-warm)" }}
+                onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.55)" }}
+              >
+                {item.label}
+              </Link>
+            ))}
           </div>
 
-          {/* Auth — pinned to bottom */}
+          {/* Auth — bottom */}
           <div style={{
             opacity:         menuOpen ? 1 : 0,
             transform:       menuOpen ? "translateY(0)" : "translateY(10px)",
             transition:      "opacity 0.3s ease, transform 0.3s ease",
-            transitionDelay: menuOpen ? `${APP_LINKS.length * 50 + 80}ms` : "0ms",
+            transitionDelay: menuOpen ? `${(MARKETING_LINKS.length + APP_LINKS.length) * 45 + 100}ms` : "0ms",
           }}>
             {user ? (
-              <div style={{ borderTop: `1px solid ${border}`, paddingTop: 20 }}>
+              <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 20 }}>
                 <Link href="/account" onClick={() => setMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: 14, textDecoration: "none", marginBottom: 14 }}>
                   <div style={{
-                    width: 42, height: 42, borderRadius: "50%",
-                    background: "linear-gradient(135deg,rgba(240,192,96,0.22) 0%,rgba(240,150,60,0.22) 100%)",
-                    border: "1px solid rgba(240,192,96,0.3)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontFamily: "var(--font-display)", fontSize: "0.65rem",
-                    color: "var(--color-gold-warm)", flexShrink: 0,
+                    width:          42,
+                    height:         42,
+                    borderRadius:   "50%",
+                    background:     "linear-gradient(135deg,rgba(240,192,96,0.22) 0%,rgba(240,150,60,0.22) 100%)",
+                    border:         "1px solid rgba(240,192,96,0.3)",
+                    display:        "flex",
+                    alignItems:     "center",
+                    justifyContent: "center",
+                    fontFamily:     "var(--font-display)",
+                    fontSize:       "0.65rem",
+                    color:          "var(--color-gold-warm)",
+                    flexShrink:     0,
                   }}>
                     {initials}
                   </div>
                   <div>
-                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: textActive, margin: 0 }}>{firstNameOnly}</p>
-                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.7rem", color: textMuted, margin: "2px 0 0" }}>View account →</p>
+                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "rgba(255,255,255,0.75)", margin: 0 }}>{firstNameOnly}</p>
+                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.7rem", color: "rgba(255,255,255,0.3)", margin: "2px 0 0" }}>View account →</p>
                   </div>
                 </Link>
                 <button
                   onClick={() => { setMenuOpen(false); setShowSignOutConfirm(true) }}
                   style={{
-                    width: "100%", padding: "12px 0",
-                    background: isLight ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.04)",
-                    border: `1px solid ${border}`,
-                    borderRadius: 12, color: textMuted,
-                    fontFamily: "var(--font-body)", fontSize: "0.85rem",
-                    cursor: "pointer", transition: "all 0.15s ease", minHeight: "44px",
+                    width:       "100%",
+                    padding:     "12px 0",
+                    background:  "rgba(255,255,255,0.04)",
+                    border:      "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: 12,
+                    color:       "rgba(255,255,255,0.4)",
+                    fontFamily:  "var(--font-body)",
+                    fontSize:    "0.85rem",
+                    cursor:      "pointer",
+                    transition:  "all 0.15s ease",
+                    minHeight:   "44px",
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(240,80,80,0.4)"; e.currentTarget.style.color = "#f08080" }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = border; e.currentTarget.style.color = textMuted }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(240,80,80,0.4)"; e.currentTarget.style.color = "#f08080" }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "rgba(255,255,255,0.4)" }}
                 >
                   Sign out
                 </button>
               </div>
             ) : (
-              <div style={{ borderTop: `1px solid ${border}`, paddingTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
                 <Link href="/journey" onClick={() => setMenuOpen(false)} style={{
-                  display: "block", textAlign: "center", padding: "14px 0",
-                  background: "var(--gradient-gold)", borderRadius: 14,
-                  color: "#060912", fontFamily: "var(--font-display)",
-                  fontSize: "0.7rem", letterSpacing: "0.15em",
-                  textDecoration: "none", boxShadow: "var(--shadow-gold-sm)", minHeight: "48px", lineHeight: "20px",
+                  display:        "block",
+                  textAlign:      "center",
+                  padding:        "14px 0",
+                  background:     "var(--gradient-gold)",
+                  borderRadius:   14,
+                  color:          "#060912",
+                  fontFamily:     "var(--font-display)",
+                  fontSize:       "0.7rem",
+                  letterSpacing:  "0.15em",
+                  textDecoration: "none",
+                  boxShadow:      "var(--shadow-gold-sm)",
+                  minHeight:      "48px",
+                  lineHeight:     "20px",
                 }}>
                   BEGIN JOURNEY
                 </Link>
                 <Link href="/login" onClick={() => setMenuOpen(false)} style={{
-                  display: "block", textAlign: "center", padding: "12px 0",
-                  background: "transparent", border: `1px solid ${border}`,
-                  borderRadius: 14, color: textMuted,
-                  fontFamily: "var(--font-body)", fontSize: "0.85rem",
-                  textDecoration: "none", minHeight: "48px", lineHeight: "24px",
-                  transition: "all 0.15s ease",
+                  display:        "block",
+                  textAlign:      "center",
+                  padding:        "12px 0",
+                  background:     "transparent",
+                  border:         "1px solid rgba(255,255,255,0.08)",
+                  borderRadius:   14,
+                  color:          "rgba(255,255,255,0.4)",
+                  fontFamily:     "var(--font-body)",
+                  fontSize:       "0.85rem",
+                  textDecoration: "none",
+                  minHeight:      "48px",
+                  lineHeight:     "24px",
+                  transition:     "all 0.15s ease",
                 }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = textActive; e.currentTarget.style.borderColor = isLight ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.18)" }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = textMuted; e.currentTarget.style.borderColor = border }}
+                  onMouseEnter={e => { e.currentTarget.style.color = "rgba(255,255,255,0.75)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)" }}
+                  onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.4)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)" }}
                 >
                   Sign in
                 </Link>
@@ -484,17 +537,32 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* ── Responsive breakpoints ── */}
         <style>{`
-          @media (max-width: 680px) {
-            .nb-desktop   { display: none !important; }
-            .nb-hamburger { display: flex !important; }
+          @media (max-width: 700px) {
+            .hn-desktop   { display: none !important; }
+            .hn-hamburger { display: flex !important; }
+
+            /* When menu is open on mobile: force full-width solid bar,
+               no pill transform — otherwise corners of screen are exposed */
+            .hn-nav.hn-nav-open {
+              top: 0 !important;
+              left: 0 !important;
+              right: 0 !important;
+              transform: none !important;
+              width: 100% !important;
+              max-width: none !important;
+              border-radius: 0 !important;
+              border-left: none !important;
+              border-right: none !important;
+              border-top: none !important;
+              background: rgba(6,9,18,0.98) !important;
+              box-shadow: none !important;
+            }
           }
-          @media (min-width: 681px) {
-            .nb-mobile-menu { display: none !important; }
+          @media (min-width: 701px) {
+            .hn-mobile-menu { display: none !important; }
           }
         `}</style>
-
       </nav>
     </>
   )
