@@ -1,3 +1,5 @@
+<meta name="msvalidate.01" content="15369B905988A21945FCE4603D0F4970" />
+
 import Navbar          from "@/components/shared/HomepageNavbar"
 import Footer          from "@/components/shared/Footer"
 import Hero            from "@/components/landing/Hero"
@@ -19,6 +21,7 @@ export const metadata = {
   metadataBase: new URL("https://kairos-ebon.vercel.app"),
   verification: {
     google: "VRnQo2aiDdytuMbHxXf1kkTeEVHx_0G8WnG9l0gtqBg",
+    bing: "15369B905988A21945FCE4603D0F4970"
   },
   openGraph: {
     title:       "Kairos — A Biblical AI Life Companion",
