@@ -244,7 +244,7 @@ export default function Contact() {
               Or email us directly
             </p>
             <a
-              href="mailtokairos.app.official@gmail.com"
+              href="mailto:kairos.app.official@gmail.com"
               style={{
                 color:          "var(--color-gold-warm)",
                 fontSize:       "0.92rem",
