@@ -244,7 +244,7 @@ export default function Contact() {
               Or email us directly
             </p>
             <a
-              href="mailto:hello@kairos.app"
+              href="mailtokairos.app.official@gmail.com"
               style={{
                 color:          "var(--color-gold-warm)",
                 fontSize:       "0.92rem",
@@ -253,7 +253,7 @@ export default function Contact() {
                 paddingBottom:  "2px",
               }}
             >
-              hello@kairos.app
+              kairos.app.official@gmail.com
             </a>
           </div>
         </div>
@@ -350,7 +350,7 @@ export default function Contact() {
                   fontFamily:   "var(--font-body)",
                   lineHeight:   1.5,
                 }}>
-                  Something went wrong. Please try again or email us directly at hello@kairos.app
+                  Something went wrong. Please try again or email us directly at kairos.app.official@gmail.com
                 </div>
               )}
 
