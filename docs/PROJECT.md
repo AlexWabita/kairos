@@ -1,5 +1,5 @@
 # KAIROS — Project Handoff Document
-_Last updated: Phase 7J (Session end)_
+_Last updated: Phase 7J complete — pre-deployment session_
 
 ---
 
@@ -7,9 +7,11 @@ _Last updated: Phase 7J (Session end)_
 
 A Biblical AI life companion web app. Not a utility tool — a companion. Every design and architectural decision should serve that identity. Users come with real questions, pain, doubt, and faith. Kairos listens, responds with scripture wisdom, and helps them record their spiritual journey.
 
-**Stack:** Next.js 16 (App Router, Turbopack), Supabase (auth + DB), Groq (primary AI), OpenRouter + Gemini (fallback chain), Jina AI (RAG embeddings, 768-dim), bible-api.com
+**Stack:** Next.js 16 (App Router, webpack), Supabase (auth + DB), Groq (primary AI), OpenRouter + Gemini (fallback chain), Jina AI (RAG embeddings, 768-dim), bible-api.com
 
 **Repo:** `AlexWabita/kairos` (private) — branches: `main`, `dev`
+
+**Design inspiration:** Leonardo AI — ultra-dark void (`#060912`), floating pill nav, sidebar navigation on all app pages, subtle card borders (`rgba(255,255,255,0.07)`), gold accents used sparingly
 
 ---
 
@@ -39,8 +41,8 @@ kairos/
 │       └── logo-mark.png       ← star only
 ├── src/
 │   ├── app/
-│   │   ├── layout.jsx          ← root layout, metadata, viewport export fixed
-│   │   ├── page.jsx            ← homepage (full rebuild, Phase 7J)
+│   │   ├── layout.jsx          ← root layout, SettingsProvider + ThemeApplier inside
+│   │   ├── page.jsx            ← homepage (full rebuild Phase 7J)
 │   │   ├── globals.css
 │   │   ├── loading.jsx
 │   │   ├── error.jsx
@@ -50,21 +52,16 @@ kairos/
 │   │   │   ├── login/page.jsx          ← UPDATED: returnTo support, Suspense wrapper
 │   │   │   ├── register/page.jsx
 │   │   │   └── forgot-password/page.jsx
-│   │   ├── (main)/
-│   │   │   ├── layout.jsx              ← minimal passthrough
-│   │   │   ├── journey/page.jsx        ← AI companion page (PENDING UI redesign)
-│   │   │   ├── explore/page.jsx
-│   │   │   ├── profile/page.jsx
-│   │   │   └── resources/page.jsx
-│   │   ├── account/page.jsx
-│   │   ├── settings/page.jsx
-│   │   ├── bible/page.jsx              ← Bible reader
+│   │   ├── account/page.jsx            ← REDESIGNED: sidebar nav, stats strip, section cards
+│   │   ├── settings/page.jsx           ← REDESIGNED: sidebar nav, theme/accent/font/translation/companion/notifications
+│   │   ├── bible/page.jsx              ← REDESIGNED: 3-panel layout, verse selection, action bar
 │   │   ├── plans/
-│   │   │   ├── page.jsx                ← UPDATED: useAuthState hook
-│   │   │   ├── [id]/page.jsx
-│   │   │   └── [id]/day/[day]/page.jsx
+│   │   │   ├── page.jsx                ← REDESIGNED: sidebar nav, active enrollments, category badges
+│   │   │   ├── [id]/page.jsx           ← REDESIGNED: sidebar nav, progress strip, day grid ← PASTE IN NEXT SESSION
+│   │   │   └── [id]/day/[day]/page.jsx ← REDESIGNED: sidebar nav, all original logic preserved ← PASTE IN NEXT SESSION
 │   │   ├── journey/
-│   │   │   └── saved/page.jsx          ← REDESIGNED: two-column layout, sidebar
+│   │   │   ├── page.jsx                ← AI companion (CompanionCore, sidebar nav)
+│   │   │   └── saved/page.jsx          ← REDESIGNED: sidebar filter/sort, mobile bottom nav, single filter&sort button
 │   │   ├── privacy/page.jsx
 │   │   └── api/
 │   │       ├── ai/companion/route.js
@@ -74,6 +71,7 @@ kairos/
 │   │       ├── bible/chapter/route.js
 │   │       ├── bible/verse/route.js
 │   │       ├── bible/debug/route.js
+│   │       ├── contact/route.js        ← BUILT: Resend auto-replies, Supabase save ← PASTE IN NEXT SESSION
 │   │       ├── journey/save/route.js
 │   │       ├── plans/route.js
 │   │       ├── plans/[id]/route.js
@@ -85,7 +83,7 @@ kairos/
 │   │       └── admin/seed/route.js
 │   ├── components/
 │   │   ├── companion/
-│   │   │   ├── CompanionCore.jsx       ← UPDATED: useAuthState + InlineSignInModal
+│   │   │   ├── CompanionCore.jsx       ← UPDATED: sidebar nav, VotD/ActivePlan/Prompts gated by settings
 │   │   │   ├── CompanionPrompt.jsx
 │   │   │   ├── CompanionResponse.jsx
 │   │   │   ├── CompanionVoice.jsx
@@ -96,18 +94,20 @@ kairos/
 │   │   │   ├── JourneyMap.jsx
 │   │   │   └── JourneyTimeline.jsx
 │   │   ├── landing/
-│   │   │   ├── Hero.jsx               ← UPDATED: buttons wired up
+│   │   │   ├── Hero.jsx               ← UPDATED: buttons wired up, CSS blur orbs
 │   │   │   ├── About.jsx
 │   │   │   ├── Features.jsx
 │   │   │   ├── HowItWorks.jsx
 │   │   │   ├── ScriptureBanner.jsx
 │   │   │   ├── Testimonials.jsx
 │   │   │   ├── FAQ.jsx
-│   │   │   └── Contact.jsx            ← form UI done, /api/contact route PENDING
+│   │   │   ├── Contact.jsx            ← form wired to /api/contact ← WIRE IN NEXT SESSION
+│   │   │   └── FinalCTA.jsx           ← "use client" component
 │   │   ├── shared/
-│   │   │   ├── Navbar.jsx             ← UPDATED: logo with mix-blend-mode: screen
-│   │   │   ├── Footer.jsx             ← NEW: client component
-│   │   │   ├── Sidebar.jsx
+│   │   │   ├── Navbar.jsx             ← REDESIGNED: floating pill, app links, avatar chip
+│   │   │   ├── HomepageNavbar.jsx     ← NEW: transparent→frosted on scroll, marketing links
+│   │   │   ├── ThemeApplier.jsx       ← NEW: global CSS variable injection for theme/accent/font
+│   │   │   ├── Footer.jsx
 │   │   │   ├── ConfirmModal.jsx
 │   │   │   └── SEOHead.jsx
 │   │   └── ui/
@@ -120,11 +120,13 @@ kairos/
 │   ├── context/
 │   │   ├── CompanionContext.jsx
 │   │   ├── JourneyContext.jsx
-│   │   ├── SettingsContext.jsx
+│   │   ├── SettingsContext.jsx        ← keys: theme, accentColor, readingFont, bibleTranslation,
+│   │   │                                       fontSize, lineSpacing, showVotD, showActivePlan,
+│   │   │                                       showExamplePrompts, dailyReminder, votdNotification
 │   │   └── UserContext.jsx
 │   ├── hooks/
 │   │   ├── useAuth.js
-│   │   ├── useAuthState.js             ← NEW: reactive onAuthStateChange hook
+│   │   ├── useAuthState.js             ← reactive onAuthStateChange hook
 │   │   ├── useCompanion.js
 │   │   ├── useJourney.js
 │   │   └── useVoice.js
@@ -189,136 +191,206 @@ kairos/
 
 - **Spacing tokens:** `--space-1` through `--space-6`, then `--space-8`, `--space-10`, `--space-16`, `--space-24` — `--space-7` and `--space-9` do NOT exist
 - **Font families:** `--font-display`, `--font-heading`, `--font-body`
-- **Colors:** `--color-void`, `--color-divine`, `--color-gold-warm`, `--color-gold-deep`, `--color-soft`, `--color-muted`, `--color-faint`, `--color-border`, `--color-border-hover`, `--color-elevated`, `--color-surface`, `--color-life`
+- **Colors:** `--color-void`, `--color-divine`, `--color-gold-warm`, `--color-gold-deep`, `--color-soft`, `--color-muted`, `--color-faint`, `--color-border`, `--color-border-hover`, `--color-elevated`, `--color-surface`
 - **All interactive elements:** minimum 44px touch target height
+- **Border conflict rule:** NEVER mix `border` shorthand with `borderColor` in event handlers — always use `borderWidth`/`borderStyle`/`borderColor` separately
+- **Sidebar pattern:** `220px` sticky sidebar, all app pages consistent
+- **Mobile nav:** Fixed `58px` bottom bar, `z-index: 100`, `env(safe-area-inset-bottom)` padding
 - **"use client"** required on any component using hooks, event handlers, or browser APIs
 - Surgical edits only — never regenerate full files without being asked
 
 ---
 
-## What Was Completed This Session (Phase 7J)
+## App-Wide Layout Pattern (All App Pages)
 
-### Homepage Full Rebuild
-- `src/app/page.jsx` — full SEO metadata, viewport export, metadataBase
-- `src/components/landing/About.jsx` — manifesto split layout, scroll animations
-- `src/components/landing/Features.jsx` — 4 product feature cards
-- `src/components/landing/HowItWorks.jsx` — 3-step with connecting timeline
-- `src/components/landing/ScriptureBanner.jsx` — Ecclesiastes 3:11 ornament
-- `src/components/landing/Testimonials.jsx` — 6 testimonials, masonry grid
-- `src/components/landing/FAQ.jsx` — 10 questions, animated accordion
-- `src/components/landing/Contact.jsx` — split layout form, success state (API route PENDING)
-- `src/components/shared/Footer.jsx` — NEW client component, 4-column nav
-- Hero buttons wired: "Begin Journey" → `/journey`, "Learn More" → `#about`
+Every app page (companion, saved, bible, plans, account, settings) follows this exact pattern:
 
-### Branding
-- Logo: 8-pointed star + KAIROS wordmark (Image 7)
-- `mix-blend-mode: screen` on Navbar logo — makes black bg invisible on dark nav
-- `layout.jsx` fixed: manifest inside metadata, separate viewport export
-- `manifest.json` created for PWA
-- OG image, icon.png, apple-touch-icon.png, logo-full.png, logo-mark.png all in place
-
-### Journey Saved Page Redesign (`src/app/journey/saved/page.jsx`)
-- Two-column layout: sticky sidebar (260px) + main content
-- Sidebar: journey title, pinned/favourites stat tiles, type breakdown with progress bars, quick nav links
-- Sort pills (Newest/Oldest/Pinned/Favourites/A→Z) replacing dropdown
-- Premium entry cards: left accent bar, hover glow, staggered entrance animations
-- All existing logic (pin, favourite, rename, delete, search, filter) preserved exactly
-
-### Auth Fixes Attempted
-- `src/lib/supabase/client.js` — **FIXED**: switched from `createClient` to `createBrowserClient` (cookie-based sessions)
-- `middleware.js` — **UPDATED**: adds `?returnTo=` on protected route redirects; honours returnTo when redirecting logged-in users away from auth pages
-- `src/app/(auth)/login/page.jsx` — **UPDATED**: reads `returnTo` from searchParams, redirects there after login; wrapped in `<Suspense>`
-- `src/app/plans/page.jsx` — **UPDATED**: uses `useAuthState` hook, waits for auth before fetching plans
-- `src/components/companion/CompanionCore.jsx` — **UPDATED**: uses `useAuthState`, added `InlineSignInModal` so unauthenticated users can sign in without leaving the chat to save a moment
-- `src/hooks/useAuthState.js` — **NEW**: reactive `onAuthStateChange` hook that never misses the session
-
----
-
-## 🔴 Active Bug — Authentication Loop (UNRESOLVED)
-
-### Symptoms
-1. User signs in successfully
-2. Plans page shows as unauthenticated (no progress, "Sign in to start" buttons)
-3. Clicking "Sign in to start" on individual plan opens that plan correctly
-4. Returning to plans page — shows unauthenticated again
-5. "Sign in" button at bottom of plans page does nothing on repeated attempts
-6. Companion chat save button triggers sign-in; after signing in, page reloads and conversation is lost; trying to save again prompts sign-in again
-
-### Root Cause — Current Best Understanding
-The `createBrowserClient` fix should theoretically resolve this. The fact that it hasn't suggests one of:
-
-**Hypothesis A — The files weren't actually saved correctly.**
-The outputs were generated but may not have been copied to the correct paths in the actual project. Specifically verify these three files are exactly as generated:
-- `src/lib/supabase/client.js` — must be `createBrowserClient`, nothing else
-- `src/hooks/useAuthState.js` — must exist at this exact path
-- `src/app/plans/page.jsx` — must import from `@/hooks/useAuthState`
-
-**Hypothesis B — Supabase cookie domain/SameSite mismatch.**
-The network warning in the terminal: `Cross origin request detected from 192.168.0.100 to /_next/* resource` suggests the app is being accessed from two different IPs (localhost AND 192.168.0.100 from another device or network interface). Supabase cookies set on `localhost` won't be sent to `192.168.0.100`. Always test on `http://localhost:3000` only.
-
-**Hypothesis C — `initKairosSession` in CompanionCore still interfering.**
-`initKairosSession` from `src/lib/supabase/sessions.js` is still called on mount. If that function creates an anonymous session or calls `supabase.auth.signInAnonymously()`, it would overwrite the real session. **Paste `sessions.js` in the next chat.**
-
-**Hypothesis D — Supabase Auth email confirmation not completed.**
-If the account was registered but the confirmation email was never clicked, Supabase considers the account unconfirmed. The `getUser()` call may return the user but `is_anonymous` behaviour varies. Check Supabase dashboard → Authentication → Users → confirm the account shows as "Confirmed".
-
-### Diagnostics to Run at Start of Next Chat
-```powershell
-# 1. Confirm client.js is correct
-cat src/lib/supabase/client.js
-
-# 2. Confirm useAuthState exists
-cat src/hooks/useAuthState.js
-
-# 3. Check sessions.js — likely culprit
-cat src/lib/supabase/sessions.js
-
-# 4. Check if plans page actually uses the hook
-cat src/app/plans/page.jsx | Select-String "useAuthState"
+```jsx
+// Desktop: 220px sidebar + 1fr main, min-height: 100vh
+// Sidebar: sticky, 100vh, logo → nav links → user chip at bottom
+// Mobile (≤768px): sidebar hidden, mobile bottom nav (58px fixed)
+// Active nav item: highlighted background + gold dot on right
+// Safe area: env(safe-area-inset-bottom) on mobile nav padding
 ```
 
-Also open browser DevTools → Application → Cookies → `http://localhost:3000` and confirm `sb-zvleavbmqgxlybnmizst-auth-token` cookie is present after signing in.
+---
+
+## Phase 7J — What Was Completed
+
+### Full App Redesign (Leonardo AI aesthetic)
+All pages redesigned with consistent sidebar + mobile bottom nav:
+
+| Page | Status |
+|------|--------|
+| `/` (homepage) | ✅ Full rebuild — Hero, About, Features, HowItWorks, ScriptureBanner, Testimonials, FAQ, Contact, FinalCTA |
+| `/journey` (CompanionCore) | ✅ Sidebar nav, VotD card, active plan card, example prompts, chat bubbles, save button |
+| `/journey/saved` | ✅ Sidebar filter/sort, desktop search-only toolbar, single mobile "Filter & Sort" button + active chips, mobile bottom nav |
+| `/bible` | ✅ 3-panel layout, verse selection + action bar (position:fixed on mobile), book drawer, mobile bottom nav |
+| `/plans` | ✅ Sidebar nav, active enrollments, category filters, mobile bottom nav |
+| `/plans/[id]` | ✅ Sidebar nav, progress strip, day grid (current/completed/locked states), enroll/continue CTA |
+| `/plans/[id]/day/[day]` | ✅ Sidebar nav, all original logic preserved, sticky complete button, mobile-safe |
+| `/account` | ✅ Sidebar nav, avatar, stats strip, section cards (Identity/Security/Data/Links/Danger) |
+| `/settings` | ✅ Sidebar nav, theme/accent palette/reading font/translation/companion toggles/notifications |
+
+### Navigation System
+- `Navbar.jsx` — floating pill nav (`top:12px`, `border-radius:16px`), app links, avatar → `/account`, theme-synced
+- `HomepageNavbar.jsx` — transparent → frosted pill on scroll, marketing + app links, mobile overlay
+- `ThemeApplier.jsx` — global CSS variable injection; place inside `SettingsProvider` in `layout.jsx`:
+  ```jsx
+  <SettingsProvider>
+    <ThemeApplier />   {/* ← required for theme to work globally */}
+    {children}
+  </SettingsProvider>
+  ```
+
+### Theme System (ThemeApplier.jsx)
+Watches `settings.theme`, `settings.accentColor`, `settings.readingFont` and injects a `<style id="kairos-theme">` tag with full CSS variable overrides:
+- **Themes:** dark (default), light, system (listens to `prefers-color-scheme`)
+- **Accents:** gold (default), blue (Ocean), purple (Dusk), green (Forest), rose (Rose)
+- **Reading fonts:** default (Kairos vars), serif (Georgia), mono (JetBrains Mono)
+
+### Settings Keys (SettingsContext)
+All keys written via `updateSetting(key, value)`, reset via `resetSettings()`:
+
+| Key | Type | Default | Controls |
+|-----|------|---------|---------|
+| `theme` | string | `"dark"` | Global theme |
+| `accentColor` | string | `"gold"` | Accent colour everywhere |
+| `readingFont` | string | `"default"` | Body + heading font |
+| `bibleTranslation` | string | `"WEB"` | Bible reader + companion |
+| `fontSize` | string | `"md"` | Bible reader text size |
+| `lineSpacing` | string | `"normal"` | Bible reader line spacing |
+| `showVotD` | bool | `true` | Verse of Day in CompanionCore |
+| `showActivePlan` | bool | `true` | Active plan card in CompanionCore |
+| `showExamplePrompts` | bool | `true` | Example prompts in CompanionCore |
+| `dailyReminder` | bool | `false` | Browser notification — reading reminder |
+| `votdNotification` | bool | `false` | Browser notification — VotD |
+
+### Key Fixes Applied
+- **Bible action bar:** moved outside `.br-scroll` container (`position:fixed` on mobile, `flex-shrink:0` on desktop), clears both our nav bar and browser chrome via `bottom: calc(58px + env(safe-area-inset-bottom))`
+- **Bible mobile drawer:** `BookPanel` accepts `inDrawer` prop to skip `.br-bookpanel { display:none }` CSS class
+- **Bible double panel on desktop:** mobile bar button had `display:"flex"` inline style overriding CSS `display:none` — removed
+- **Bible verse key warning:** `key={\`v-${num}-${selectedChapter}\`}` with `?? (i+1)` fallback
+- **Journey/saved duplicate search:** mobile search wrapped in `.js-mobile-only` class, desktop in `.js-desktop-sorts`
+- **Journey/saved duplicate nav:** `<Navbar />` removed from saved page (sidebar handles navigation)
+- **Companion toggles wired:** `settings.showVotD !== false`, `settings.showActivePlan !== false`, `settings.showExamplePrompts !== false` gate rendering in CompanionCore
+- **Notification permission flow:** real `Notification.requestPermission()` with denied-state detection and browser instructions
 
 ---
 
-## Pending Work (Agreed Before Auth Issues Began)
+## Contact Form Setup (Next Session — Step by Step)
 
-### UI Redesign — Leonard AI Inspired (High Priority)
-The goal is to make the entire app feel like a premium, editorial product similar to Leonardo AI's latest interface: clean sidebar navigation, rich content cards, clear visual hierarchy, generous spacing, and a cohesive dark luxury aesthetic.
+### 1. Supabase table
+```sql
+create table contact_messages (
+  id          uuid default gen_random_uuid() primary key,
+  name        text not null,
+  email       text not null,
+  type        text not null default 'other',
+  message     text not null,
+  created_at  timestamptz default now()
+);
+```
 
-**Pages to redesign in order:**
-1. `src/app/(main)/journey/page.jsx` — the AI companion chat page (PRIMARY — this was the intended target before auth issues)
-2. `src/app/plans/page.jsx` — reading plans (partial redesign done, needs polish)
-3. `src/app/plans/[id]/page.jsx` — individual plan view
-4. `src/app/plans/[id]/day/[day]/page.jsx` — daily reading
-5. `src/app/bible/page.jsx` — Bible reader
-6. `src/app/account/page.jsx` — account page
-7. `src/app/settings/page.jsx` — settings
+### 2. Install Resend
+```bash
+npm install resend
+```
 
-### Feature Work (Deferred)
-- `/api/contact` route for the Contact form
-- Phase 8 — Organisation Portal (deliberately deferred, 3 architecture questions unresolved)
+### 3. Resend account setup (free tier: 3,000 emails/month)
+1. Go to `resend.com` → Sign up free
+2. Dashboard → Domains → Add Domain → enter `kairos.app`
+3. Add the DNS records shown (3 TXT records + 1 MX record) to your domain registrar
+4. Wait for verification (usually 5–15 minutes)
+5. Dashboard → API Keys → Create API Key → copy it
+
+### 4. Environment variables
+Add to `.env.local` AND to Vercel project settings (Settings → Environment Variables):
+```
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
+CONTACT_FROM_EMAIL=hello@kairos.app
+CONTACT_TEAM_EMAIL=hello@kairos.app
+```
+
+### 5. Wire Contact.jsx
+In `src/components/landing/Contact.jsx`, replace the `setTimeout` simulation:
+```js
+// Replace:
+await new Promise((r) => setTimeout(r, 1200))
+setStatus("success")
+
+// With:
+const res  = await fetch("/api/contact", {
+  method:  "POST",
+  headers: { "Content-Type": "application/json" },
+  body:    JSON.stringify(form),
+})
+const data = await res.json()
+if (data.success) setStatus("success")
+else setStatus("error")
+```
+
+### Auto-reply behaviour
+Each contact type gets a different auto-reply tone:
+- `feedback` → warm gratitude
+- `question` → 24h response promise
+- `prayer` → pastoral acknowledgment ("You are not alone")
+- `partnership` → 2 business day reply
+- `bug` → technical confirmation
+- `other` → generic warm reply
+
+No GitHub link in contact. Users are people in spiritual need, not developers.
 
 ---
 
-## Phase 8 Architecture Questions (Still Unresolved — Do Not Start)
+## Vercel Deployment (Next Session)
+
+### Pre-deploy checklist
+- [ ] Plans detail pages pasted and verified (`/plans/[id]` and `/plans/[id]/day/[day]`)
+- [ ] Contact API route pasted (`/api/contact/route.js`)
+- [ ] Contact.jsx wired to real API
+- [ ] `npm run build` passes locally with no errors
+- [ ] All env vars confirmed in `.env.local`
+
+### Deploy steps
+1. Push dev branch: `git add . && git commit -m "feat: Phase 7J complete" && git push origin dev`
+2. Merge to main: `git checkout main && git merge dev && git push origin main`
+3. Go to `vercel.com` → Import Git Repository → select `AlexWabita/kairos`
+4. Framework: Next.js (auto-detected)
+5. Add all environment variables (copy from `.env.local`)
+6. Deploy → get production URL
+
+### Post-deploy real-device testing
+- Light theme across all pages
+- Bible action bar on iOS Safari, Android Chrome, Brave
+- Bottom nav safe area on notched phones
+- Plans enrollment flow end-to-end
+- Contact form sends real email
+
+---
+
+## Architecture Rules (Permanent)
+
+- All Supabase DB queries use `users.id` (profile ID) — NOT the auth UUID. Always resolve via `users` table query on `auth_id`
+- Bible API: `bible-api.com` — free, no key needed for WEB/KJV/ASV/BBE
+- AI chain: Groq (3 models) → OpenRouter (4 models) → Gemini (3 models)
+- RAG: Jina AI embeddings, 768-dim vectors in Supabase pgvector
+- `journey/saved` is at `src/app/journey/saved/` — NOT inside `(main)` route group
+- All app pages import their own inline CSS via `<style>{css}</style>` — no global stylesheet dependencies beyond tokens
+
+---
+
+## Phase 8 — Organisation Portal (Deliberately Deferred)
+
+Do not start until Phase 7 is fully deployed and tested. Three unresolved architecture questions:
 1. Org-user relationship model (one user, many orgs vs separate accounts)
 2. Group plan progress ownership (individual or org-level)
 3. Auth separation for org admins
 
 ---
 
-## Key Architectural Rules
-- `journey/saved` is at `src/app/journey/saved/` — NOT inside `(main)` route group, so no parent layout provides Navbar. Navbar is imported directly.
-- `src/app/(main)/journey/page.jsx` IS inside `(main)` — check whether `(main)/layout.jsx` provides Navbar before adding one
-- All Supabase DB queries use the internal `users.id` (profile ID) not the auth UUID. Always resolve `profile.id` via `users` table query on `auth_id`
-- Bible API: `bible-api.com` — free, no key needed for WEB/KJV/ASV/BBE
-- AI chain: Groq (3 models) → OpenRouter (4 models) → Gemini (3 models)
-- RAG: Jina AI embeddings, 768-dim vectors in Supabase pgvector
-
----
-
 ## Environment Variables Required
+
 ```
 NEXT_PUBLIC_APP_URL
 NEXT_PUBLIC_SUPABASE_URL
@@ -330,11 +402,15 @@ GEMINI_API_KEY
 JINA_API_KEY
 SCRIPTURE_API_KEY
 SEED_SECRET
+RESEND_API_KEY
+CONTACT_FROM_EMAIL
+CONTACT_TEAM_EMAIL
 ```
 
 ---
 
 ## Git Workflow
+
 - Work branch: `dev`
 - Commit at end of each phase
 - `git add . && git commit -m "..." && git push -u origin dev`
@@ -347,38 +423,38 @@ Paste this at the start of the next conversation:
 
 ---
 
-**KAIROS — Continuing from Phase 7J**
+**KAIROS — Continuing from Phase 7J (pre-deployment)**
 
-I'm building Kairos, a Biblical AI life companion web app. Stack: Next.js 16 (App Router), Supabase, Groq, bible-api.com. Repo: AlexWabita/kairos (private), working on `dev` branch.
+I'm building Kairos, a Biblical AI life companion web app. Stack: Next.js 16 (App Router, webpack), Supabase, Groq, bible-api.com. Repo: AlexWabita/kairos (private), working on `dev` branch. Design: Leonardo AI aesthetic — dark void, 220px sidebar on all app pages, mobile bottom nav (58px fixed).
 
-**We have an unresolved authentication loop bug.** Here is the exact situation:
+**All app pages have been redesigned. Phase 7J is complete.** The next session goal is to finish the remaining loose ends and deploy to Vercel.
 
-- `src/lib/supabase/client.js` was changed from `createClient` to `createBrowserClient` from `@supabase/ssr` — this should fix cookie-based sessions
-- `middleware.js` was updated to add `?returnTo=` on protected route redirects
-- `src/app/(auth)/login/page.jsx` was updated to read `returnTo` and redirect there after login
-- `src/app/plans/page.jsx` was updated to use a new `useAuthState` hook
-- `src/components/companion/CompanionCore.jsx` was updated to use `useAuthState` and show an `InlineSignInModal` when unauthenticated users try to save a moment
-- `src/hooks/useAuthState.js` was created — reactive `onAuthStateChange`-based hook
+**What needs to happen this session, in order:**
 
-**Despite all these changes, the bug persists:**
-1. After signing in, plans page still shows as unauthenticated
-2. The bottom sign-in button on plans page does nothing
-3. The companion save button still triggers sign-in; after sign-in, page reloads and conversation is lost; trying to save again prompts sign-in again
+**Step 1 — Paste and verify Plans detail pages**
+I have two files to paste:
+- `src/app/plans/[id]/page.jsx` — plan detail page (has `PlanDetailPage`, `DayRow`, `ProgressBar`, `handleEnroll`, `handleCatchUp`, `showAllDays` state)
+- `src/app/plans/[id]/day/[day]/page.jsx` — day reading page (has `DayPage`, `handleComplete`, `handleAskKairos`, `personalNotes`, `notesOpen`, `completing`, `completed` state)
 
-**Start by asking me to paste these files so you can diagnose:**
-- `src/lib/supabase/sessions.js` (suspected culprit — may be creating anonymous sessions that overwrite real sessions)
-- `src/lib/supabase/client.js` (confirm the fix was actually saved)
-- `src/hooks/useAuthState.js` (confirm it exists)
-- `src/app/plans/page.jsx` (confirm it uses the hook)
-- Browser DevTools → Application → Cookies → `http://localhost:3000` — screenshot or list of cookie names present after signing in
+These need to be redesigned to match the rest of the app (220px sidebar, mobile bottom nav, dark void background) while preserving ALL existing logic exactly. The sidebar and mobile nav pattern is identical to what was done for `/account`, `/settings`, `/bible`, `/plans`.
 
-Also check Supabase dashboard → Authentication → Users — confirm the test account shows status "Confirmed" not "Unconfirmed".
+**Step 2 — Paste contact API route**
+File: `src/app/api/contact/route.js`
+Built with Resend — saves to `contact_messages` Supabase table, sends team notification, sends type-aware auto-reply. Needs:
+- `npm install resend`
+- Supabase table creation (SQL provided in PROJECT.md)
+- Resend account setup (step by step in PROJECT.md)
+- Wire `Contact.jsx` to replace `setTimeout` with real `fetch("/api/contact", ...)`
 
-**After fixing auth, the next planned work is:**
-1. Redesign `src/app/(main)/journey/page.jsx` — the AI companion chat page — in a premium Leonard AI-inspired style (the `journey/saved` page was already redesigned as a reference for the visual direction)
-2. Continue redesigning remaining pages in order: plans, bible, account, settings
-3. Create `/api/contact` route for the Contact form
+**Step 3 — Verify build passes**
+Run `npm run build` and fix any errors before deploying.
 
-Full project structure and context is in `docs/PROJECT.md`.
+**Step 4 — Deploy to Vercel**
+Push dev → merge to main → import to Vercel → add env vars → deploy.
+
+**Step 5 — Post-deploy device testing**
+Test on real phones: light theme, Bible action bar (iOS Safari, Brave), bottom nav safe areas, plans enrollment flow, contact form email delivery.
+
+Full project context including all design system rules, component patterns, and setup instructions is in `docs/PROJECT.md`.
 
 ---
