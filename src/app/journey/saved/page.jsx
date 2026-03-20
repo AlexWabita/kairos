@@ -430,7 +430,6 @@ function BottomSheet({ isOpen, onClose, entries, filterType, setFilterType, sort
           </button>
         </div>
       </div>
-      <MobileBottomNav />
     </>
   )
 }
@@ -1025,6 +1024,7 @@ export default function SavedPage() {
           </div>
         </div>
       </div>
+      <MobileBottomNav />
     </>
   )
 }
