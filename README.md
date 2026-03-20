@@ -8,6 +8,7 @@
 <p align="center">
   <a href="https://kairos-ebon.vercel.app"><img src="https://img.shields.io/badge/Live-kairos--ebon.vercel.app-f0c060?style=flat-square&logo=vercel&logoColor=black" alt="Live" /></a>
   <img src="https://img.shields.io/badge/Version-1.0.0-f0c060?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/Status-Live%20%7C%20Actively%20Maintained-brightgreen?style=flat-square" alt="Status" />
   <img src="https://img.shields.io/badge/Next.js-16.1.6-black?style=flat-square&logo=next.js" alt="Next.js" />
   <img src="https://img.shields.io/badge/Supabase-PostgreSQL-3ecf8e?style=flat-square&logo=supabase" alt="Supabase" />
   <img src="https://img.shields.io/badge/AI-Groq%20%2B%20OpenRouter-orange?style=flat-square" alt="AI" />
@@ -25,29 +26,70 @@
 
 ---
 
-## What is Kairos?
+## Who Kairos Is For
 
-Kairos is a full-stack Biblical AI companion web application — not a chatbot, not a search engine, and deliberately not a replacement for church, scripture, or pastoral care. It is a **companion**: something that listens to where you actually are, engages your real questions, and grounds every response in scripture.
+Kairos is for anyone who has ever had a question they felt they couldn't ask in church. Anyone carrying grief, doubt, or curiosity about faith and looking for a space to engage it honestly. Anyone who reads a verse and wants to go deeper than a surface explanation.
 
-The name *Kairos* (καιρός) is a Greek word meaning **the appointed time** — the right moment, as distinct from *chronos* (clock time). It reflects the product's philosophy: not productivity, not efficiency, but meeting people at the exact moment they need to be met.
+It is **not** a replacement for scripture, pastoral care, or community. It is a companion — something that listens to where you actually are, engages your real questions, and grounds every response in the Bible.
 
-The project was designed, built, and shipped solo — from zero to production — across a disciplined phase-based development process spanning multiple months.
+**In one sentence:** Kairos is a Biblical AI that meets you exactly where you are — no judgment, no agenda, no shortcuts.
 
-> **Live:** [kairos-ebon.vercel.app](https://kairos-ebon.vercel.app)
+> **Try it now:** [kairos-ebon.vercel.app](https://kairos-ebon.vercel.app) — no account required to start a conversation.
+
+---
+
+## Start Here — 3 Things to Try in Your First 5 Minutes
+
+You do not need an account to begin. Open the app and try one of these:
+
+**1. Ask a hard question**
+Go to the Companion and ask something you have genuinely wondered about — suffering, doubt, a difficult passage, a personal struggle. See how Kairos responds differently from a generic AI.
+
+**2. Open a scripture and go deeper**
+Go to the Bible reader, open any chapter, select a verse, and tap "Ask Kairos about this." The companion receives the full verse context and responds as if you are studying together.
+
+**3. Start a reading plan**
+Go to Plans, enroll in any plan, and complete Day 1. Write a personal note at the end. It saves automatically to your Journey — a private spiritual journal that grows with you.
+
+---
+
+## Project Status
+
+| | |
+|---|---|
+| **Version** | 1.0.0 — Production |
+| **State** | Live, actively maintained |
+| **Built by** | Alex Wabita (solo) |
+| **Launched** | March 2026 |
+| **Deployment** | Vercel (auto-deploys on push to `main`) |
+| **Next milestone** | Phase 8 — Organisation Portal (in design) |
+
+---
+
+## A Note on Safety and Integrity
+
+Kairos is built for a context where the stakes are real. People bring grief, doubt, crisis, and genuine faith questions. Because of that, several deliberate constraints are built into how it works:
+
+- Kairos never claims spiritual authority it does not have. It is calibrated for humility.
+- It is not a therapist, a pastor, or a medical advisor. It says so clearly when relevant.
+- Responses are grounded in a curated Biblical theology knowledge base — not the open internet.
+- No engagement streaks, gamification, or notifications designed to maximise session time.
+- User data is never sold, shared, or used to train AI models.
+- All data can be exported or permanently deleted from the Account page at any time.
 
 ---
 
 ## Screenshots
 
-> _Homepage, Companion, Bible Reader, Reading Plans, Journey — dark and light themes_
-
-| Homepage | Companion | Bible Reader |
-|----------|-----------|--------------|
+| Homepage | AI Companion | Bible Reader |
+|----------|-------------|--------------|
 | ![Homepage](docs/screenshots/homepage.png) | ![Companion](docs/screenshots/companion.png) | ![Bible](docs/screenshots/bible.png) |
+| *Dark void homepage with gold accents* | *Conversational companion with scripture grounding* | *3-panel Bible reader with verse actions* |
 
 | Reading Plans | Journey Saved | Settings |
 |---------------|---------------|----------|
 | ![Plans](docs/screenshots/plans.png) | ![Journey](docs/screenshots/journey.png) | ![Settings](docs/screenshots/settings.png) |
+| *Day-by-day progress with honest catch-up* | *Private spiritual journal with search and filters* | *Theme, accent, font, and companion preferences* |
 
 ---
 
@@ -74,7 +116,7 @@ The project was designed, built, and shipped solo — from zero to production �
 - Full reading plan system with enrollment, day-by-day progress, and completion tracking
 - **Catch Me Up** — advances `current_day` to the next unread day without falsely marking skipped days as complete (honest progress)
 - Verse of the Day: static array of 365 curated verses, cycling by day-of-year — no API dependency
-- Personal notes on day completion auto-saved as `journey_entries` (Option B architecture)
+- Personal notes on day completion auto-saved as `journey_entries`
 - Devotional text, reflection prompts, and prayer prompts per day
 
 ### 🌟 Journey (Saved Moments)
@@ -127,13 +169,13 @@ The project was designed, built, and shipped solo — from zero to production �
 
 **Groq over OpenAI:** Groq's inference speed is 10–20× faster than OpenAI's API at a fraction of the cost, making real-time conversational AI viable on a free/low-cost budget.
 
-**Jina AI over Gemini for embeddings:** Gemini embedding API had regional billing restrictions that made it unusable. Jina AI's embedding API is free, reliable globally, and produces high-quality 768-dimension vectors compatible with Supabase pgvector.
+**Jina AI over Gemini for embeddings:** Gemini embedding API had regional billing restrictions that blocked access from Kenya. Jina AI is free, globally accessible, and produces high-quality 768-dim vectors compatible with Supabase pgvector.
 
-**bible-api.com over paid Bible APIs:** The Scripture API (paid) was in the stack but `bible-api.com` covers the four most common translations (WEB, KJV, ASV, BBE) with no API key, no rate limits for reasonable usage, and zero cost — sufficient for a companion app.
+**bible-api.com over paid Bible APIs:** Covers WEB, KJV, ASV, BBE with no API key, no rate limits for reasonable usage, and zero cost.
 
-**Supabase over PlanetScale/Railway:** Supabase provides auth + database + pgvector (for RAG) in a single free-tier product. It removed the need for a separate vector database (Pinecone, Weaviate) entirely.
+**Supabase over PlanetScale/Railway:** Provides auth + database + pgvector in a single free-tier product — no separate vector database needed.
 
-**Vercel over Netlify/Railway:** Next.js App Router is optimised for Vercel. Zero-config deployment, automatic preview deployments, and edge middleware support.
+**Vercel over Netlify/Railway:** Next.js App Router is optimised for Vercel. Zero-config deployment, automatic preview deployments, edge middleware support.
 
 ---
 
@@ -172,19 +214,17 @@ kairos/
 
 ### Key architectural decisions
 
-**Profile ID vs Auth UUID:** All database queries use `users.id` (an internal profile ID), never the Supabase auth UUID directly. This separates identity from authentication and makes future auth provider changes non-breaking. A pattern enforced across every API route.
+**Profile ID vs Auth UUID:** All database queries use `users.id` (internal profile ID), never the Supabase auth UUID directly. Separates identity from authentication — auth provider changes are non-breaking.
 
-**AI fallback chain:** The companion never fails silently. Groq is the primary (fastest, cheapest). If it fails, OpenRouter's 4-model chain catches it. If that fails, Gemini's 3-model chain is the final safety net. Users never see an AI error on the first attempt.
+**AI fallback chain:** The companion never fails silently. Groq → OpenRouter (4 models) → Gemini (3 models). Users never see an AI error on the first attempt.
 
-**RAG over fine-tuning:** Fine-tuning an LLM for Biblical theology is expensive and inflexible. RAG allows the knowledge base to be updated without retraining — new theological content, commentary, or pastoral guidance can be added by inserting new embeddings into Supabase.
+**RAG over fine-tuning:** RAG allows the knowledge base to be updated without retraining — new theological content can be added by inserting new embeddings into Supabase.
 
-**sessionStorage for Bible→Companion handoff:** When a user taps "Ask Kairos about this" in the Bible reader, the full verse context (book, chapter, verse, surrounding text) is written to `sessionStorage` and read by `CompanionCore` on mount. This avoids URL-based state (which is bookmarkable and fragile) and query params (which would expose scripture text in browser history).
+**sessionStorage for Bible→Companion handoff:** Verse context written to `sessionStorage` and consumed by `CompanionCore` on mount. Avoids URL-based state and query params.
 
 ---
 
 ## How Kairos Stays Free
-
-This is a genuine question worth answering honestly.
 
 | Service | Free Tier | Kairos Usage |
 |---------|-----------|--------------|
@@ -196,7 +236,7 @@ This is a genuine question worth answering honestly.
 | Resend | 3,000 emails/month | Contact form only |
 | Google Fonts | Free | Cinzel, Cormorant Garamond, Nunito |
 
-**The honest answer:** The free tier stack is viable for a launch-stage product with hundreds of daily active users. At scale (thousands of daily AI conversations), Groq costs become real — approximately $0.0006 per 1K tokens on their paid tier. A monetisation layer (optional premium features) would be introduced before that point without removing core companion functionality from free users.
+**The honest answer:** The free tier stack is viable for hundreds of daily active users. At scale, a monetisation layer (optional premium features) would be introduced — without removing core companion functionality from free users.
 
 ---
 
@@ -212,10 +252,10 @@ Kairos was built across **8 disciplined phases** over several months, each with 
 | 7A–7F | App Pages | Account, Settings, Plans, Journey pages |
 | 7G | Journey Saved | Real-time search, filters, SaveMomentModal |
 | 7H | Bible Reader | 3-panel layout, verse actions, session highlights |
-| 7I | Reading Plans | Day pages, VotD, Guided Study, Glorify-inspired daily surface |
+| 7I | Reading Plans | Day pages, VotD, Guided Study, daily experience surface |
 | 7J | Full Redesign + Launch | Leonardo AI aesthetic, homepage rebuild, Vercel deployment |
 
-See [`CHANGELOG.md`](CHANGELOG.md) for the complete version history and [`docs/CHALLENGES.md`](docs/CHALLENGES.md) for the engineering problems encountered and solved at each phase.
+See [`CHANGELOG.md`](CHANGELOG.md) for the complete version history and [`docs/CHALLENGES.md`](docs/CHALLENGES.md) for engineering problems and solutions at each phase.
 
 ---
 
@@ -237,36 +277,35 @@ npm install --legacy-peer-deps
 
 ### Environment Variables
 
-Create `.env.local` in the project root:
+Copy `.env.example` to `.env.local` and fill in your values:
 
+```bash
+cp .env.example .env.local
+```
+
+Minimum required keys to run locally:
 ```env
-NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-
 GROQ_API_KEY=your_groq_key
-OPENROUTER_API_KEY=your_openrouter_key
-GEMINI_API_KEY=your_gemini_key
 JINA_API_KEY=your_jina_key
-
-RESEND_API_KEY=your_resend_key
-CONTACT_FROM_EMAIL=onboarding@resend.dev
-CONTACT_TEAM_EMAIL=your@email.com
 ```
+
+Full key list in `.env.example`.
 
 ### Database Setup
 
 Run the migrations in order in your Supabase SQL editor:
 
-```bash
+```
 supabase/migrations/001_initial_schema.sql
 supabase/migrations/002_user_profiles.sql
 supabase/migrations/003_journeys.sql
 supabase/migrations/004_reading_plans.sql
 ```
 
-Seed reading plans:
+Then seed reading plans:
 ```
 GET /api/admin/seed?secret=YOUR_SEED_SECRET
 ```
@@ -283,34 +322,31 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Deployment
 
-The app is deployed on Vercel. Any push to `main` triggers a production deployment.
+Any push to `main` triggers a production deployment on Vercel.
 
 ```bash
-# Commit and push
 git add .
 git commit -m "your message"
 git push origin main
 ```
 
-Required Vercel environment variables: all keys from `.env.local` above, with `NEXT_PUBLIC_APP_URL` set to your production URL.
+Add all keys from `.env.example` in Vercel → Project Settings → Environment Variables.
 
 ---
 
 ## Engineering Challenges
 
-A selection of non-trivial problems solved during development:
+**Authentication loop** — `createClient` vs `createBrowserClient` caused an infinite redirect loop. Solved by migrating to `createBrowserClient`, a reactive `useAuthState` hook, and `returnTo` middleware logic.
 
-**Authentication loop** — Supabase's `createClient` vs `createBrowserClient` distinction caused an infinite auth redirect loop. Solved by migrating to `createBrowserClient`, implementing a reactive `useAuthState` hook with `onAuthStateChange`, and adding `returnTo` parameter logic in middleware.
+**Bible action bar on mobile** — Fixed bar obscured by browser chrome on iOS Safari and Android. Solved with `bottom: calc(58px + env(safe-area-inset-bottom))`.
 
-**Bible action bar on mobile** — The fixed action bar was being obscured by browser chrome (bottom bar + address bar) on iOS Safari and Android Chrome. Solved with `bottom: calc(58px + env(safe-area-inset-bottom))` — combining the fixed nav height with the CSS environment variable for notched device safe areas.
+**Profile ID vs Auth UUID** — Bible saves silently failed because the auth UUID was passed where the profile ID was expected. Established a strict server-side resolution pattern across all API routes.
 
-**Profile ID vs Auth UUID confusion** — An early bug caused Bible save actions to pass the Supabase auth UUID to routes expecting the internal `users.id` profile ID, silently failing all save operations. Solved by establishing a strict pattern: every API route resolves `users.id` from `auth_id` via a single Supabase query before any data operation.
+**RAG provider switch mid-development** — Gemini embedding API blocked by regional billing restrictions from Kenya. Migrated to Jina AI — same vector dimensions, zero schema change.
 
-**RAG embedding provider switch** — Gemini's embedding API had regional billing restrictions that blocked access from Kenya. Switched to Jina AI mid-development: different vector dimensions (768 vs 768 — compatible), different API shape, zero disruption to the pgvector schema.
+**Light theme invisible text** — Hardcoded `rgba(255,255,255,x)` inline styles were immune to CSS variable overrides. Moved colors to CSS class names with `[data-theme="light"]` overrides.
 
-**Light theme with hardcoded colors** — Landing page components used hardcoded `rgba(255,255,255,x)` inline styles that CSS variable overrides couldn't reach. Solved by extracting text colors into CSS class names and adding `[data-theme="light"]` overrides in component `<style>` blocks, while `ThemeApplier.jsx` handles global surfaces.
-
-See [`docs/CHALLENGES.md`](docs/CHALLENGES.md) for the full catalogue with context, root cause analysis, and solutions.
+Full catalogue with root cause analysis: [`docs/CHALLENGES.md`](docs/CHALLENGES.md)
 
 ---
 
@@ -322,21 +358,22 @@ Every design decision was evaluated against one question: **does this serve some
 
 This shaped concrete decisions:
 - No engagement notifications, streaks, or gamification
-- No "chat history" framing — conversations are called *moments*, saved to a *Journey*
-- AI responses are calibrated for humility — Kairos never claims authority it doesn't have
-- The design language (dark void, sacred gold, serifed typography) reflects reverence, not productivity
-- Light/dark themes exist because accessibility matters; the dark default exists because the product feels different at night
+- No "chat history" framing — conversations are *moments*, saved to a *Journey*
+- AI responses calibrated for humility — Kairos never claims authority it doesn't have
+- Design language (dark void, sacred gold, serifed typography) reflects reverence, not productivity
+- Light/dark themes exist for accessibility; the dark default exists because the product feels different at night
 
 ---
 
 ## Roadmap
 
-- [ ] **Phase 8 — Organisation Portal** (deferred): church/ministry group accounts, group plan progress, org-admin auth separation
+- [ ] **Phase 8 — Organisation Portal:** church/ministry group accounts, group plan progress, org-admin auth separation
 - [ ] Custom domain + professional email (`hello@kairos.app`)
 - [ ] Push notifications (VotD, reading reminders) via Web Push API
 - [ ] Community prayer board (shared, moderated)
 - [ ] Expanded RAG knowledge base (patristic writings, systematic theology)
 - [ ] Native mobile app (React Native / Expo)
+- [ ] Architecture diagram in docs
 
 ---
 
@@ -344,7 +381,7 @@ This shaped concrete decisions:
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines.
 
-This is a solo project built with strong design and architectural opinions. Contributions are welcome but should align with the companion-first philosophy and existing design system. Open an issue before starting significant work.
+Solo project with strong design and architectural opinions. Contributions welcome but should align with the companion-first philosophy and existing design system. Open an issue before starting significant work.
 
 ---
 
