@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 
-function useInView(threshold = 0.08) {
+function useInView(threshold = 0.06) {
   const ref = useRef(null)
   const [inView, setInView] = useState(false)
   useEffect(() => {
@@ -20,158 +20,90 @@ function useInView(threshold = 0.08) {
 
 const testimonials = [
   {
-    quote:
-      "I left the church three years ago after a painful experience with leadership. I had convinced myself I was done with God. I came to Kairos expecting to argue. Instead I found something that just... listened. It asked me better questions than I had been asking myself.",
-    name:     "David O.",
-    context:  "Former worship leader, Lagos",
-    initials: "DO",
-    accent:   "var(--color-accent)",
+    quote: "I left the church three years ago after a painful experience with leadership. I had convinced myself I was done with God. I came to Kairos expecting to argue. Instead I found something that just... listened.",
+    name: "David O.", context: "Former worship leader, Lagos", initials: "DO", accent: "#a5b4fc",
   },
   {
-    quote:
-      "My husband passed away in January. I couldn't pray — every time I tried, the words just disappeared. Kairos helped me find language again. I don't fully understand it, but something in those conversations felt sacred.",
-    name:     "Grace M.",
-    context:  "Nairobi",
-    initials: "GM",
-    accent:   "var(--color-peace)",
+    quote: "My husband passed away in January. I couldn't pray — every time I tried, the words just disappeared. Kairos helped me find language again. Something in those conversations felt sacred.",
+    name: "Grace M.", context: "Nairobi", initials: "GM", accent: "#7ec8f0",
   },
   {
-    quote:
-      "I study theology but I had questions I felt I couldn't ask in a seminary setting without judgment. The depth of engagement with the text surprised me. This is not a trivial tool.",
-    name:     "James T.",
-    context:  "Theology student, Accra",
-    initials: "JT",
-    accent:   "var(--color-gold-warm)",
+    quote: "I study theology but I had questions I felt I couldn't ask in a seminary setting without judgment. The depth of engagement with the text surprised me. This is not a trivial tool.",
+    name: "James T.", context: "Theology student, Accra", initials: "JT", accent: "#f0c060",
   },
   {
-    quote:
-      "My 19-year-old came home from university with questions I didn't know how to answer — about science, suffering, other religions. Kairos gave him a space to work through them seriously. He still believes. I'm grateful.",
-    name:     "Ruth K.",
-    context:  "Mother of three, Kampala",
-    initials: "RK",
-    accent:   "var(--color-life)",
+    quote: "My 19-year-old came home from university with questions I didn't know how to answer — about science, suffering, other religions. Kairos gave him a space to work through them seriously. He still believes.",
+    name: "Ruth K.", context: "Mother of three, Kampala", initials: "RK", accent: "#7dcf8a",
   },
   {
-    quote:
-      "I've struggled with anxiety most of my life and always felt guilty that prayer 'didn't work' the way people described. Kairos helped me see that honest wrestling with God is itself a form of faith. That changed something for me.",
-    name:     "Samuel A.",
-    context:  "Software developer, Nairobi",
-    initials: "SA",
-    accent:   "var(--color-accent)",
+    quote: "I've struggled with anxiety most of my life and always felt guilty that prayer 'didn't work'. Kairos helped me see that honest wrestling with God is itself a form of faith. That changed something for me.",
+    name: "Samuel A.", context: "Software developer, Nairobi", initials: "SA", accent: "#a5b4fc",
   },
   {
-    quote:
-      "The reading plans are extraordinary. I enrolled in the Psalms plan expecting religion. What I got was poetry that met me exactly where I was in a season of real darkness. Day 12 undid me completely. In the best way.",
-    name:     "Amara N.",
-    context:  "Journalist, Abuja",
-    initials: "AN",
-    accent:   "var(--color-gold-warm)",
+    quote: "The reading plans are extraordinary. Day 12 of the Psalms plan undid me completely. In the best way.",
+    name: "Amara N.", context: "Journalist, Abuja", initials: "AN", accent: "#f0c060",
   },
 ]
 
-function TestimonialCard({ quote, name, context, initials, accent, delay, inView }) {
+function Card({ quote, name, context, initials, accent, delay, inView }) {
   return (
-    <div
-      style={{
-        background:    "var(--color-surface)",
-        border:        "1px solid var(--color-border)",
-        borderRadius:  "var(--radius-lg)",
-        padding:       "var(--space-6)",
-        opacity:       inView ? 1 : 0,
-        transform:     inView ? "translateY(0)" : "translateY(24px)",
-        transition:    `opacity 0.7s var(--ease-divine) ${delay}, transform 0.7s var(--ease-divine) ${delay}`,
-        position:      "relative",
-        overflow:      "hidden",
-      }}
-    >
-      {/* Top accent bar */}
-      <div
-        aria-hidden="true"
-        style={{
-          position:   "absolute",
-          top:        0,
-          left:       0,
-          right:      0,
-          height:     "2px",
-          background: `linear-gradient(90deg, ${accent}, transparent)`,
-          opacity:    0.6,
-        }}
-      />
+    <div style={{
+      padding: "28px",
+      background: "rgba(255,255,255,0.02)",
+      border: "1px solid rgba(255,255,255,0.06)",
+      borderRadius: 14,
+      position: "relative", overflow: "hidden",
+      opacity: inView ? 1 : 0,
+      transform: inView ? "translateY(0)" : "translateY(20px)",
+      transition: `opacity 0.6s ease ${delay}, transform 0.6s ease ${delay}`,
+    }}>
+      {/* Top accent line */}
+      <div style={{
+        position: "absolute", top: 0, left: 0, right: 0, height: 1,
+        background: `linear-gradient(90deg, ${accent}44, transparent)`,
+      }} />
 
       {/* Quote mark */}
-      <p
-        aria-hidden="true"
-        style={{
-          fontFamily:   "var(--font-heading)",
-          fontSize:     "4rem",
-          lineHeight:   0.8,
-          color:        accent,
-          opacity:      0.2,
-          marginBottom: "var(--space-3)",
-          fontStyle:    "italic",
-          userSelect:   "none",
-        }}
-      >
+      <div style={{
+        fontFamily: "var(--font-heading)",
+        fontSize: "3.5rem", lineHeight: 0.8,
+        color: accent, opacity: 0.18,
+        marginBottom: 12,
+        fontStyle: "italic",
+        userSelect: "none",
+      }}>
         &ldquo;
-      </p>
+      </div>
 
-      <p
-        style={{
-          color:        "var(--color-soft)",
-          fontSize:     "0.92rem",
-          lineHeight:   1.8,
-          marginBottom: "var(--space-5)",
-          fontStyle:    "italic",
-        }}
-      >
+      <p style={{
+        color: "rgba(255,255,255,0.55)",
+        fontSize: "0.88rem", lineHeight: 1.8,
+        fontStyle: "italic", marginBottom: 24,
+      }}>
         {quote}
       </p>
 
       {/* Author */}
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-        {/* Avatar */}
-        <div
-          style={{
-            width:          "36px",
-            height:         "36px",
-            borderRadius:   "50%",
-            background:     `${accent}22`,
-            border:         `1px solid ${accent}44`,
-            display:        "flex",
-            alignItems:     "center",
-            justifyContent: "center",
-            flexShrink:     0,
-          }}
-        >
-          <span
-            style={{
-              fontFamily:    "var(--font-display)",
-              fontSize:      "0.6rem",
-              letterSpacing: "0.05em",
-              color:         accent,
-            }}
-          >
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{
+          width: 34, height: 34, borderRadius: "50%",
+          background: `${accent}18`,
+          border: `1px solid ${accent}33`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0,
+        }}>
+          <span style={{
+            fontFamily: "var(--font-display)", fontSize: "0.52rem",
+            letterSpacing: "0.04em", color: accent,
+          }}>
             {initials}
           </span>
         </div>
         <div>
-          <p
-            style={{
-              color:      "var(--color-divine)",
-              fontSize:   "0.85rem",
-              fontWeight: 500,
-              lineHeight: 1.3,
-            }}
-          >
+          <p style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.82rem", fontWeight: 500, lineHeight: 1.3 }}>
             {name}
           </p>
-          <p
-            style={{
-              color:    "var(--color-faint)",
-              fontSize: "0.75rem",
-              lineHeight: 1.3,
-            }}
-          >
+          <p style={{ color: "rgba(255,255,255,0.25)", fontSize: "0.72rem", lineHeight: 1.3 }}>
             {context}
           </p>
         </div>
@@ -185,99 +117,76 @@ export default function Testimonials() {
   const [gridRef, gridIn]     = useInView(0.05)
 
   return (
-    <section
-      style={{
-        background: "var(--color-void)",
-        padding:    "var(--space-24) var(--space-5)",
-        position:   "relative",
-        overflow:   "hidden",
-      }}
-    >
-      {/* Background */}
-      <div
-        aria-hidden="true"
-        style={{
-          position:      "absolute",
-          top:           "30%",
-          right:         "-150px",
-          width:         "500px",
-          height:        "500px",
-          background:    "radial-gradient(circle, rgba(240,192,96,0.03) 0%, transparent 70%)",
-          pointerEvents: "none",
-        }}
-      />
+    <section style={{
+      background: "var(--color-void)",
+      padding: "120px 24px",
+      position: "relative", overflow: "hidden",
+    }}>
+      <div aria-hidden="true" style={{
+        position: "absolute", top: "30%", right: "-100px",
+        width: 450, height: 450,
+        background: "radial-gradient(circle, rgba(240,192,96,0.03) 0%, transparent 65%)",
+        pointerEvents: "none",
+      }} />
 
       <div className="kairos-container">
+
         {/* Header */}
-        <div
-          ref={headerRef}
-          style={{ textAlign: "center", marginBottom: "var(--space-10)" }}
-        >
-          <p
-            className="kairos-section-label"
-            style={{
-              opacity:    headerIn ? 1 : 0,
-              transform:  headerIn ? "translateY(0)" : "translateY(12px)",
-              transition: "opacity 0.6s var(--ease-divine), transform 0.6s var(--ease-divine)",
-            }}
-          >
+        <div ref={headerRef} style={{ textAlign: "center", marginBottom: 60 }}>
+          <p style={{
+            fontFamily: "var(--font-display)", fontSize: "0.58rem",
+            letterSpacing: "0.28em", textTransform: "uppercase",
+            color: "rgba(240,192,96,0.7)", marginBottom: 18,
+            opacity: headerIn ? 1 : 0,
+            transform: headerIn ? "translateY(0)" : "translateY(12px)",
+            transition: "opacity 0.6s ease, transform 0.6s ease",
+          }}>
             Real People. Real Moments.
           </p>
-          <h2
-            style={{
-              fontFamily:   "var(--font-heading)",
-              fontSize:     "clamp(1.8rem, 3vw, 2.8rem)",
-              fontWeight:   300,
-              color:        "var(--color-divine)",
-              lineHeight:   1.35,
-              maxWidth:     "520px",
-              margin:       "0 auto var(--space-3)",
-              opacity:      headerIn ? 1 : 0,
-              transform:    headerIn ? "translateY(0)" : "translateY(16px)",
-              transition:   "opacity 0.7s var(--ease-divine) 0.1s, transform 0.7s var(--ease-divine) 0.1s",
-            }}
-          >
-            Where Kairos has
-            <br />
-            <span style={{ color: "var(--color-gold-warm)", fontStyle: "italic" }}>
-              met people.
-            </span>
+          <h2 style={{
+            fontFamily: "var(--font-heading)",
+            fontSize: "clamp(1.8rem, 3vw, 2.8rem)",
+            fontWeight: 300, color: "rgba(255,255,255,0.88)",
+            lineHeight: 1.3, maxWidth: "480px", margin: "0 auto 16px",
+            opacity: headerIn ? 1 : 0,
+            transform: headerIn ? "translateY(0)" : "translateY(16px)",
+            transition: "opacity 0.7s ease 0.1s, transform 0.7s ease 0.1s",
+          }}>
+            Where Kairos has{" "}
+            <em style={{ color: "var(--color-gold-warm)" }}>met people.</em>
           </h2>
-          <p
-            style={{
-              color:      "var(--color-muted)",
-              fontSize:   "0.9rem",
-              maxWidth:   "380px",
-              margin:     "0 auto",
-              lineHeight: 1.7,
-              opacity:    headerIn ? 1 : 0,
-              transition: "opacity 0.7s var(--ease-divine) 0.2s",
-            }}
-          >
-            These are real words from real people.
+          <p style={{
+            color: "rgba(255,255,255,0.28)", fontSize: "0.85rem",
+            maxWidth: "340px", margin: "0 auto", lineHeight: 1.75,
+            opacity: headerIn ? 1 : 0,
+            transition: "opacity 0.7s ease 0.2s",
+          }}>
+            Real words from real people.
             Names and locations shared with permission.
           </p>
         </div>
 
         {/* Grid */}
-        <div
-          ref={gridRef}
-          style={{
-            display:             "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-            gap:                 "var(--space-5)",
-          }}
-        >
+        <div ref={gridRef} className="testimonials-grid" style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: 2,
+        }}>
           {testimonials.map((t, i) => (
-            <TestimonialCard
-              key={t.name}
-              {...t}
-              delay={`${0.05 + i * 0.08}s`}
-              inView={gridIn}
-            />
+            <Card key={t.name} {...t} delay={`${0.05 + i * 0.07}s`} inView={gridIn} />
           ))}
         </div>
+
       </div>
+
+      <style>{`
+        @media (max-width: 900px) {
+          .testimonials-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media (max-width: 560px) {
+          .testimonials-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </section>
   )
 }

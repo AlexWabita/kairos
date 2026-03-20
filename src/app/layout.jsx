@@ -1,5 +1,6 @@
 import "./globals.css"
 import { SettingsProvider } from "@/context/SettingsContext"
+import ThemeApplier from "@/components/shared/ThemeApplier"
 
 /* ── Metadata ────────────────────────────────────────────────── */
 export const metadata = {
@@ -68,7 +69,7 @@ export const viewport = {
 /* ── Root Layout ─────────────────────────────────────────────── */
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* ── Anti-FOUC: apply theme before React hydrates ────
             Reads kairos_settings from localStorage and sets
@@ -113,8 +114,10 @@ export default function RootLayout({ children }) {
           component for metadata support; provider handles all
           client-side settings logic.
         */}
+                
         <SettingsProvider>
-          {children}
+            <ThemeApplier />   {/* ← add this */}
+            {children}
         </SettingsProvider>
       </body>
     </html>

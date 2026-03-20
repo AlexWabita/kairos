@@ -1,58 +1,506 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { BIBLE_BOOKS } from "@/lib/bible/client"
-import { supabase } from "@/lib/supabase/client"
-import SaveMomentModal from "@/components/companion/SaveMomentModal"
+import { supabase }     from "@/lib/supabase/client"
+import SaveMomentModal  from "@/components/companion/SaveMomentModal"
 
-// ── Constants ─────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────
+   CONSTANTS  (all preserved from original)
+───────────────────────────────────────────────────────────── */
 const OT_BOOKS     = BIBLE_BOOKS.filter(b => b.testament === "OT")
 const NT_BOOKS     = BIBLE_BOOKS.filter(b => b.testament === "NT")
 const TRANSLATIONS = ["WEB", "KJV", "ASV", "BBE"]
 const STORAGE_KEY  = "kairos_bible_pos"
 
-const FONT_SIZES = {
-  sm: "0.9375rem",
-  md: "1.0625rem",
-  lg: "1.25rem",
-}
+const FONT_SIZES = { sm: "0.925rem", md: "1.0625rem", lg: "1.28rem" }
+const LINE_SPACINGS = { tight: 1.65, normal: 1.9, loose: 2.2 }
 
-const LINE_SPACINGS = {
-  tight:  1.65,
-  normal: 1.85,
-  loose:  2.1,
-}
-
-// ── Persistence ───────────────────────────────────────────────
 function savePosition(bookId, chapter, translation) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ bookId, chapter, translation })) } catch (_) {}
 }
 function loadPosition() {
   try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null } catch (_) { return null }
 }
-
-// ── Format verse range for display + saving ───────────────────
-// e.g. {Genesis 1:1–3} or {John 3:16, 18}
 function formatVerseRange(book, chapter, verseSet) {
   if (!book || verseSet.size === 0) return ""
   const sorted = [...verseSet].sort((a, b) => a - b)
-  const first  = sorted[0]
-  const last   = sorted[sorted.length - 1]
+  const first = sorted[0], last = sorted[sorted.length - 1]
   if (sorted.length === 1) return `${book.name} ${chapter}:${first}`
   const isContiguous = sorted.every((v, i) => i === 0 || v === sorted[i - 1] + 1)
-  return isContiguous
-    ? `${book.name} ${chapter}:${first}–${last}`
-    : `${book.name} ${chapter}:${sorted.join(", ")}`
+  return isContiguous ? `${book.name} ${chapter}:${first}–${last}` : `${book.name} ${chapter}:${sorted.join(", ")}`
 }
 
-// ═════════════════════════════════════════════════════════════
-// PAGE
-// ═════════════════════════════════════════════════════════════
-export default function BiblePage() {
-  const router = useRouter()
+/* ─────────────────────────────────────────────────────────────
+   STYLES
+───────────────────────────────────────────────────────────── */
+const css = `
+  @keyframes br-fade  { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes br-slide { from{transform:translateX(-100%)} to{transform:translateX(0)} }
+  @keyframes br-spin  { to{transform:rotate(360deg)} }
+  @keyframes br-bar   { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
 
-  // ── Navigation ────────────────────────────────────────────
+  /* ── 3-panel shell ── */
+  .br-shell {
+    display: grid;
+    grid-template-columns: 220px 260px 1fr;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--color-void);
+  }
+
+  /* ── App nav sidebar ── */
+  .br-appnav {
+    display: flex; flex-direction: column;
+    height: 100vh; overflow-y: auto; overflow-x: hidden;
+    background: rgba(8,10,18,0.98);
+    border-right: 1px solid rgba(255,255,255,0.06);
+    padding: 24px 14px;
+    scrollbar-width: none;
+  }
+  .br-appnav::-webkit-scrollbar { display: none; }
+
+  /* ── Book panel ── */
+  .br-bookpanel {
+    display: flex; flex-direction: column;
+    height: 100vh;
+    background: rgba(10,12,20,0.95);
+    border-right: 1px solid rgba(255,255,255,0.06);
+    overflow: hidden;
+  }
+
+  /* ── Reading column ── */
+  .br-reader {
+    display: flex; flex-direction: column;
+    height: 100vh; overflow: hidden;
+    min-width: 0;
+  }
+
+  /* ── Top bar ── */
+  .br-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 52px; padding: 0 28px; flex-shrink: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    background: rgba(8,10,18,0.7);
+    backdrop-filter: blur(12px);
+    gap: 12px;
+  }
+
+  /* ── Nav link ── */
+  .br-nav-link {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 8px;
+    text-decoration: none; border: none;
+    background: transparent; width: 100%;
+    cursor: pointer; transition: background 0.15s ease;
+    min-height: 40px; text-align: left;
+    font-family: var(--font-body); font-size: 0.82rem;
+  }
+  .br-nav-link:hover  { background: rgba(255,255,255,0.05); }
+  .br-nav-link.active { background: rgba(255,255,255,0.08); }
+
+  /* ── Book list item ── */
+  .br-book-item {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; padding: 9px 16px;
+    border: none; background: transparent;
+    cursor: pointer; text-align: left;
+    transition: background 0.12s ease; min-height: 40px;
+  }
+  .br-book-item:hover { background: rgba(255,255,255,0.04); }
+  .br-book-item.active { background: rgba(240,192,96,0.07); }
+
+  /* ── Chapter grid button ── */
+  .br-ch-btn {
+    display: flex; align-items: center; justify-content: center;
+    height: 40px; border-radius: 9px;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: transparent; cursor: pointer;
+    font-family: var(--font-body); font-size: 0.85rem;
+    color: rgba(255,255,255,0.45);
+    transition: all 0.12s ease;
+  }
+  .br-ch-btn:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); border-color: rgba(255,255,255,0.14); }
+  .br-ch-btn.active { background: var(--gradient-gold); color: #060912; border-color: transparent; font-weight: 600; }
+
+  /* ── Verse ── */
+  .br-verse {
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 7px 0; border-radius: 6px;
+    cursor: pointer; transition: background 0.12s ease;
+    margin: 0 -8px; padding: 6px 8px;
+  }
+  .br-verse:hover { background: rgba(255,255,255,0.03); }
+  .br-verse.selected { background: rgba(240,192,96,0.07); }
+  .br-verse.highlighted { background: rgba(240,192,96,0.12); }
+
+  /* ── Action bar (selected verses) ── */
+  /* ── Action bar — desktop: flex child at bottom of reader column ── */
+  .br-action-bar {
+    flex-shrink: 0;
+    padding: 12px 20px;
+    background: rgba(10,12,22,0.98);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center; gap: 10px;
+    animation: br-bar 0.25s ease forwards;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .br-action-bar::-webkit-scrollbar { display: none; }
+
+  /* ── Action bar — mobile: position: fixed, sits exactly above our nav bar.
+     Our nav bar is:  position: fixed; bottom: 0; height: 58px;
+                      padding-bottom: env(safe-area-inset-bottom)
+     So its visual top edge is at: 58px + env(safe-area-inset-bottom) from the viewport bottom.
+     We anchor the action bar to that same value, so it always rides on top of
+     our nav — which is itself already riding on top of the browser's own chrome. ── */
+  @media (max-width: 720px) {
+    .br-action-bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+      z-index: 95;
+      border-radius: 14px 14px 0 0;
+      border-left: none;
+      border-right: none;
+      padding: 12px 16px;
+      box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
+      /* Ensure it is never taller than needed */
+      flex-wrap: nowrap;
+    }
+  }
+
+  /* ── Mobile ── */
+  .br-mobile-nav { display: none; }
+  .br-mobile-bar { display: none; }
+  .br-mobile-overlay { display: none; }
+
+  @media (max-width: 1000px) {
+    .br-shell { grid-template-columns: 220px 1fr; }
+    .br-bookpanel { display: none; }
+  }
+  @media (max-width: 720px) {
+    .br-shell { grid-template-columns: 1fr; }
+    .br-appnav { display: none; }
+    .br-mobile-nav { display: flex; }
+    .br-mobile-bar { display: flex; }
+    .br-topbar { padding: 0 16px; }
+    /* Scroll content bottom padding accounts for:
+       - Our fixed mobile nav bar         = 58px
+       - The fixed action bar (when shown) = ~58px
+       - Browser safe area                = env(safe-area-inset-bottom)
+       Using the larger of the two states so content is never hidden. */
+    .br-scroll { padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
+  }
+
+  /* Reading content */
+  .br-verse-text {
+    font-family: var(--font-heading);
+    font-weight: 300;
+    line-height: 1.9;
+    color: rgba(255,255,255,0.82);
+    margin: 0;
+    user-select: none;
+  }
+  .br-verse-num {
+    font-family: var(--font-display);
+    font-size: 0.52rem; letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.2);
+    margin-top: 7px;
+    flex-shrink: 0; min-width: 22px;
+    user-select: none;
+  }
+
+  /* Scrollbars */
+  .br-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.07) transparent; overflow-y: auto; }
+  .br-scroll::-webkit-scrollbar { width: 4px; }
+  .br-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
+
+  /* Settings popover */
+  .br-settings-panel {
+    position: absolute; top: 56px; right: 12px; z-index: 200;
+    background: #13161f;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px; padding: 20px;
+    width: 260px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    animation: br-fade 0.15s ease;
+  }
+`
+
+/* ─────────────────────────────────────────────────────────────
+   APP NAV ITEMS
+───────────────────────────────────────────────────────────── */
+const NAV = [
+  { label: "Companion", href: "/journey",       icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
+  { label: "Saved",     href: "/journey/saved", icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> },
+  { label: "Bible",     href: "/bible",         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> },
+  { label: "Plans",     href: "/plans",         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
+  { label: "Account",   href: "/account",       icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+  { label: "Settings",  href: "/settings",      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> },
+]
+
+/* ─────────────────────────────────────────────────────────────
+   APP NAV SIDEBAR
+───────────────────────────────────────────────────────────── */
+function AppNav({ pathname, userName, initials }) {
+  return (
+    <nav className="br-appnav">
+      <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", marginBottom: 28 }}>
+        <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg, rgba(240,192,96,0.28), rgba(200,140,40,0.28))", border: "1px solid rgba(240,192,96,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(240,192,96,0.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+        </div>
+        <span style={{ fontFamily: "var(--font-display)", fontSize: "0.75rem", letterSpacing: "0.22em", background: "var(--gradient-text)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>KAIROS</span>
+      </a>
+
+      <p style={{ fontFamily: "var(--font-display)", fontSize: "0.46rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.2)", padding: "0 12px 6px", margin: 0 }}>Navigation</p>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
+        {NAV.map(item => {
+          const active = pathname === item.href
+          return (
+            <a key={item.href} href={item.href} className={`br-nav-link${active ? " active" : ""}`}
+              style={{ color: active ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.38)" }}>
+              <span style={{ color: active ? "rgba(240,192,96,0.8)" : "rgba(255,255,255,0.25)", flexShrink: 0 }}>{item.icon}</span>
+              {item.label}
+              {active && <div style={{ marginLeft: "auto", width: 5, height: 5, borderRadius: "50%", background: "rgba(240,192,96,0.7)", flexShrink: 0 }} />}
+            </a>
+          )
+        })}
+      </div>
+
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 14, marginTop: 12 }}>
+        {userName ? (
+          <a href="/account" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", padding: "8px 10px", borderRadius: 10, transition: "background 0.15s ease" }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+            <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg, rgba(240,192,96,0.2), rgba(200,140,40,0.2))", border: "1px solid rgba(240,192,96,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", fontSize: "0.52rem", color: "rgba(240,192,96,0.8)", flexShrink: 0 }}>{initials}</div>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "rgba(255,255,255,0.65)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: 0 }}>{userName.split(" ")[0]}</p>
+              <p style={{ fontFamily: "var(--font-body)", fontSize: "0.68rem", color: "rgba(255,255,255,0.2)", margin: "1px 0 0" }}>View account →</p>
+            </div>
+          </a>
+        ) : (
+          <a href="/login" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 10, textDecoration: "none", background: "rgba(240,192,96,0.06)", borderWidth: 1, borderStyle: "solid", borderColor: "rgba(240,192,96,0.15)", transition: "all 0.15s ease" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(240,192,96,0.1)"; e.currentTarget.style.borderColor = "rgba(240,192,96,0.3)" }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(240,192,96,0.06)"; e.currentTarget.style.borderColor = "rgba(240,192,96,0.15)" }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(240,192,96,0.7)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            <span style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "rgba(240,192,96,0.7)" }}>Sign in</span>
+          </a>
+        )}
+      </div>
+    </nav>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────
+   BOOK PANEL
+───────────────────────────────────────────────────────────── */
+function BookPanel({ activeTab, onTabChange, selectedBook, selectedChapter, showChapters, setShowChapters, onBookSelect, onChapterSelect, inDrawer = false }) {
+  const books = activeTab === "OT" ? OT_BOOKS : NT_BOOKS
+
+  return (
+    <div className={inDrawer ? "" : "br-bookpanel"} style={inDrawer ? { display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" } : {}}>
+      {/* OT / NT tabs */}
+      <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
+        {[["OT", "Old"], ["NT", "New"]].map(([tab, label]) => (
+          <button key={tab} onClick={() => { onTabChange(tab); setShowChapters(false) }} style={{
+            flex: 1, height: 48, border: "none",
+            background: "transparent", cursor: "pointer",
+            fontFamily: "var(--font-display)", fontSize: "0.55rem",
+            letterSpacing: "0.18em", textTransform: "uppercase",
+            color: activeTab === tab ? "rgba(240,192,96,0.9)" : "rgba(255,255,255,0.25)",
+            borderBottom: `2px solid ${activeTab === tab ? "rgba(240,192,96,0.7)" : "transparent"}`,
+            transition: "all 0.15s ease",
+          }}>
+            {label} Testament
+          </button>
+        ))}
+      </div>
+
+      {/* Back to books */}
+      {showChapters && selectedBook && (
+        <button onClick={() => setShowChapters(false)} style={{
+          display: "flex", alignItems: "center", gap: 10,
+          width: "100%", padding: "12px 16px", height: 46,
+          border: "none", background: "rgba(240,192,96,0.05)",
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          cursor: "pointer", textAlign: "left", flexShrink: 0,
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(240,192,96,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <span style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "rgba(240,192,96,0.85)", fontWeight: 500 }}>{selectedBook.name}</span>
+          <span style={{ fontFamily: "var(--font-body)", fontSize: "0.7rem", color: "rgba(255,255,255,0.25)", marginLeft: "auto" }}>{selectedBook.chapters} ch.</span>
+        </button>
+      )}
+
+      {/* Books list */}
+      {!showChapters && (
+        <div className="br-scroll" style={{ flex: 1 }}>
+          <div style={{ padding: "6px 0" }}>
+            {books.map(book => {
+              const active = selectedBook?.id === book.id
+              return (
+                <button key={book.id} onClick={() => onBookSelect(book)}
+                  className={`br-book-item${active ? " active" : ""}`}>
+                  <span style={{
+                    fontFamily: "var(--font-body)", fontSize: "0.88rem",
+                    color: active ? "rgba(240,192,96,0.9)" : "rgba(255,255,255,0.6)",
+                    fontWeight: active ? 500 : 400,
+                  }}>{book.name}</span>
+                  <span style={{
+                    fontFamily: "var(--font-display)", fontSize: "0.48rem",
+                    color: "rgba(255,255,255,0.2)", letterSpacing: "0.06em",
+                  }}>{book.chapters}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Chapters grid */}
+      {showChapters && selectedBook && (
+        <div className="br-scroll" style={{ flex: 1, padding: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(44px, 1fr))", gap: 6 }}>
+            {Array.from({ length: selectedBook.chapters }, (_, i) => i + 1).map(ch => (
+              <button key={ch} onClick={() => onChapterSelect(ch)}
+                className={`br-ch-btn${selectedChapter === ch ? " active" : ""}`}>
+                {ch}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SETTINGS POPOVER
+───────────────────────────────────────────────────────────── */
+function SettingsPopover({ fontSize, setFontSize, lineSpacing, setLineSpacing, onClose }) {
+  const ref = useRef(null)
+  useEffect(() => {
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) onClose() }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [onClose])
+
+  return (
+    <div ref={ref} className="br-settings-panel">
+      <p style={{ fontFamily: "var(--font-display)", fontSize: "0.5rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: 18 }}>Display Settings</p>
+
+      {/* Font size */}
+      <p style={{ fontFamily: "var(--font-display)", fontSize: "0.48rem", letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,0.22)", marginBottom: 10 }}>Text size</p>
+      <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
+        {[["sm","Aa","Small"], ["md","Aa","Medium"], ["lg","Aa","Large"]].map(([key, label, desc]) => (
+          <button key={key} onClick={() => setFontSize(key)} style={{
+            flex: 1, height: 40, borderRadius: 10,
+            borderWidth: 1, borderStyle: "solid",
+            borderColor: fontSize === key ? "rgba(240,192,96,0.5)" : "rgba(255,255,255,0.08)",
+            background: fontSize === key ? "rgba(240,192,96,0.08)" : "transparent",
+            color: fontSize === key ? "rgba(240,192,96,0.9)" : "rgba(255,255,255,0.4)",
+            fontFamily: "var(--font-body)", fontSize: FONT_SIZES[key],
+            cursor: "pointer", transition: "all 0.15s ease",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>{label}</button>
+        ))}
+      </div>
+
+      {/* Line spacing */}
+      <p style={{ fontFamily: "var(--font-display)", fontSize: "0.48rem", letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,0.22)", marginBottom: 10 }}>Line spacing</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {[["tight","Tight","Compact"], ["normal","Normal","Balanced"], ["loose","Spacious","Airy"]].map(([key, label, desc]) => (
+          <button key={key} onClick={() => setLineSpacing(key)} style={{
+            height: 40, padding: "0 14px", borderRadius: 9,
+            borderWidth: 1, borderStyle: "solid",
+            borderColor: lineSpacing === key ? "rgba(240,192,96,0.4)" : "rgba(255,255,255,0.07)",
+            background: lineSpacing === key ? "rgba(240,192,96,0.07)" : "transparent",
+            color: lineSpacing === key ? "rgba(240,192,96,0.9)" : "rgba(255,255,255,0.4)",
+            fontFamily: "var(--font-body)", fontSize: "0.82rem",
+            cursor: "pointer", transition: "all 0.15s ease",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+          }}>
+            <span>{label}</span>
+            <span style={{ fontSize: "0.7rem", color: lineSpacing === key ? "rgba(240,192,96,0.5)" : "rgba(255,255,255,0.2)" }}>{desc}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MOBILE BOTTOM NAV
+───────────────────────────────────────────────────────────── */
+function MobileBottomNav({ pathname }) {
+  return (
+    <div className="br-mobile-nav" style={{
+      position: "fixed", bottom: 0, left: 0, right: 0,
+      height: 58, zIndex: 100,
+      background: "rgba(8,10,18,0.96)", backdropFilter: "blur(16px)",
+      borderTop: "1px solid rgba(255,255,255,0.07)",
+      alignItems: "center", justifyContent: "space-around",
+      paddingBottom: "env(safe-area-inset-bottom)",
+    }}>
+      {NAV.slice(0, 5).map(item => {
+        const active = pathname === item.href
+        return (
+          <a key={item.href} href={item.href} style={{
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+            textDecoration: "none",
+            color: active ? "rgba(240,192,96,0.9)" : "rgba(255,255,255,0.3)",
+            minWidth: 44, minHeight: 44, justifyContent: "center",
+          }}>
+            {item.icon}
+            <span style={{ fontFamily: "var(--font-display)", fontSize: "0.45rem", letterSpacing: "0.08em" }}>{item.label}</span>
+          </a>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MOBILE BOOK DRAWER
+───────────────────────────────────────────────────────────── */
+function MobileDrawer({ open, onClose, children }) {
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : ""
+    return () => { document.body.style.overflow = "" }
+  }, [open])
+
+  if (!open) return null
+  return (
+    <>
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", zIndex: 300 }} />
+      <div style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: "min(300px, 85vw)", background: "#0d0f1a", borderRight: "1px solid rgba(255,255,255,0.08)", zIndex: 301, display: "flex", flexDirection: "column", animation: "br-slide 0.25s ease" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
+          <p style={{ fontFamily: "var(--font-display)", fontSize: "0.55rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)", margin: 0 }}>Books</p>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.07)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.5)" }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          {children}
+        </div>
+      </div>
+    </>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MAIN PAGE
+───────────────────────────────────────────────────────────── */
+export default function BiblePage() {
+  const pathname = usePathname()
+
+  /* ── State (all preserved) ── */
   const [activeTab,       setActiveTab]       = useState("OT")
   const [selectedBook,    setSelectedBook]    = useState(null)
   const [selectedChapter, setSelectedChapter] = useState(1)
@@ -60,1344 +508,492 @@ export default function BiblePage() {
   const [loading,         setLoading]         = useState(false)
   const [error,           setError]           = useState(null)
   const [showChapters,    setShowChapters]    = useState(false)
-  const [sidebarOpen,     setSidebarOpen]     = useState(false)
+  const [drawerOpen,      setDrawerOpen]      = useState(false)
 
-  // ── Display settings ──────────────────────────────────────
   const [translation,  setTranslation]  = useState("WEB")
   const [fontSize,     setFontSize]     = useState("md")
   const [lineSpacing,  setLineSpacing]  = useState("normal")
   const [settingsOpen, setSettingsOpen] = useState(false)
 
-  // ── Verse selection (multi, session-only) ─────────────────
   const [selectedVerses,    setSelectedVerses]    = useState(new Set())
-  const [highlightedVerses, setHighlightedVerses] = useState(new Set()) // session-only
+  const [highlightedVerses, setHighlightedVerses] = useState(new Set())
   const [copied,            setCopied]            = useState(false)
 
-  // ── Note flow ─────────────────────────────────────────────
   const [noteDrawerOpen, setNoteDrawerOpen] = useState(false)
   const [noteText,       setNoteText]       = useState("")
   const [saveModalOpen,  setSaveModalOpen]  = useState(false)
   const [savingNote,     setSavingNote]     = useState(false)
-  const [pendingNote,    setPendingNote]    = useState(null) // { content, scriptureRef }
 
-  // ── Auth (lightweight — Bible page is public) ─────────────
   const [userId,          setUserId]          = useState(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [userName,        setUserName]        = useState(null)
 
   const scrollRef = useRef(null)
-  const noteRef   = useRef(null)
 
-  // ── Auth check ────────────────────────────────────────────
+  const initials = userName ? userName.trim().split(" ").slice(0,2).map(p => p[0]).join("").toUpperCase() : "K"
+
+  /* ── Auth ── */
   useEffect(() => {
-      supabase.auth.getUser().then(async ({ data: { user } })   => {
-        if (user && !user.is_anonymous) {
-          // Fetch internal profile ID — save route expects   users.id not auth UUID
-          const { data: profile } = await supabase
-            .from("users")
-            .select("id")
-            .eq("auth_id", user.id)
-            .maybeSingle()
-  
-          if (profile) {
-            setUserId(profile.id)
-            setIsAuthenticated(true)
-          }
-        }
-      })
-    }, [])
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (user && !user.is_anonymous) {
+        const { data: profile } = await supabase.from("users").select("id").eq("auth_id", user.id).maybeSingle()
+        if (profile) { setUserId(profile.id); setIsAuthenticated(true) }
+        setUserName(user.user_metadata?.full_name || user.email?.split("@")[0] || null)
+      }
+    })
+  }, [])
 
-  // ── Restore last position on mount ────────────────────────
+  /* ── Restore position ── */
   useEffect(() => {
     const pos = loadPosition()
-    let book  = null
-
+    let book = null
     if (pos) {
       book = BIBLE_BOOKS.find(b => b.id === pos.bookId)
       if (book) {
-        setSelectedBook(book)
-        setSelectedChapter(pos.chapter || 1)
-        setTranslation(pos.translation || "WEB")
-        setActiveTab(book.testament)
-        setShowChapters(true)
-        return
+        setSelectedBook(book); setSelectedChapter(pos.chapter || 1)
+        setTranslation(pos.translation || "WEB"); setActiveTab(book.testament)
+        setShowChapters(true); return
       }
     }
-
-    // Default: John 1
     book = BIBLE_BOOKS.find(b => b.id === "JHN")
-    setSelectedBook(book)
-    setSelectedChapter(1)
-    setActiveTab("NT")
-    setShowChapters(true)
+    setSelectedBook(book); setSelectedChapter(1); setActiveTab("NT"); setShowChapters(true)
   }, [])
 
-  // ── Fetch chapter whenever book / chapter / translation changes
+  /* ── Fetch chapter ── */
   useEffect(() => {
     if (!selectedBook) return
     loadChapter(selectedBook, selectedChapter, translation)
   }, [selectedBook, selectedChapter, translation]) // eslint-disable-line
 
   async function loadChapter(book, chapter, trans) {
-    setLoading(true)
-    setError(null)
-    clearSelection()
+    setLoading(true); setError(null); clearSelection()
     if (scrollRef.current) scrollRef.current.scrollTop = 0
-
     try {
       const res  = await fetch(`/api/bible/chapter?book=${book.id}&chapter=${chapter}&translation=${trans}`)
       const data = await res.json()
       if (!data.success) throw new Error(data.error || "Failed to load chapter")
-      setChapterData(data)
-      savePosition(book.id, chapter, trans)
-    } catch (err) {
-      setError(err.message)
-      setChapterData(null)
-    } finally {
-      setLoading(false)
-    }
+      setChapterData(data); savePosition(book.id, chapter, trans)
+    } catch (err) { setError(err.message); setChapterData(null) }
+    finally { setLoading(false) }
   }
 
-  // ── Chapter navigation ────────────────────────────────────
+  /* ── Chapter nav ── */
   function goToPrev() {
     if (!selectedBook) return
-    if (selectedChapter > 1) {
-      setSelectedChapter(c => c - 1)
-    } else {
+    if (selectedChapter > 1) { setSelectedChapter(c => c - 1) }
+    else {
       const idx = BIBLE_BOOKS.findIndex(b => b.id === selectedBook.id)
-      if (idx > 0) {
-        const prev = BIBLE_BOOKS[idx - 1]
-        setSelectedBook(prev)
-        setSelectedChapter(prev.chapters)
-        setActiveTab(prev.testament)
-      }
+      if (idx > 0) { const prev = BIBLE_BOOKS[idx - 1]; setSelectedBook(prev); setSelectedChapter(prev.chapters); setActiveTab(prev.testament) }
     }
   }
-
   function goToNext() {
     if (!selectedBook) return
-    if (selectedChapter < selectedBook.chapters) {
-      setSelectedChapter(c => c + 1)
-    } else {
+    if (selectedChapter < selectedBook.chapters) { setSelectedChapter(c => c + 1) }
+    else {
       const idx = BIBLE_BOOKS.findIndex(b => b.id === selectedBook.id)
-      if (idx < BIBLE_BOOKS.length - 1) {
-        const next = BIBLE_BOOKS[idx + 1]
-        setSelectedBook(next)
-        setSelectedChapter(1)
-        setActiveTab(next.testament)
-      }
+      if (idx < BIBLE_BOOKS.length - 1) { const next = BIBLE_BOOKS[idx + 1]; setSelectedBook(next); setSelectedChapter(1); setActiveTab(next.testament) }
     }
   }
 
   const atVeryStart = selectedBook?.id === "GEN" && selectedChapter === 1
-  const atVeryEnd   = selectedBook?.id === "REV" && selectedChapter === 22
+  const atVeryEnd   = selectedBook?.id === "REV"  && selectedChapter === 22
 
-  // ── Sidebar ───────────────────────────────────────────────
-  function handleBookSelect(book) {
-    setSelectedBook(book)
-    setSelectedChapter(1)
-    setShowChapters(true)
-  }
+  /* ── Book / chapter select ── */
+  function handleBookSelect(book) { setSelectedBook(book); setSelectedChapter(1); setShowChapters(true) }
+  function handleChapterSelect(ch) { setSelectedChapter(ch); setDrawerOpen(false) }
 
-  function handleChapterSelect(ch) {
-    setSelectedChapter(ch)
-    setSidebarOpen(false)
-  }
+  /* ── Verse selection ── */
+  function clearSelection() { setSelectedVerses(new Set()); setCopied(false) }
 
-  // ── Verse selection ───────────────────────────────────────
   function toggleVerse(num) {
-    if (noteDrawerOpen) setNoteDrawerOpen(false)
     setSelectedVerses(prev => {
       const next = new Set(prev)
-      if (next.has(num)) next.delete(num)
-      else next.add(num)
+      next.has(num) ? next.delete(num) : next.add(num)
       return next
     })
   }
 
-  function clearSelection() {
-    setSelectedVerses(new Set())
-    setNoteDrawerOpen(false)
-    setNoteText("")
+  function copySelectedVerses() {
+    if (!chapterData || selectedVerses.size === 0) return
+    const sorted = [...selectedVerses].sort((a, b) => a - b)
+    const text = sorted.map(num => {
+      const v = chapterData.verses.find(v => v.verse === num)
+      return v ? `[${num}] ${v.text}` : ""
+    }).filter(Boolean).join("\n")
+    const ref = formatVerseRange(selectedBook, selectedChapter, selectedVerses)
+    navigator.clipboard.writeText(`${text}\n\n— ${ref} (${translation})`).then(() => {
+      setCopied(true); setTimeout(() => setCopied(false), 2000)
+    })
   }
 
-  // ── Toolbar: Highlight ────────────────────────────────────
-  // Toggles — if all selected are already highlighted, un-highlights them
-  function handleHighlight() {
-    const allAlreadyHighlighted = [...selectedVerses].every(v => highlightedVerses.has(v))
+  function highlightSelected() {
     setHighlightedVerses(prev => {
       const next = new Set(prev)
-      if (allAlreadyHighlighted) {
-        selectedVerses.forEach(v => next.delete(v))
-      } else {
-        selectedVerses.forEach(v => next.add(v))
-      }
+      selectedVerses.forEach(v => (next.has(v) ? next.delete(v) : next.add(v)))
       return next
     })
     clearSelection()
   }
 
-  // ── Toolbar: Copy ─────────────────────────────────────────
-  async function handleCopyMulti() {
-    if (!selectedBook || !chapterData) return
+  function openNoteForSelection() {
+    const ref = formatVerseRange(selectedBook, selectedChapter, selectedVerses)
     const sorted = [...selectedVerses].sort((a, b) => a - b)
-    const range  = formatVerseRange(selectedBook, selectedChapter, selectedVerses)
-    const lines  = sorted.map(num => {
-      const v = chapterData.verses.find(v => v.number === num)
+    const snippet = sorted.map(num => {
+      const v = chapterData?.verses.find(v => v.verse === num)
       return v ? `[${num}] ${v.text}` : ""
-    }).filter(Boolean)
-    const text = `${lines.join(" ")}\n— ${range} (${translation})`
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-      setTimeout(() => { setCopied(false); clearSelection() }, 1800)
-    } catch (_) {}
-  }
-
-  // ── Toolbar: Note ─────────────────────────────────────────
-  function handleNoteOpen() {
-    setNoteText("")
+    }).filter(Boolean).join(" ")
+    setNoteText(`${snippet}\n\n— ${ref} (${translation})\n\nReflection:\n`)
     setNoteDrawerOpen(true)
-    setTimeout(() => noteRef.current?.focus(), 120)
+    clearSelection()
   }
 
-  function handleNoteCancel() {
-    setNoteDrawerOpen(false)
-    setNoteText("")
-  }
-
-  // Opens SaveMomentModal with note content pre-packaged
-  function handleNoteSaveToJourney() {
-    if (!noteText.trim()) return
-    const scriptureRef = formatVerseRange(selectedBook, selectedChapter, selectedVerses)
-    const sorted       = [...selectedVerses].sort((a, b) => a - b)
-    const verseLines   = sorted.map(num => {
-      const v = chapterData?.verses.find(v => v.number === num)
-      return v ? `[${num}] ${v.text}` : ""
-    }).filter(Boolean)
-
-    // Content = user's note + verse text block (so Journey entry is self-contained)
-    const content = `${noteText.trim()}\n\n${verseLines.join(" ")}\n— ${scriptureRef} (${translation})`
-    setPendingNote({ content, scriptureRef })
-    setNoteDrawerOpen(false)
-    setSaveModalOpen(true)
-  }
-
-  async function handleSaveConfirm({ title, entry_type }) {
-    if (!pendingNote) return
-    setSavingNote(true)
-    try {
-      const res  = await fetch("/api/journey/save", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content:       pendingNote.content,
-          title,
-          entry_type,
-          scripture_ref: pendingNote.scriptureRef,
-          userId:        userId || null,
-        }),
-      })
-      const data = await res.json()
-      if (!data.success) throw new Error(data.error)
-      clearSelection()
-      setPendingNote(null)
-    } catch (err) {
-      console.error("[Kairos Bible] Note save failed:", err.message)
-    } finally {
-      setSavingNote(false)
-      setSaveModalOpen(false)
-    }
-  }
-
-  // ── Toolbar: Ask Kairos ───────────────────────────────────
-  // Builds a rich multi-verse context block → sessionStorage → /journey
-  function handleAskKairos() {
-    if (!selectedBook || !chapterData) return
+  function sendToCompanion() {
+    const ref = formatVerseRange(selectedBook, selectedChapter, selectedVerses)
     const sorted = [...selectedVerses].sort((a, b) => a - b)
-    const range  = formatVerseRange(selectedBook, selectedChapter, selectedVerses)
-    const lines  = sorted.map(num => {
-      const v = chapterData.verses.find(v => v.number === num)
-      return v ? `${num}. ${v.text}` : ""
-    }).filter(Boolean)
-    const ctx = `I'd like to reflect on ${range} (${translation}):\n\n${lines.join("\n")}`
-    try { sessionStorage.setItem("kairos_verse_context", ctx) } catch (_) {}
-    router.push("/journey")
+    const snippet = sorted.map(num => {
+      const v = chapterData?.verses.find(v => v.verse === num)
+      return v ? v.text : ""
+    }).filter(Boolean).join(" ")
+    const prompt = `I'd like to reflect on ${ref}: "${snippet}" — what does this mean for my life today?`
+    try { sessionStorage.setItem("kairos_verse_context", prompt) } catch (_) {}
+    window.location.href = "/journey"
   }
 
-  // ── Derived ───────────────────────────────────────────────
-  const verseRange     = formatVerseRange(selectedBook, selectedChapter, selectedVerses)
-  const selectionCount = selectedVerses.size
-  const hasSelection   = selectionCount > 0
-  const allHighlighted = hasSelection && [...selectedVerses].every(v => highlightedVerses.has(v))
-
-  const sidebarProps = {
-    activeTab,
-    onTabChange:     (tab) => { setActiveTab(tab); setShowChapters(false) },
-    books:           activeTab === "OT" ? OT_BOOKS : NT_BOOKS,
-    selectedBook, selectedChapter,
-    showChapters, setShowChapters,
-    onBookSelect:    handleBookSelect,
-    onChapterSelect: handleChapterSelect,
+  async function handleSaveNote({ title, entry_type }) {
+    setSavingNote(true)
+    const ref = formatVerseRange(selectedBook, selectedChapter, new Set())
+    try {
+      await fetch("/api/journey/save", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: noteText, title, entry_type, scripture_ref: ref, userId }),
+      })
+    } catch (err) { console.error("[Bible] Save note failed:", err.message) }
+    finally { setSavingNote(false); setSaveModalOpen(false); setNoteDrawerOpen(false); setNoteText("") }
   }
 
-  // ─────────────────────────────────────────────────────────
+  const verseRef = selectedVerses.size > 0 ? formatVerseRange(selectedBook, selectedChapter, selectedVerses) : ""
+
+  /* ─────────────────────────────────────────────────────────
+     RENDER
+  ───────────────────────────────────────────────────────── */
   return (
-    <div style={{
-      display:    "flex",
-      height:     "100dvh",
-      overflow:   "hidden",
-      background: "var(--color-bg-primary)",
-      color:      "var(--color-text-primary)",
-      fontFamily: "var(--font-body)",
-      position:   "relative",
-    }}>
+    <>
+      <style>{css}</style>
 
-      {/* ── SaveMomentModal (note flow) ───────────────────── */}
       <SaveMomentModal
         isOpen={saveModalOpen}
-        content={pendingNote?.content || ""}
-        scriptureRef={pendingNote?.scriptureRef || null}
-        onConfirm={handleSaveConfirm}
-        onCancel={() => { setSaveModalOpen(false); setPendingNote(null) }}
+        content={noteText}
+        scriptureRef={formatVerseRange(selectedBook, selectedChapter, new Set())}
+        onConfirm={handleSaveNote}
+        onCancel={() => setSaveModalOpen(false)}
         saving={savingNote}
       />
 
-      {/* ── Settings panel backdrop ───────────────────────── */}
-      {settingsOpen && (
-        <div
-          onClick={() => setSettingsOpen(false)}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 60 }}
+      {/* Mobile drawer */}
+      <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+        <BookPanel
+          inDrawer
+          activeTab={activeTab} onTabChange={setActiveTab}
+          selectedBook={selectedBook} selectedChapter={selectedChapter}
+          showChapters={showChapters} setShowChapters={setShowChapters}
+          onBookSelect={handleBookSelect} onChapterSelect={handleChapterSelect}
         />
-      )}
+      </MobileDrawer>
 
-      {/* ── Settings panel ────────────────────────────────── */}
-      <div style={{
-        position:      "fixed",
-        top: 0, right: 0, bottom: 0,
-        width:         "280px",
-        maxWidth:      "90vw",
-        background:    "#0d1428",
-        borderLeft:    "1px solid #2a3a5c",
-        zIndex:        70,
-        display:       "flex",
-        flexDirection: "column",
-        padding:       "var(--space-6)",
-        gap:           "var(--space-6)",
-        transform:     settingsOpen ? "translateX(0)" : "translateX(100%)",
-        transition:    "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-        overflowY:     "auto",
-      }}>
-        <SettingsPanel
-          translation={translation}
-          fontSize={fontSize}
-          lineSpacing={lineSpacing}
-          onTranslationChange={setTranslation}
-          onFontSizeChange={setFontSize}
-          onLineSpacingChange={setLineSpacing}
-          onClose={() => setSettingsOpen(false)}
+      <div className="br-shell">
+
+        {/* ── App nav sidebar ── */}
+        <AppNav pathname={pathname} userName={userName} initials={initials} />
+
+        {/* ── Book panel (desktop) ── */}
+        <BookPanel
+          activeTab={activeTab} onTabChange={setActiveTab}
+          selectedBook={selectedBook} selectedChapter={selectedChapter}
+          showChapters={showChapters} setShowChapters={setShowChapters}
+          onBookSelect={handleBookSelect} onChapterSelect={handleChapterSelect}
         />
-      </div>
 
-      {/* ── Desktop sidebar ───────────────────────────────── */}
-      <aside className="bible-sidebar-desktop" style={{
-        width:         "272px",
-        minWidth:      "272px",
-        borderRight:   "1px solid var(--color-border-subtle)",
-        display:       "flex",
-        flexDirection: "column",
-        overflow:      "hidden",
-        background:    "#060912",
-      }}>
-        <SidebarContent {...sidebarProps} />
-      </aside>
+        {/* ── Reading column ── */}
+        <div className="br-reader">
 
-      {/* ── Mobile backdrop ───────────────────────────────── */}
-      {sidebarOpen && (
-        <div
-          onClick={() => setSidebarOpen(false)}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 40 }}
-        />
-      )}
-
-      {/* ── Mobile sidebar ────────────────────────────────── */}
-      <aside
-        className="bible-sidebar-mobile"
-        style={{
-          position:      "fixed",
-          top: 0, left: 0, bottom: 0,
-          width:         "300px",
-          maxWidth:      "88vw",
-          background:    "#060912",
-          zIndex:        50,
-          display:       "flex",
-          flexDirection: "column",
-          overflow:      "hidden",
-          transform:     sidebarOpen ? "translateX(0)" : "translateX(-100%)",
-          transition:    "transform 0.26s cubic-bezier(0.4, 0, 0.2, 1)",
-          borderRight:   "1px solid var(--color-border-subtle)",
-        }}
-      >
-        <SidebarContent {...sidebarProps} />
-      </aside>
-
-      {/* ── Reading pane ──────────────────────────────────── */}
-      <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
-
-        {/* Header */}
-        <header style={{
-          padding:      "0 var(--space-4)",
-          borderBottom: "1px solid var(--color-border-subtle)",
-          display:      "flex",
-          alignItems:   "center",
-          gap:          "var(--space-3)",
-          background:   "var(--color-bg-secondary)",
-          minHeight:    "64px",
-          flexShrink:   0,
-        }}>
-
-          {/* Mobile hamburger */}
-          <button
-            className="bible-mobile-btn"
-            onClick={() => setSidebarOpen(true)}
-            aria-label="Open book selector"
-            style={{
-              display:        "none",
-              alignItems:     "center",
-              justifyContent: "center",
-              width:          "44px",
-              height:         "44px",
-              borderRadius:   "var(--radius-md)",
-              border:         "1px solid var(--color-border-subtle)",
-              background:     "transparent",
-              color:          "var(--color-text-secondary)",
-              cursor:         "pointer",
-              flexShrink:     0,
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M4 6h16M4 12h16M4 18h16"/>
-            </svg>
-          </button>
-
-          {/* Chapter title */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {selectedBook ? (
-              <h1 style={{
-                fontFamily:    "var(--font-display)",
-                fontSize:      "clamp(1rem, 2.5vw, 1.375rem)",
-                fontWeight:    600,
-                letterSpacing: "0.04em",
-                color:         "var(--color-text-primary)",
-                margin:        0,
-                whiteSpace:    "nowrap",
-                overflow:      "hidden",
-                textOverflow:  "ellipsis",
-              }}>
-                {selectedBook.name}{" "}
-                <span style={{ color: "var(--color-gold-bright)" }}>{selectedChapter}</span>
-              </h1>
-            ) : (
-              <h1 style={{
-                fontFamily: "var(--font-display)",
-                fontSize:   "1.25rem",
-                color:      "var(--color-text-muted)",
-                fontStyle:  "italic",
-                margin:     0,
-              }}>
-                Select a book to begin
-              </h1>
-            )}
-          </div>
-
-          {/* Translation picker */}
-          <div style={{ position: "relative", flexShrink: 0 }}>
-            <select
-              value={translation}
-              onChange={e => setTranslation(e.target.value)}
-              style={{
-                height:        "44px",
-                padding:       "0 var(--space-6) 0 var(--space-3)",
-                borderRadius:  "var(--radius-md)",
-                border:        "1px solid var(--color-border-subtle)",
-                background:    "var(--color-bg-tertiary)",
-                color:         "var(--color-text-primary)",
-                fontFamily:    "var(--font-body)",
-                fontSize:      "0.8125rem",
-                fontWeight:    600,
-                cursor:        "pointer",
-                appearance:    "none",
-                letterSpacing: "0.04em",
-              }}
-            >
-              {TRANSLATIONS.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-            <svg
-              style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
-              width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="2.5"
-            >
-              <path d="M6 9l6 6 6-6"/>
-            </svg>
-          </div>
-
-          {/* Aa — Display settings */}
-          <button
-            onClick={() => setSettingsOpen(s => !s)}
-            aria-label="Display settings"
-            title="Display settings"
-            style={{
-              width:          "44px",
-              height:         "44px",
-              borderRadius:   "var(--radius-md)",
-              border:         `1px solid ${settingsOpen ? "var(--color-gold-bright)" : "var(--color-border-subtle)"}`,
-              background:     settingsOpen ? "rgba(240,192,96,0.08)" : "transparent",
-              color:          settingsOpen ? "var(--color-gold-bright)" : "var(--color-text-secondary)",
-              cursor:         "pointer",
-              display:        "flex",
-              alignItems:     "center",
-              justifyContent: "center",
-              flexShrink:     0,
-              fontFamily:     "var(--font-display)",
-              fontSize:       "0.9rem",
-              fontWeight:     700,
-              letterSpacing:  "0.02em",
-              transition:     "all 0.15s ease",
-            }}
-          >
-            Aa
-          </button>
-        </header>
-
-        {/* Verses scroll area — bottom padding grows when toolbar is visible */}
-        <div
-          ref={scrollRef}
-          style={{
-            flex:       1,
-            overflowY:  "auto",
-            padding:    `var(--space-6) var(--space-6) ${hasSelection ? "148px" : "var(--space-6)"}`,
-            transition: "padding-bottom 0.22s ease",
-          }}
-        >
-          <div style={{ maxWidth: "680px", margin: "0 auto" }}>
-
-            {/* Tap hint — fades out once selection starts */}
-            {!loading && !error && chapterData && (
-              <p style={{
-                fontSize:     "0.75rem",
-                color:        "var(--color-text-muted)",
-                fontStyle:    "italic",
-                marginBottom: "var(--space-4)",
-                opacity:      hasSelection ? 0 : 0.65,
-                transition:   "opacity 0.2s ease",
-                userSelect:   "none",
-              }}>
-                Tap any verse to select it — select multiple to highlight, copy, note, or ask Kairos
-              </p>
-            )}
-
-            {/* Loading */}
-            {loading && (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "240px" }}>
-                <p style={{
-                  fontFamily:    "var(--font-display)",
-                  fontStyle:     "italic",
-                  fontSize:      "1.25rem",
-                  color:         "var(--color-text-muted)",
-                  letterSpacing: "0.04em",
-                  margin:        0,
-                }}>
-                  Opening the Word…
-                </p>
-              </div>
-            )}
-
-            {/* Error */}
-            {!loading && error && (
-              <div style={{
-                padding:      "var(--space-5)",
-                borderRadius: "var(--radius-lg)",
-                border:       "1px solid rgba(225,29,72,0.25)",
-                background:   "rgba(225,29,72,0.06)",
-              }}>
-                <p style={{ margin: "0 0 var(--space-2) 0", fontWeight: 600, fontSize: "0.9rem", color: "#E11D48" }}>
-                  Could not load chapter
-                </p>
-                <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--color-text-secondary)", lineHeight: 1.6 }}>
-                  {error}
-                </p>
-              </div>
-            )}
-
-            {/* Verses */}
-            {!loading && !error && chapterData && (
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                {chapterData.verses.map(verse => {
-                  const isSelected    = selectedVerses.has(verse.number)
-                  const isHighlighted = highlightedVerses.has(verse.number)
-
-                  // Visual state priority: selected > highlighted > default
-                  let borderColor = "transparent"
-                  let bgColor     = "transparent"
-                  if (isSelected) {
-                    borderColor = "var(--color-gold-bright)"
-                    bgColor     = isHighlighted ? "rgba(240,192,96,0.12)" : "rgba(99,102,241,0.08)"
-                  } else if (isHighlighted) {
-                    borderColor = "rgba(240,192,96,0.45)"
-                    bgColor     = "rgba(240,192,96,0.06)"
-                  }
-
-                  return (
-                    <div
-                      key={verse.number}
-                      onClick={() => toggleVerse(verse.number)}
-                      style={{
-                        display:      "flex",
-                        gap:          "var(--space-3)",
-                        padding:      "var(--space-2) var(--space-3)",
-                        borderRadius: "var(--radius-md)",
-                        cursor:       "pointer",
-                        borderLeft:   `2px solid ${borderColor}`,
-                        background:   bgColor,
-                        transition:   "background 0.14s ease, border-color 0.14s ease",
-                        userSelect:   "none",
-                        position:     "relative",
-                        alignItems:   "flex-start",
-                      }}
-                    >
-                      {/* Verse number */}
-                      <span style={{
-                        color:         "var(--color-gold-bright)",
-                        fontSize:      "0.6875rem",
-                        fontWeight:    700,
-                        letterSpacing: "0.04em",
-                        lineHeight:    `calc(${FONT_SIZES[fontSize]} * ${LINE_SPACINGS[lineSpacing]})`,
-                        minWidth:      "20px",
-                        flexShrink:    0,
-                        opacity:       isHighlighted ? 1 : 0.65,
-                        transition:    "opacity 0.14s ease",
-                      }}>
-                        {verse.number}
-                      </span>
-
-                      {/* Verse text */}
-                      <p style={{
-                        margin:      0,
-                        fontSize:    FONT_SIZES[fontSize],
-                        lineHeight:  LINE_SPACINGS[lineSpacing],
-                        color:       "var(--color-text-primary)",
-                        fontFamily:  "var(--font-body)",
-                        flex:        1,
-                        paddingRight: hasSelection ? "var(--space-8)" : 0,
-                        transition:  "padding-right 0.2s ease",
-                      }}>
-                        {verse.text}
-                      </p>
-
-                      {/* Selection checkbox — visible when any selection is active */}
-                      <div style={{
-                        position:       "absolute",
-                        top:            "50%",
-                        right:          "var(--space-3)",
-                        transform:      "translateY(-50%)",
-                        width:          "20px",
-                        height:         "20px",
-                        borderRadius:   "50%",
-                        border:         `1.5px solid ${isSelected ? "var(--color-gold-bright)" : "var(--color-border-subtle)"}`,
-                        background:     isSelected ? "var(--color-gold-bright)" : "transparent",
-                        display:        "flex",
-                        alignItems:     "center",
-                        justifyContent: "center",
-                        flexShrink:     0,
-                        opacity:        hasSelection ? 1 : 0,
-                        transition:     "all 0.14s ease",
-                        pointerEvents:  "none",
-                      }}>
-                        {isSelected && (
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--color-bg-primary)" strokeWidth="3.5">
-                            <path d="M20 6L9 17l-5-5"/>
-                          </svg>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-
-                {/* Attribution */}
-                <p style={{
-                  marginTop: "var(--space-8)",
-                  fontSize:  "0.75rem",
-                  color:     "var(--color-text-muted)",
-                  textAlign: "center",
-                  fontStyle: "italic",
-                }}>
-                  {chapterData.translation} · {chapterData.source}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Prev / Next nav */}
-        {selectedBook && (
-          <nav style={{
-            borderTop:      "1px solid var(--color-border-subtle)",
-            padding:        "var(--space-3) var(--space-6)",
-            display:        "flex",
-            alignItems:     "center",
-            justifyContent: "space-between",
-            background:     "var(--color-bg-secondary)",
-            flexShrink:     0,
-            gap:            "var(--space-4)",
-            minHeight:      "60px",
-          }}>
-            <button
-              onClick={goToPrev}
-              disabled={atVeryStart}
-              style={{
-                height:       "44px",
-                padding:      "0 var(--space-4)",
-                borderRadius: "var(--radius-md)",
-                border:       "1px solid var(--color-border-subtle)",
-                background:   "transparent",
-                color:        "var(--color-text-secondary)",
-                fontFamily:   "var(--font-body)",
-                fontSize:     "0.875rem",
-                fontWeight:   500,
-                cursor:       atVeryStart ? "not-allowed" : "pointer",
-                display:      "flex",
-                alignItems:   "center",
-                gap:          "var(--space-2)",
-                opacity:      atVeryStart ? 0.35 : 1,
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
-              Prev
-            </button>
-
-            <span style={{
-              fontSize:           "0.8125rem",
-              color:              "var(--color-text-muted)",
-              textAlign:          "center",
-              fontVariantNumeric: "tabular-nums",
+          {/* Top bar */}
+          <div className="br-topbar">
+            {/* Mobile: hamburger for drawer */}
+            <button className="br-mobile-bar" onClick={() => setDrawerOpen(true)} style={{
+              width: 36, height: 36, borderRadius: 9,
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              cursor: "pointer", alignItems: "center", justifyContent: "center",
+              color: "rgba(255,255,255,0.5)",
             }}>
-              {selectedBook.name} {selectedChapter} / {selectedBook.chapters}
-            </span>
-
-            <button
-              onClick={goToNext}
-              disabled={atVeryEnd}
-              style={{
-                height:       "44px",
-                padding:      "0 var(--space-4)",
-                borderRadius: "var(--radius-md)",
-                border:       "1px solid var(--color-border-subtle)",
-                background:   "transparent",
-                color:        "var(--color-text-secondary)",
-                fontFamily:   "var(--font-body)",
-                fontSize:     "0.875rem",
-                fontWeight:   500,
-                cursor:       atVeryEnd ? "not-allowed" : "pointer",
-                display:      "flex",
-                alignItems:   "center",
-                gap:          "var(--space-2)",
-                opacity:      atVeryEnd ? 0.35 : 1,
-              }}
-            >
-              Next
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
             </button>
-          </nav>
-        )}
-      </main>
 
-      {/* ═══════════════════════════════════════════════════
-          FLOATING LAYER — Note drawer + Toolbar
-          Both anchored to bottom, toolbar below drawer
-      ═══════════════════════════════════════════════════ */}
+            {/* Book + chapter label */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {selectedBook && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontFamily: "var(--font-heading)", fontSize: "0.95rem", fontWeight: 300, color: "rgba(255,255,255,0.85)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {selectedBook.name}
+                  </span>
+                  <span style={{ fontFamily: "var(--font-display)", fontSize: "0.5rem", letterSpacing: "0.12em", color: "rgba(255,255,255,0.25)" }}>
+                    CH. {selectedChapter}
+                  </span>
+                </div>
+              )}
+            </div>
 
-      {/* Note drawer — slides up above toolbar when open */}
-      <div style={{
-        position:      "fixed",
-        bottom:        hasSelection && noteDrawerOpen ? "96px" : "-280px",
-        left:          "50%",
-        transform:     "translateX(-50%)",
-        width:  "min(520px, calc(100vw - 2rem))",
-        background:    "#0d1428",
-        border:        "1px solid #2a3a5c",
-        borderRadius:  "var(--radius-lg)",
-        padding:       "var(--space-4)",
-        zIndex:        90,
-        transition:    "bottom 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-        boxShadow:     "0 -8px 32px rgba(0,0,0,0.35)",
-        display:       "flex",
-        flexDirection: "column",
-        gap:           "var(--space-3)",
-      }}>
-        <p style={{
-          margin:        0,
-          fontSize:      "0.75rem",
-          color:         "var(--color-text-muted)",
-          letterSpacing: "0.03em",
-          fontStyle:     "italic",
-        }}>
-          Note for <strong style={{ color: "var(--color-gold-bright)", fontStyle: "normal" }}>{verseRange}</strong>
-        </p>
+            {/* Right controls */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+              {/* Translation selector */}
+              <select value={translation} onChange={e => setTranslation(e.target.value)} style={{
+                height: 32, padding: "0 10px",
+                background: "rgba(255,255,255,0.04)",
+                borderWidth: 1, borderStyle: "solid", borderColor: "rgba(255,255,255,0.08)",
+                borderRadius: 8, color: "rgba(255,255,255,0.45)",
+                fontFamily: "var(--font-body)", fontSize: "0.72rem",
+                cursor: "pointer", outline: "none",
+              }}
+                onFocus={e => e.target.style.borderColor = "rgba(240,192,96,0.4)"}
+                onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.08)"}
+              >
+                {TRANSLATIONS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
 
-        <textarea
-          ref={noteRef}
-          value={noteText}
-          onChange={e => setNoteText(e.target.value)}
-          placeholder="Write your reflection, observation, or prayer…"
-          rows={3}
-          style={{
-            width:        "100%",
-            background:   "var(--color-bg-tertiary)",
-            border:       "1px solid var(--color-border-subtle)",
-            borderRadius: "var(--radius-md)",
-            padding:      "var(--space-3)",
-            color:        "var(--color-text-primary)",
-            fontFamily:   "var(--font-body)",
-            fontSize:     "0.9rem",
-            lineHeight:   1.6,
-            resize:       "none",
-            outline:      "none",
-            boxSizing:    "border-box",
-            transition:   "border-color 0.15s ease",
-          }}
-          onFocus={e => { e.target.style.borderColor = "var(--color-gold-bright)" }}
-          onBlur={e  => { e.target.style.borderColor = "var(--color-border-subtle)" }}
-        />
+              {/* Settings */}
+              <div style={{ position: "relative" }}>
+                <button onClick={() => setSettingsOpen(v => !v)} style={{
+                  width: 32, height: 32, borderRadius: 8,
+                  background: settingsOpen ? "rgba(240,192,96,0.08)" : "rgba(255,255,255,0.04)",
+                  borderWidth: 1, borderStyle: "solid",
+                  borderColor: settingsOpen ? "rgba(240,192,96,0.3)" : "rgba(255,255,255,0.08)",
+                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  color: settingsOpen ? "rgba(240,192,96,0.8)" : "rgba(255,255,255,0.4)",
+                  transition: "all 0.15s ease",
+                }} aria-label="Display settings">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </button>
+                {settingsOpen && (
+                  <SettingsPopover
+                    fontSize={fontSize} setFontSize={setFontSize}
+                    lineSpacing={lineSpacing} setLineSpacing={setLineSpacing}
+                    onClose={() => setSettingsOpen(false)}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
 
-        <div style={{ display: "flex", gap: "var(--space-2)", justifyContent: "flex-end" }}>
-          <button
-            onClick={handleNoteCancel}
-            style={{
-              height:       "44px",
-              padding:      "0 var(--space-4)",
-              borderRadius: "var(--radius-md)",
-              border:       "1px solid var(--color-border-subtle)",
-              background:   "transparent",
-              color:        "var(--color-text-muted)",
-              fontFamily:   "var(--font-body)",
-              fontSize:     "0.8125rem",
-              cursor:       "pointer",
-            }}
-          >
-            Cancel
-          </button>
-
-          <button
-            onClick={handleNoteSaveToJourney}
-            disabled={!noteText.trim() || !isAuthenticated}
-            title={!isAuthenticated ? "Sign in to save notes to your Journey" : ""}
-            style={{
-              height:       "44px",
-              padding:      "0 var(--space-4)",
-              borderRadius: "var(--radius-md)",
-              border:       "none",
-              background:   noteText.trim() && isAuthenticated
-                ? "var(--color-gold-bright)"
-                : "var(--color-bg-tertiary)",
-              color: noteText.trim() && isAuthenticated
-                ? "var(--color-bg-primary)"
-                : "var(--color-text-muted)",
-              fontFamily: "var(--font-body)",
-              fontSize:   "0.8125rem",
-              fontWeight: 600,
-              cursor:     noteText.trim() && isAuthenticated ? "pointer" : "not-allowed",
+          {/* Chapter navigation */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "10px 28px", flexShrink: 0,
+            borderBottom: "1px solid rgba(255,255,255,0.04)",
+          }}>
+            <button onClick={goToPrev} disabled={atVeryStart} style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "6px 12px", borderRadius: 8,
+              background: "transparent", border: "none",
+              color: atVeryStart ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.35)",
+              fontFamily: "var(--font-body)", fontSize: "0.75rem",
+              cursor: atVeryStart ? "not-allowed" : "pointer",
               transition: "all 0.15s ease",
             }}
-          >
-            {!isAuthenticated ? "Sign in to save" : "Save to Journey"}
-          </button>
-        </div>
-      </div>
+              onMouseEnter={e => { if (!atVeryStart) e.currentTarget.style.color = "rgba(255,255,255,0.7)" }}
+              onMouseLeave={e => { e.currentTarget.style.color = atVeryStart ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.35)" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+              Previous
+            </button>
 
-      {/* Floating selection toolbar */}
-      <div style={{
-        position:       "fixed",
-        bottom:         hasSelection ? "var(--space-5)" : "-200px",
-        left:           "50%",
-        transform:      "translateX(-50%)",
-        zIndex:         80,
-        transition:     "bottom 0.25s cubic-bezier(0.4, 0, 0.2, 1)      ",
-        display:        "flex",
-        alignItems:     "center",
-        gap:            "var(--space-2)",
-        background:     "#0d1428",
-        border:         "1px solid #2a3a5c",
-        borderRadius:   "var(--radius-lg)",
-        padding:        "var(--space-2) var(--space-3)",
-        boxShadow:      "0 4px 32px rgba(0,0,0,0.45)",
-        whiteSpace:     "nowrap",
-        width:          "min(520px, calc(100vw - 2rem))",
-        flexWrap:       "wrap",
-        justifyContent: "space-between",
-      }}>
+            <span style={{ fontFamily: "var(--font-display)", fontSize: "0.5rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.2)" }}>
+              {selectedBook?.name} · Chapter {selectedChapter}
+            </span>
 
-        {/* Count + clear */}
-        <div style={{
-          display:      "flex",
-          alignItems:   "center",
-          gap:          "var(--space-2)",
-          paddingRight: "var(--space-3)",
-          borderRight:  "1px solid #2a3a5c",
-          flexShrink:   0,
-        }}>
-          <span style={{
-            fontSize:      "0.75rem",
-            color:         "var(--color-gold-bright)",
-            fontWeight:    700,
-            letterSpacing: "0.02em",
-          }}>
-            {selectionCount} {selectionCount === 1 ? "verse" : "verses"}
-          </span>
-          <button
-            onClick={clearSelection}
-            aria-label="Clear selection"
-            style={{
-              width:          "22px",
-              height:         "22px",
-              borderRadius:   "50%",
-              border:         "none",
-              background:     "var(--color-bg-tertiary)",
-              color:          "var(--color-text-muted)",
-              cursor:         "pointer",
-              display:        "flex",
-              alignItems:     "center",
-              justifyContent: "center",
-              padding:        0,
-              flexShrink:     0,
+            <button onClick={goToNext} disabled={atVeryEnd} style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "6px 12px", borderRadius: 8,
+              background: "transparent", border: "none",
+              color: atVeryEnd ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.35)",
+              fontFamily: "var(--font-body)", fontSize: "0.75rem",
+              cursor: atVeryEnd ? "not-allowed" : "pointer",
+              transition: "all 0.15s ease",
             }}
-          >
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-
-        <div style={{
-            display:        "flex",
-            alignItems:     "center",
-            gap:            "var(--space-2)",
-            flex:           "1",
-        }}>
-            {/* Highlight */}
-            <ToolbarButton
-              onClick={handleHighlight}
-              active={allHighlighted}
-              label={allHighlighted ? "Remove" : "Highlight"}
-              icon={
-                <svg width="14" height="14" viewBox="0 0 24 24"  fill="none" stroke="currentColor"     strokeWidth="2">
-                  <rect x="3" y="5" width="18" height="11" rx="2"
-                    fill={allHighlighted ? "rgba(240,192,96,0.5)" : "none"}/>
-                  <path d="M3 20h18"/>
-               </svg>
-              }
-            />
-
-            {/* Copy */}
-            <ToolbarButton
-              onClick={handleCopyMulti}
-              active={copied}
-              label={copied ? "Copied!" : "Copy"}
-              icon={
-                copied
-                  ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
-                  : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-              }
-            />
-
-            {/* Note */}
-            <ToolbarButton
-              onClick={noteDrawerOpen ? handleNoteCancel :  handleNoteOpen}
-              active={noteDrawerOpen}
-              label="Note"
-              icon={
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                </svg>
-              }
-            />
-        </div>
-
-        {/* Ask Kairos — gold pill, always rightmost */}
-        <button
-          onClick={handleAskKairos}
-          style={{
-            height:        "44px",
-            padding:       "0 var(--space-4)",
-            borderRadius:  "var(--radius-full)",
-            border:        "none",
-            background:    "var(--color-gold-bright)",
-            color:         "var(--color-bg-primary)",
-            fontFamily:    "var(--font-body)",
-            fontSize:      "0.8125rem",
-            fontWeight:    700,
-            cursor:        "pointer",
-            display:       "flex",
-            alignItems:    "center",
-            gap:           "var(--space-2)",
-            letterSpacing: "0.02em",
-            flexShrink: 0,
-            marginLeft: "auto",
-            
-          }}
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-          </svg>
-          Ask Kairos
-        </button>
-      </div>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .bible-sidebar-desktop { display: none !important; }
-          .bible-mobile-btn      { display: flex !important; }
-        }
-        @media (min-width: 769px) {
-          .bible-sidebar-mobile  { display: none !important; }
-          .bible-mobile-btn      { display: none !important; }
-        }
-        @media (max-width: 480px) {
-          .bible-toolbar-actions span { display: none !important; }
-        }
-      `}</style>
-    </div>
-  )
-}
-
-// ═════════════════════════════════════════════════════════════
-// TOOLBAR BUTTON
-// ═════════════════════════════════════════════════════════════
-function ToolbarButton({ onClick, active, label, icon }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        height:       "44px",
-        padding:      "0 var(--space-3)",
-        borderRadius: "var(--radius-md)",
-        border:       `1px solid ${active ? "var(--color-gold-bright)" : "var(--color-border-subtle)"}`,
-        background:   active ? "rgba(240,192,96,0.1)" : "transparent",
-        color:        active ? "var(--color-gold-bright)" : "var(--color-text-secondary)",
-        fontFamily:   "var(--font-body)",
-        fontSize:     "0.8125rem",
-        fontWeight:   500,
-        cursor:       "pointer",
-        display:      "flex",
-        alignItems:   "center",
-        gap:          "var(--space-2)",
-        transition:   "all 0.14s ease",
-        whiteSpace:   "nowrap",
-      }}
-    >
-      {icon}
-      {label}
-    </button>
-  )
-}
-
-// ═════════════════════════════════════════════════════════════
-// SETTINGS PANEL
-// ═════════════════════════════════════════════════════════════
-function SettingsPanel({ translation, fontSize, lineSpacing, onTranslationChange, onFontSizeChange, onLineSpacingChange, onClose }) {
-  return (
-    <>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <h2 style={{
-          fontFamily:    "var(--font-display)",
-          fontSize:      "0.875rem",
-          fontWeight:    600,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color:         "var(--color-text-primary)",
-          margin:        0,
-        }}>
-          Display
-        </h2>
-        <button
-          onClick={onClose}
-          aria-label="Close display settings"
-          style={{
-            width:          "36px",
-            height:         "36px",
-            borderRadius:   "var(--radius-md)",
-            border:         "1px solid var(--color-border-subtle)",
-            background:     "transparent",
-            color:          "var(--color-text-muted)",
-            cursor:         "pointer",
-            display:        "flex",
-            alignItems:     "center",
-            justifyContent: "center",
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M18 6L6 18M6 6l12 12"/>
-          </svg>
-        </button>
-      </div>
-
-      {/* Translation */}
-      <SettingsSection label="Translation">
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-          {[
-            ["WEB", "World English Bible"],
-            ["KJV", "King James Version"],
-            ["ASV", "American Standard"],
-            ["BBE", "Basic English"],
-          ].map(([code, name]) => (
-            <button
-              key={code}
-              onClick={() => onTranslationChange(code)}
-              style={{
-                height:       "44px",
-                padding:      "0 var(--space-4)",
-                borderRadius: "var(--radius-md)",
-                border:       `1px solid ${translation === code ? "var(--color-gold-bright)" : "var(--color-border-subtle)"}`,
-                background:   translation === code ? "rgba(240,192,96,0.08)" : "transparent",
-                color:        translation === code ? "var(--color-gold-bright)" : "var(--color-text-secondary)",
-                fontFamily:   "var(--font-body)",
-                fontSize:     "0.875rem",
-                fontWeight:   translation === code ? 600 : 400,
-                cursor:       "pointer",
-                textAlign:    "left",
-                display:      "flex",
-                alignItems:   "center",
-                justifyContent: "space-between",
-                transition:   "all 0.14s ease",
-              }}
+              onMouseEnter={e => { if (!atVeryEnd) e.currentTarget.style.color = "rgba(255,255,255,0.7)" }}
+              onMouseLeave={e => { e.currentTarget.style.color = atVeryEnd ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.35)" }}
             >
-              <span style={{ fontWeight: 700, letterSpacing: "0.04em" }}>{code}</span>
-              <span style={{ fontSize: "0.8rem", opacity: 0.7 }}>{name}</span>
+              Next
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
             </button>
-          ))}
-        </div>
-      </SettingsSection>
-
-      {/* Text size */}
-      <SettingsSection label="Text Size">
-        <div style={{ display: "flex", gap: "var(--space-2)" }}>
-          {[
-            ["sm", "A", "0.875rem", "Small"],
-            ["md", "A", "1.0625rem", "Default"],
-            ["lg", "A", "1.25rem", "Large"],
-          ].map(([key, label, size, title]) => (
-            <button
-              key={key}
-              onClick={() => onFontSizeChange(key)}
-              title={title}
-              style={{
-                flex:           1,
-                height:         "44px",
-                borderRadius:   "var(--radius-md)",
-                border:         `1px solid ${fontSize === key ? "var(--color-gold-bright)" : "var(--color-border-subtle)"}`,
-                background:     fontSize === key ? "rgba(240,192,96,0.08)" : "transparent",
-                color:          fontSize === key ? "var(--color-gold-bright)" : "var(--color-text-secondary)",
-                fontFamily:     "var(--font-body)",
-                fontSize:       size,
-                fontWeight:     fontSize === key ? 700 : 400,
-                cursor:         "pointer",
-                display:        "flex",
-                alignItems:     "center",
-                justifyContent: "center",
-                transition:     "all 0.14s ease",
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </SettingsSection>
-
-      {/* Line spacing */}
-      <SettingsSection label="Line Spacing">
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-          {[
-            ["tight",  "Tight",    "Compact"],
-            ["normal", "Normal",   "Balanced"],
-            ["loose",  "Spacious", "Airy"],
-          ].map(([key, label, desc]) => (
-            <button
-              key={key}
-              onClick={() => onLineSpacingChange(key)}
-              style={{
-                height:         "44px",
-                padding:        "0 var(--space-4)",
-                borderRadius:   "var(--radius-md)",
-                border:         `1px solid ${lineSpacing === key ? "var(--color-gold-bright)" : "var(--color-border-subtle)"}`,
-                background:     lineSpacing === key ? "rgba(240,192,96,0.08)" : "transparent",
-                color:          lineSpacing === key ? "var(--color-gold-bright)" : "var(--color-text-secondary)",
-                fontFamily:     "var(--font-body)",
-                fontSize:       "0.875rem",
-                fontWeight:     lineSpacing === key ? 600 : 400,
-                cursor:         "pointer",
-                textAlign:      "left",
-                display:        "flex",
-                alignItems:     "center",
-                justifyContent: "space-between",
-                transition:     "all 0.14s ease",
-              }}
-            >
-              <span>{label}</span>
-              <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", fontWeight: 400 }}>{desc}</span>
-            </button>
-          ))}
-        </div>
-      </SettingsSection>
-    </>
-  )
-}
-
-function SettingsSection({ label, children }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-      <p style={{
-        margin:        0,
-        fontSize:      "0.6875rem",
-        fontWeight:    700,
-        letterSpacing: "0.1em",
-        textTransform: "uppercase",
-        color:         "var(--color-text-muted)",
-      }}>
-        {label}
-      </p>
-      {children}
-    </div>
-  )
-}
-
-// ═════════════════════════════════════════════════════════════
-// SIDEBAR CONTENT (unchanged from File 3)
-// ═════════════════════════════════════════════════════════════
-function SidebarContent({ activeTab, onTabChange, books, selectedBook, selectedChapter, showChapters, setShowChapters, onBookSelect, onChapterSelect }) {
-  return (
-    <>
-      <div style={{ display: "flex", borderBottom: "1px solid var(--color-border-subtle)", flexShrink: 0 }}>
-        {[["OT", "Old Testament"], ["NT", "New Testament"]].map(([tab, label]) => (
-          <button
-            key={tab}
-            onClick={() => onTabChange(tab)}
-            style={{
-              flex:          1,
-              height:        "48px",
-              border:        "none",
-              background:    "transparent",
-              color:         activeTab === tab ? "var(--color-gold-bright)" : "var(--color-text-muted)",
-              fontFamily:    "var(--font-body)",
-              fontSize:      "0.6875rem",
-              fontWeight:    700,
-              letterSpacing: "0.08em",
-              cursor:        "pointer",
-              borderBottom:  activeTab === tab ? "2px solid var(--color-gold-bright)" : "2px solid transparent",
-              transition:    "color 0.14s ease, border-color 0.14s ease",
-            }}
-          >
-            {label.toUpperCase()}
-          </button>
-        ))}
-      </div>
-
-      {showChapters && selectedBook && (
-        <button
-          onClick={() => setShowChapters(false)}
-          style={{
-            height:       "44px",
-            padding:      "0 var(--space-4)",
-            border:       "none",
-            borderBottom: "1px solid var(--color-border-subtle)",
-            background:   "rgba(99,102,241,0.05)",
-            color:        "var(--color-gold-bright)",
-            fontFamily:   "var(--font-body)",
-            fontSize:     "0.875rem",
-            fontWeight:   600,
-            cursor:       "pointer",
-            display:      "flex",
-            alignItems:   "center",
-            gap:          "var(--space-2)",
-            flexShrink:   0,
-            width:        "100%",
-            textAlign:    "left",
-          }}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6"/></svg>
-          {selectedBook.name}
-        </button>
-      )}
-
-      <div style={{ flex: 1, overflowY: "auto" }}>
-        {!showChapters && (
-          <ul style={{ listStyle: "none", margin: 0, padding: "var(--space-2) 0" }}>
-            {books.map(book => {
-              const isActive = selectedBook?.id === book.id
-              return (
-                <li key={book.id}>
-                  <button
-                    onClick={() => onBookSelect(book)}
-                    style={{
-                      width:          "100%",
-                      minHeight:      "44px",
-                      padding:        "0 var(--space-4)",
-                      border:         "none",
-                      borderLeft:     isActive ? "2px solid var(--color-gold-bright)" : "2px solid transparent",
-                      background:     isActive ? "rgba(99,102,241,0.08)" : "transparent",
-                      color:          isActive ? "var(--color-gold-bright)" : "var(--color-text-secondary)",
-                      fontFamily:     "var(--font-body)",
-                      fontSize:       "0.9rem",
-                      fontWeight:     isActive ? 600 : 400,
-                      cursor:         "pointer",
-                      display:        "flex",
-                      alignItems:     "center",
-                      justifyContent: "space-between",
-                      textAlign:      "left",
-                      transition:     "background 0.12s ease, color 0.12s ease, border-color 0.12s ease",
-                    }}
-                  >
-                    <span>{book.name}</span>
-                    <span style={{ fontSize: "0.6875rem", color: "var(--color-text-muted)", fontWeight: 400 }}>
-                      {book.chapters}
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        )}
-
-        {showChapters && selectedBook && (
-          <div style={{
-            padding:             "var(--space-4)",
-            display:             "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(44px, 1fr))",
-            gap:                 "var(--space-2)",
-          }}>
-            {Array.from({ length: selectedBook.chapters }, (_, i) => i + 1).map(ch => {
-              const isActive = selectedChapter === ch
-              return (
-                <button
-                  key={ch}
-                  onClick={() => onChapterSelect(ch)}
-                  style={{
-                    height:       "44px",
-                    borderRadius: "var(--radius-md)",
-                    border:       isActive ? "1px solid var(--color-gold-bright)" : "1px solid var(--color-border-subtle)",
-                    background:   isActive ? "var(--color-gold-bright)" : "transparent",
-                    color:        isActive ? "var(--color-bg-primary)" : "var(--color-text-secondary)",
-                    fontFamily:   "var(--font-body)",
-                    fontSize:     "0.875rem",
-                    fontWeight:   isActive ? 700 : 400,
-                    cursor:       "pointer",
-                    transition:   "all 0.12s ease",
-                  }}
-                >
-                  {ch}
-                </button>
-              )
-            })}
           </div>
-        )}
-      </div>
+
+          {/* ── Verses ── */}
+          <div ref={scrollRef} className="br-scroll" style={{ flex: 1, position: "relative" }}>
+            <div style={{ maxWidth: 680, margin: "0 auto", padding: "32px 28px 48px" }}>
+
+              {/* Loading */}
+              {loading && (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingTop: 80, gap: 16 }}>
+                  <div style={{ width: 28, height: 28, border: "1px solid rgba(240,192,96,0.2)", borderTop: "1px solid rgba(240,192,96,0.7)", borderRadius: "50%", animation: "br-spin 0.8s linear infinite" }} />
+                  <p style={{ fontFamily: "var(--font-heading)", fontStyle: "italic", color: "rgba(240,192,96,0.5)", fontSize: "0.88rem" }}>
+                    {selectedBook?.name} {selectedChapter}…
+                  </p>
+                </div>
+              )}
+
+              {/* Error */}
+              {error && !loading && (
+                <div style={{ textAlign: "center", paddingTop: 80 }}>
+                  <p style={{ fontFamily: "var(--font-body)", color: "rgba(240,100,100,0.7)", marginBottom: 16 }}>{error}</p>
+                  <button onClick={() => loadChapter(selectedBook, selectedChapter, translation)} style={{ padding: "8px 20px", borderRadius: 100, background: "transparent", borderWidth: 1, borderStyle: "solid", borderColor: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.5)", fontFamily: "var(--font-body)", fontSize: "0.8rem", cursor: "pointer" }}>
+                    Try again
+                  </button>
+                </div>
+              )}
+
+              {/* Chapter heading */}
+              {chapterData && !loading && (
+                <div style={{ marginBottom: 32 }}>
+                  <p style={{ fontFamily: "var(--font-display)", fontSize: "0.52rem", letterSpacing: "0.28em", textTransform: "uppercase", color: "rgba(255,255,255,0.2)", marginBottom: 8 }}>
+                    {selectedBook?.name}
+                  </p>
+                  <h1 style={{ fontFamily: "var(--font-heading)", fontSize: "clamp(1.6rem, 3vw, 2.2rem)", fontWeight: 300, color: "rgba(255,255,255,0.88)", lineHeight: 1.25, margin: 0 }}>
+                    Chapter {selectedChapter}
+                  </h1>
+                  <div style={{ width: 40, height: 1, background: "var(--gradient-gold)", marginTop: 14, opacity: 0.5 }} />
+                </div>
+              )}
+
+              {/* Verses */}
+              {chapterData && !loading && chapterData.verses?.map((verse, i) => {
+                const num = verse.verse ?? (i + 1)
+                const isSelected    = selectedVerses.has(num)
+                const isHighlighted = highlightedVerses.has(num)
+
+                return (
+                  <div
+                    key={`v-${num}-${selectedChapter}`}
+                    className={`br-verse${isSelected ? " selected" : ""}${isHighlighted && !isSelected ? " highlighted" : ""}`}
+                    onClick={() => toggleVerse(num)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={e => { if (e.key === "Enter" || e.key === " ") toggleVerse(num) }}
+                    aria-pressed={isSelected}
+                  >
+                    {/* Verse number */}
+                    <span className="br-verse-num">{num}</span>
+                    {/* Verse text */}
+                    <p className="br-verse-text" style={{
+                      fontSize: FONT_SIZES[fontSize],
+                      lineHeight: LINE_SPACINGS[lineSpacing],
+                    }}>
+                      {verse.text}
+                    </p>
+                  </div>
+                )
+              })}
+
+              {/* End of chapter hint */}
+              {chapterData && !loading && !atVeryEnd && (
+                <div style={{ textAlign: "center", paddingTop: 40 }}>
+                  <button onClick={goToNext} style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    padding: "9px 20px", borderRadius: 100,
+                    background: "rgba(255,255,255,0.03)",
+                    borderWidth: 1, borderStyle: "solid", borderColor: "rgba(255,255,255,0.07)",
+                    color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-body)",
+                    fontSize: "0.78rem", cursor: "pointer", transition: "all 0.15s ease",
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(240,192,96,0.25)"; e.currentTarget.style.color = "rgba(240,192,96,0.6)" }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; e.currentTarget.style.color = "rgba(255,255,255,0.3)" }}
+                  >
+                    Continue to chapter {selectedChapter + 1}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </button>
+                </div>
+              )}
+
+            </div>
+
+          </div>{/* end br-scroll */}
+
+          {/* ── Action bar — sibling of scroll, stays pinned at bottom of reader column ── */}
+          {selectedVerses.size > 0 && (
+            <div className="br-action-bar">
+              <span style={{ fontFamily: "var(--font-display)", fontSize: "0.5rem", letterSpacing: "0.14em", color: "rgba(240,192,96,0.7)", whiteSpace: "nowrap", marginRight: 4, flexShrink: 0 }}>
+                {verseRef}
+              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
+                <button onClick={copySelectedVerses} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: copied ? "rgba(100,200,100,0.08)" : "rgba(255,255,255,0.05)", borderWidth: 1, borderStyle: "solid", borderColor: copied ? "rgba(100,200,100,0.3)" : "rgba(255,255,255,0.1)", color: copied ? "rgba(100,200,100,0.85)" : "rgba(255,255,255,0.55)", fontFamily: "var(--font-body)", fontSize: "0.75rem", cursor: "pointer", transition: "all 0.15s ease", minHeight: 34, whiteSpace: "nowrap" }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  {copied ? "Copied!" : "Copy"}
+                </button>
+                <button onClick={highlightSelected} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: "rgba(255,255,255,0.04)", borderWidth: 1, borderStyle: "solid", borderColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.55)", fontFamily: "var(--font-body)", fontSize: "0.75rem", cursor: "pointer", transition: "all 0.15s ease", minHeight: 34, whiteSpace: "nowrap" }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(240,192,96,0.3)"}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  Highlight
+                </button>
+                {isAuthenticated && (
+                  <button onClick={openNoteForSelection} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: "rgba(255,255,255,0.04)", borderWidth: 1, borderStyle: "solid", borderColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.55)", fontFamily: "var(--font-body)", fontSize: "0.75rem", cursor: "pointer", transition: "all 0.15s ease", minHeight: 34, whiteSpace: "nowrap" }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(240,192,96,0.3)"}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    Add note
+                  </button>
+                )}
+                <button onClick={sendToCompanion} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 16px", borderRadius: 8, background: "var(--gradient-gold)", border: "none", color: "#060912", fontFamily: "var(--font-display)", fontSize: "0.58rem", letterSpacing: "0.12em", cursor: "pointer", boxShadow: "var(--shadow-gold-sm)", minHeight: 34, whiteSpace: "nowrap" }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  ASK KAIROS
+                </button>
+              </div>
+              <button onClick={clearSelection} aria-label="Clear selection" style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.07)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.4)", flexShrink: 0 }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+          )}
+
+          {/* ── Note drawer ── */}
+          {noteDrawerOpen && (
+            <>
+              <div onClick={() => setNoteDrawerOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200 }} />
+              <div style={{
+                position: "fixed", right: 0, top: 0, bottom: 0, width: "min(400px, 90vw)",
+                background: "#0f1117", border: "left 1px solid rgba(255,255,255,0.08)",
+                borderLeft: "1px solid rgba(255,255,255,0.08)",
+                zIndex: 201, display: "flex", flexDirection: "column",
+                animation: "br-slide 0.25s ease",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                  <p style={{ fontFamily: "var(--font-display)", fontSize: "0.52rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)", margin: 0 }}>Reflection Note</p>
+                  <button onClick={() => setNoteDrawerOpen(false)} style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.07)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.5)" }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+                <textarea value={noteText} onChange={e => setNoteText(e.target.value)}
+                  style={{
+                    flex: 1, background: "transparent", border: "none", outline: "none",
+                    padding: "20px", color: "rgba(255,255,255,0.75)",
+                    fontFamily: "var(--font-heading)", fontSize: "0.9rem",
+                    fontWeight: 300, lineHeight: 1.8, resize: "none",
+                  }}
+                  placeholder="Write your reflection…"
+                />
+                <div style={{ padding: "14px 20px", borderTop: "1px solid rgba(255,255,255,0.07)", display: "flex", gap: 10 }}>
+                  <button onClick={() => setNoteDrawerOpen(false)} style={{ flex: 1, height: 40, borderRadius: 10, background: "transparent", borderWidth: 1, borderStyle: "solid", borderColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)", fontFamily: "var(--font-body)", fontSize: "0.82rem", cursor: "pointer" }}>Cancel</button>
+                  <button onClick={() => { setSaveModalOpen(true) }} style={{ flex: 2, height: 40, borderRadius: 10, background: noteText.trim() ? "var(--gradient-gold)" : "rgba(255,255,255,0.06)", border: "none", color: noteText.trim() ? "#060912" : "rgba(255,255,255,0.2)", fontFamily: "var(--font-display)", fontSize: "0.62rem", letterSpacing: "0.12em", cursor: noteText.trim() ? "pointer" : "not-allowed", boxShadow: noteText.trim() ? "var(--shadow-gold-sm)" : "none" }}>SAVE TO JOURNEY</button>
+                </div>
+              </div>
+            </>
+          )}
+
+        </div>{/* end br-reader */}
+      </div>{/* end br-shell */}
+
+      {/* Mobile bottom nav */}
+      <MobileBottomNav pathname={pathname} />
     </>
   )
 }

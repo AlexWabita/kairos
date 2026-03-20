@@ -1,294 +1,242 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { useSettings }        from "@/context/SettingsContext"
-import { useAuthState }       from "@/hooks/useAuthState"
-import { getTodaysVerse }     from "@/lib/bible/daily-verses"
-import BibleVerse             from "./BibleVerse"
-import SaveMomentModal        from "./SaveMomentModal"
+import { useSettings }    from "@/context/SettingsContext"
+import { useAuthState }   from "@/hooks/useAuthState"
+import { getTodaysVerse } from "@/lib/bible/daily-verses"
+import BibleVerse         from "./BibleVerse"
+import SaveMomentModal    from "./SaveMomentModal"
 
-// ── Detect Bible verse reference in message ───────────────
+/* ─────────────────────────────────────────────────────────────
+   UTILITIES
+───────────────────────────────────────────────────────────── */
 function detectVerseRequest(text) {
-  const versePattern = /\b(genesis|exodus|leviticus|numbers|deuteronomy|joshua|judges|ruth|1\s?samuel|2\s?samuel|1\s?kings|2\s?kings|1\s?chronicles|2\s?chronicles|ezra|nehemiah|esther|job|psalms?|proverbs|ecclesiastes|song\s?of\s?solomon|isaiah|jeremiah|lamentations|ezekiel|daniel|hosea|joel|amos|obadiah|jonah|micah|nahum|habakkuk|zephaniah|haggai|zechariah|malachi|matthew|mark|luke|john|acts|romans|1\s?corinthians|2\s?corinthians|galatians|ephesians|philippians|colossians|1\s?thessalonians|2\s?thessalonians|1\s?timothy|2\s?timothy|titus|philemon|hebrews|james|1\s?peter|2\s?peter|1\s?john|2\s?john|3\s?john|jude|revelation)\s+\d+:\d+(-\d+)?/i
-  const match = text.match(versePattern)
-  return match ? match[0] : null
+  const p = /\b(genesis|exodus|leviticus|numbers|deuteronomy|joshua|judges|ruth|1\s?samuel|2\s?samuel|1\s?kings|2\s?kings|1\s?chronicles|2\s?chronicles|ezra|nehemiah|esther|job|psalms?|proverbs|ecclesiastes|song\s?of\s?solomon|isaiah|jeremiah|lamentations|ezekiel|daniel|hosea|joel|amos|obadiah|jonah|micah|nahum|habakkuk|zephaniah|haggai|zechariah|malachi|matthew|mark|luke|john|acts|romans|1\s?corinthians|2\s?corinthians|galatians|ephesians|philippians|colossians|1\s?thessalonians|2\s?thessalonians|1\s?timothy|2\s?timothy|titus|philemon|hebrews|james|1\s?peter|2\s?peter|1\s?john|2\s?john|3\s?john|jude|revelation)\s+\d+:\d+(-\d+)?/i
+  const m = text.match(p); return m ? m[0] : null
 }
-
 function detectBibleSearch(text) {
-  const lower    = text.toLowerCase()
-  const triggers = [
-    "where does the bible say", "find verses about",
-    "search the bible for", "what does the bible say about",
-    "verses about", "bible verses on",
-  ]
-  return triggers.some((t) => lower.includes(t))
+  const t = text.toLowerCase()
+  return ["where does the bible say","find verses about","search the bible for","what does the bible say about","verses about","bible verses on"].some(k => t.includes(k))
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ─────────────────────────────────────────────────────────────
+   CSS
+───────────────────────────────────────────────────────────── */
+const css = `
+  @keyframes cc-fade  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes cc-pulse { 0%,100%{opacity:.4;transform:scale(.85)} 50%{opacity:1;transform:scale(1.15)} }
+  @keyframes cc-spin  { to{transform:rotate(360deg)} }
+  @keyframes cc-blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  .cc-layout {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  .cc-sidebar {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: rgba(8,10,18,0.95);
+    border-right: 1px solid rgba(255,255,255,0.06);
+    padding: 0;
+    overflow: hidden;
+  }
+
+  /* ── Main chat column ── */
+  .cc-main {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  /* ── Nav link ── */
+  .cc-nav-link {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 16px; border-radius: 8px;
+    text-decoration: none; cursor: pointer;
+    border: none; background: transparent; width: 100%;
+    transition: background 0.15s ease, color 0.15s ease;
+    min-height: 40px;
+  }
+  .cc-nav-link:hover { background: rgba(255,255,255,0.05); }
+  .cc-nav-link.active { background: rgba(255,255,255,0.08); }
+
+  /* ── Message ── */
+  .cc-msg-kairos { animation: cc-fade 0.4s ease forwards; }
+
+  /* ── Textarea auto-resize ── */
+  .cc-input { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
+  .cc-input::-webkit-scrollbar { width: 4px; }
+  .cc-input::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+  /* ── Mobile: collapse sidebar into bottom bar ── */
+  .cc-mobile-nav { display: none; }
+
+  @media (max-width: 768px) {
+    .cc-layout { grid-template-columns: 1fr; }
+    .cc-sidebar { display: none; }
+    .cc-mobile-nav { display: flex; }
+  }
+
+  /* ── Very small screens ── */
+  @media (max-width: 420px) {
+    .cc-msg-content { font-size: 0.88rem !important; }
+  }
+`
+
+/* ─────────────────────────────────────────────────────────────
+   NAV ITEMS
+───────────────────────────────────────────────────────────── */
+const NAV = [
+  { label: "Companion", href: "/journey",       icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
+  { label: "Saved",     href: "/journey/saved", icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> },
+  { label: "Bible",     href: "/bible",         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> },
+  { label: "Plans",     href: "/plans",         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
+  { label: "Account",   href: "/account",       icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+  { label: "Settings",  href: "/settings",      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> },
+]
+
+const PROMPTS = [
+  "I have questions about faith I'm afraid to ask",
+  "I've been hurt by the church",
+  "I don't know if God is real",
+  "I'm going through something really hard",
+  "I just feel lost",
+  "Help me understand a Bible passage",
+]
+
+/* ─────────────────────────────────────────────────────────────
    INLINE SIGN-IN MODAL
-   Sits over the chat — signs in without navigating away.
-   After success, the parent proceeds with the pending save.
-══════════════════════════════════════════════════════════ */
+───────────────────────────────────────────────────────────── */
 function InlineSignInModal({ onSuccess, onCancel }) {
-  const [email,    setEmail]    = useState("")
-  const [password, setPassword] = useState("")
-  const [loading,  setLoading]  = useState(false)
-  const [error,    setError]    = useState(null)
+  const [email,   setEmail]   = useState("")
+  const [password,setPassword]= useState("")
+  const [loading, setLoading] = useState(false)
+  const [error,   setError]   = useState(null)
 
   const handleSignIn = async () => {
     if (!email || !password) return
-    setLoading(true)
-    setError(null)
-
+    setLoading(true); setError(null)
     try {
-      // Dynamically import to avoid circular deps
       const { signIn } = await import("@/lib/supabase/auth")
       const { error }  = await signIn({ email, password })
-
-      if (error) {
-        setError(error.message)
-        setLoading(false)
-        return
-      }
-
-      // Give onAuthStateChange a tick to fire
-      await new Promise((r) => setTimeout(r, 300))
+      if (error) { setError(error.message); setLoading(false); return }
+      await new Promise(r => setTimeout(r, 300))
       onSuccess()
-    } catch (err) {
-      setError("Something went wrong. Please try again.")
-      setLoading(false)
-    }
-  }
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") handleSignIn()
-    if (e.key === "Escape") onCancel()
+    } catch { setError("Something went wrong. Please try again."); setLoading(false) }
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Sign in to save"
-      style={{
-        position:       "fixed",
-        inset:          0,
-        background:     "rgba(6,9,18,0.88)",
-        backdropFilter: "blur(8px)",
-        zIndex:         300,
-        display:        "flex",
-        alignItems:     "center",
-        justifyContent: "center",
-        padding:        "var(--space-5)",
-      }}
-    >
+    <div role="dialog" aria-modal="true" style={{
+      position: "fixed", inset: 0, zIndex: 500,
+      background: "rgba(4,6,14,0.9)", backdropFilter: "blur(12px)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 20,
+    }}>
       <div style={{
-        background:   "linear-gradient(135deg, rgba(20,29,53,0.98) 0%, rgba(13,20,40,0.98) 100%)",
-        border:       "1px solid rgba(240,192,96,0.25)",
-        borderRadius: "var(--radius-xl)",
-        padding:      "var(--space-8) var(--space-6)",
-        maxWidth:     "400px",
-        width:        "100%",
-        boxShadow:    "var(--shadow-deep)",
-        animation:    "fadeUp 0.2s var(--ease-divine) forwards",
+        background: "#0f1117", border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 16, padding: "32px 28px",
+        maxWidth: "380px", width: "100%",
+        boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+        animation: "cc-fade 0.2s ease forwards",
       }}>
-        {/* Header */}
-        <p style={{
-          fontFamily:    "var(--font-display)",
-          fontSize:      "0.6rem",
-          letterSpacing: "0.25em",
-          textTransform: "uppercase",
-          color:         "var(--color-gold-warm)",
-          marginBottom:  "var(--space-3)",
-          marginTop:     0,
-        }}>
-          Save to journey
-        </p>
-        <h2 style={{
-          fontFamily:   "var(--font-heading)",
-          fontSize:     "1.3rem",
-          fontWeight:   300,
-          color:        "var(--color-divine)",
-          lineHeight:   1.4,
-          marginBottom: "var(--space-2)",
-          marginTop:    0,
-        }}>
-          Sign in to save this moment
-        </h2>
-        <p style={{
-          fontFamily:   "var(--font-body)",
-          fontSize:     "0.8rem",
-          color:        "var(--color-muted)",
-          lineHeight:   1.6,
-          marginBottom: "var(--space-6)",
-        }}>
-          Your conversation will stay exactly as it is.
-        </p>
+        <p style={{ fontFamily: "var(--font-display)", fontSize: "0.52rem", letterSpacing: "0.25em", textTransform: "uppercase", color: "rgba(240,192,96,0.7)", marginBottom: 10 }}>Save to Journey</p>
+        <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "1.2rem", fontWeight: 300, color: "rgba(255,255,255,0.88)", marginBottom: 6 }}>Sign in to save this moment</h2>
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "rgba(255,255,255,0.3)", lineHeight: 1.6, marginBottom: 24 }}>Your conversation will stay exactly as it is.</p>
 
-        {/* Error */}
-        {error && (
-          <div style={{
-            background:   "rgba(220,60,60,0.1)",
-            border:       "1px solid rgba(220,60,60,0.3)",
-            borderRadius: "var(--radius-md)",
-            padding:      "var(--space-3) var(--space-4)",
-            marginBottom: "var(--space-4)",
-          }}>
-            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "#f08080", margin: 0 }}>
-              {error}
-            </p>
+        {error && <div style={{ background: "rgba(240,60,60,0.1)", border: "1px solid rgba(240,60,60,0.25)", borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>
+          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "#f08080", margin: 0 }}>{error}</p>
+        </div>}
+
+        {["email","password"].map((field) => (
+          <div key={field} style={{ marginBottom: 14 }}>
+            <label style={{ display: "block", fontFamily: "var(--font-body)", fontSize: "0.68rem", letterSpacing: "0.06em", color: "rgba(255,255,255,0.3)", marginBottom: 6 }}>{field.toUpperCase()}</label>
+            <input
+              autoFocus={field === "email"}
+              type={field}
+              value={field === "email" ? email : password}
+              onChange={e => field === "email" ? setEmail(e.target.value) : setPassword(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") handleSignIn(); if (e.key === "Escape") onCancel() }}
+              placeholder={field === "email" ? "your@email.com" : "••••••••"}
+              autoComplete={field === "email" ? "email" : "current-password"}
+              style={{
+                width: "100%", boxSizing: "border-box",
+                background: "rgba(255,255,255,0.04)",
+                borderWidth: 1, borderStyle: "solid", borderColor: "rgba(255,255,255,0.09)",
+                borderRadius: 10, padding: "10px 14px",
+                color: "rgba(255,255,255,0.85)",
+                fontFamily: "var(--font-body)", fontSize: "0.9rem",
+                outline: "none",
+              }}
+              onFocus={e => { e.target.style.borderColor = "rgba(240,192,96,0.5)" }}
+              onBlur={e  => { e.target.style.borderColor = "rgba(255,255,255,0.09)" }}
+            />
           </div>
-        )}
+        ))}
 
-        {/* Email */}
-        <div style={{ marginBottom: "var(--space-4)" }}>
-          <label style={{ fontFamily: "var(--font-body)", fontSize: "0.68rem", letterSpacing: "0.08em", color: "var(--color-muted)", display: "block", marginBottom: "var(--space-2)" }}>
-            EMAIL
-          </label>
-          <input
-            autoFocus
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="your@email.com"
-            autoComplete="email"
+        <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+          <button onClick={onCancel} style={{ flex: 1, padding: "11px 0", background: "transparent", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-body)", fontSize: "0.85rem", cursor: "pointer" }}>Cancel</button>
+          <button onClick={handleSignIn} disabled={!email || !password || loading}
             style={{
-              width:        "100%",
-              background:   "rgba(6,9,18,0.6)",
-              border:       "1px solid var(--color-border)",
-              borderRadius: "var(--radius-lg)",
-              padding:      "var(--space-3) var(--space-4)",
-              color:        "var(--color-divine)",
-              fontFamily:   "var(--font-body)",
-              fontSize:     "0.9rem",
-              outline:      "none",
-              boxSizing:    "border-box",
-              transition:   "border-color 0.2s ease",
-            }}
-            onFocus={e => e.target.style.borderColor = "var(--color-gold-warm)"}
-            onBlur={e  => e.target.style.borderColor = "var(--color-border)"}
-          />
-        </div>
-
-        {/* Password */}
-        <div style={{ marginBottom: "var(--space-6)" }}>
-          <label style={{ fontFamily: "var(--font-body)", fontSize: "0.68rem", letterSpacing: "0.08em", color: "var(--color-muted)", display: "block", marginBottom: "var(--space-2)" }}>
-            PASSWORD
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="••••••••"
-            autoComplete="current-password"
-            style={{
-              width:        "100%",
-              background:   "rgba(6,9,18,0.6)",
-              border:       "1px solid var(--color-border)",
-              borderRadius: "var(--radius-lg)",
-              padding:      "var(--space-3) var(--space-4)",
-              color:        "var(--color-divine)",
-              fontFamily:   "var(--font-body)",
-              fontSize:     "0.9rem",
-              outline:      "none",
-              boxSizing:    "border-box",
-              transition:   "border-color 0.2s ease",
-            }}
-            onFocus={e => e.target.style.borderColor = "var(--color-gold-warm)"}
-            onBlur={e  => e.target.style.borderColor = "var(--color-border)"}
-          />
-        </div>
-
-        {/* Buttons */}
-        <div style={{ display: "flex", gap: "var(--space-3)" }}>
-          <button
-            onClick={onCancel}
-            disabled={loading}
-            style={{
-              flex: 1, padding: "var(--space-3)",
-              background: "none", border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-lg)", color: "var(--color-muted)",
-              fontFamily: "var(--font-body)", fontSize: "0.85rem",
-              cursor: loading ? "not-allowed" : "pointer", minHeight: "48px",
-              opacity: loading ? 0.5 : 1,
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSignIn}
-            disabled={!email || !password || loading}
-            style={{
-              flex: 2, padding: "var(--space-3)",
-              background:    email && password && !loading ? "var(--gradient-gold)" : "var(--color-surface)",
-              border:        "none",
-              borderRadius:  "var(--radius-lg)",
-              color:         email && password && !loading ? "#060912" : "var(--color-muted)",
-              fontFamily:    "var(--font-display)",
-              fontSize:      "0.7rem",
-              letterSpacing: "0.15em",
-              cursor:        email && password && !loading ? "pointer" : "not-allowed",
-              minHeight:     "48px",
-              boxShadow:     email && password && !loading ? "var(--shadow-gold-sm)" : "none",
-            }}
-          >
+              flex: 2, padding: "11px 0",
+              background: email && password && !loading ? "var(--gradient-gold)" : "rgba(255,255,255,0.06)",
+              border: "none", borderRadius: 10,
+              color: email && password && !loading ? "#060912" : "rgba(255,255,255,0.25)",
+              fontFamily: "var(--font-display)", fontSize: "0.65rem",
+              letterSpacing: "0.14em", cursor: email && password && !loading ? "pointer" : "not-allowed",
+              boxShadow: email && password && !loading ? "var(--shadow-gold-sm)" : "none",
+            }}>
             {loading ? "Signing in…" : "SIGN IN & SAVE"}
           </button>
         </div>
-
-        {/* Register link */}
-        <p style={{ textAlign: "center", fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-faint)", marginTop: "var(--space-4)" }}>
+        <p style={{ textAlign: "center", fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "rgba(255,255,255,0.2)", marginTop: 16 }}>
           No account?{" "}
-          <a href="/register" style={{ color: "var(--color-gold-warm)", textDecoration: "none" }}>
-            Create one →
-          </a>
+          <a href="/register" style={{ color: "rgba(240,192,96,0.7)", textDecoration: "none" }}>Create one →</a>
         </p>
       </div>
     </div>
   )
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ─────────────────────────────────────────────────────────────
    CONSENT MODAL
-══════════════════════════════════════════════════════════ */
+───────────────────────────────────────────────────────────── */
 function ConsentModal({ onAccept }) {
   return (
     <div style={{
-      position: "fixed", inset: 0,
-      background: "rgba(6,9,18,0.92)", backdropFilter: "blur(8px)",
-      zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center",
-      padding: "var(--space-5)",
+      position: "fixed", inset: 0, zIndex: 400,
+      background: "rgba(4,6,14,0.95)", backdropFilter: "blur(16px)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
     }}>
       <div style={{
-        background: "linear-gradient(135deg, rgba(20,29,53,0.98) 0%, rgba(13,20,40,0.98) 100%)",
-        border: "1px solid rgba(240,192,96,0.3)", borderRadius: "var(--radius-xl)",
-        padding: "var(--space-8)", maxWidth: "420px", width: "100%", textAlign: "center",
+        background: "#0f1117", border: "1px solid rgba(240,192,96,0.2)",
+        borderRadius: 18, padding: "36px 32px",
+        maxWidth: "400px", width: "100%", textAlign: "center",
+        boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
       }}>
-        <p style={{ fontFamily: "var(--font-display)", fontSize: "0.65rem", letterSpacing: "0.25em", textTransform: "uppercase", color: "var(--color-gold-warm)", marginBottom: "var(--space-5)" }}>
-          Before we begin
+        <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(240,192,96,0.1)", border: "1px solid rgba(240,192,96,0.25)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "rgba(240,192,96,0.8)" }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <p style={{ fontFamily: "var(--font-display)", fontSize: "0.52rem", letterSpacing: "0.25em", textTransform: "uppercase", color: "rgba(240,192,96,0.7)", marginBottom: 14 }}>Before we begin</p>
+        <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "1.25rem", fontWeight: 300, color: "rgba(255,255,255,0.88)", lineHeight: 1.4, marginBottom: 12 }}>A safe space for honest conversations</h2>
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "rgba(255,255,255,0.38)", lineHeight: 1.75, marginBottom: 28 }}>
+          Kairos stores your conversations to provide continuity. What you share is treated with care and is never sold or used for advertising. By continuing you agree to our{" "}
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "rgba(240,192,96,0.7)", textDecoration: "none" }}>Privacy Policy</a>.
         </p>
-        <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "1.3rem", fontWeight: 300, color: "var(--color-divine)", lineHeight: 1.4, marginBottom: "var(--space-4)" }}>
-          A safe space for honest conversations
-        </h2>
-        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-soft)", lineHeight: "var(--leading-relaxed)", marginBottom: "var(--space-3)" }}>
-          Kairos stores your conversations to provide continuity across sessions.
-          What you share here is treated with care and is never sold or used for advertising.
-        </p>
-        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "var(--color-muted)", lineHeight: "var(--leading-relaxed)", marginBottom: "var(--space-7)" }}>
-          By continuing you agree to our{" "}
-          <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-gold-warm)", textDecoration: "none" }}>Privacy Policy</a>.
-        </p>
-        <button
-          onClick={onAccept}
-          style={{
-            background: "var(--gradient-gold)", border: "none",
-            borderRadius: "var(--radius-full)", padding: "var(--space-3) var(--space-8)",
-            color: "#060912", fontFamily: "var(--font-display)", fontSize: "0.7rem",
-            letterSpacing: "0.15em", cursor: "pointer", boxShadow: "var(--shadow-gold-sm)", width: "100%",
-          }}
-        >
+        <button onClick={onAccept} style={{
+          width: "100%", padding: "13px 0",
+          background: "var(--gradient-gold)", border: "none",
+          borderRadius: 12, color: "#060912",
+          fontFamily: "var(--font-display)", fontSize: "0.65rem",
+          letterSpacing: "0.15em", cursor: "pointer",
+          boxShadow: "var(--shadow-gold-sm)",
+        }}>
           I UNDERSTAND — BEGIN
         </button>
       </div>
@@ -296,55 +244,20 @@ function ConsentModal({ onAccept }) {
   )
 }
 
-/* ══════════════════════════════════════════════════════════
-   GLOW ORB
-══════════════════════════════════════════════════════════ */
-function GlowOrb({ size, left, top, color, delay = "0s" }) {
-  return (
-    <div style={{
-      position: "absolute", left, top,
-      transform: "translate(-50%, -50%)",
-      width: size, height: size,
-      background: `radial-gradient(circle, ${color} 0%, transparent 70%)`,
-      borderRadius: "50%", pointerEvents: "none",
-      animation: `breathe 4s ease-in-out ${delay} infinite`,
-    }} />
-  )
-}
-
-/* ══════════════════════════════════════════════════════════
-   TYPING INDICATOR
-══════════════════════════════════════════════════════════ */
-function TypingIndicator() {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "var(--space-4) 0" }}>
-      <span style={{ fontFamily: "var(--font-heading)", fontStyle: "italic", fontSize: "0.85rem", color: "var(--color-gold-warm)", marginRight: "4px" }}>
-        Kairos is listening
-      </span>
-      {[0, 1, 2].map((i) => (
-        <div key={i} style={{
-          width: "5px", height: "5px", borderRadius: "50%",
-          background: "var(--color-gold-warm)",
-          animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
-          opacity: 0.6,
-        }} />
-      ))}
-      <style>{`@keyframes pulse { 0%,100%{opacity:.3;transform:scale(.8)} 50%{opacity:1;transform:scale(1.2)} }`}</style>
-    </div>
-  )
-}
-
-/* ══════════════════════════════════════════════════════════
-   SCRIPTURE BLOCK
-══════════════════════════════════════════════════════════ */
+/* ─────────────────────────────────────────────────────────────
+   SCRIPTURE BLOCK (inside message)
+───────────────────────────────────────────────────────────── */
 function ScriptureBlock({ text, reference }) {
   return (
-    <div style={{ borderLeft: "2px solid var(--color-gold-warm)", paddingLeft: "var(--space-4)", margin: "var(--space-4) 0" }}>
-      <p style={{ fontFamily: "var(--font-heading)", fontStyle: "italic", fontSize: "1rem", color: "var(--color-gold-warm)", lineHeight: "var(--leading-relaxed)", margin: 0 }}>
+    <div style={{
+      borderLeft: "2px solid rgba(240,192,96,0.4)",
+      paddingLeft: 14, margin: "10px 0",
+    }}>
+      <p style={{ fontFamily: "var(--font-heading)", fontStyle: "italic", fontSize: "0.92rem", color: "rgba(240,192,96,0.9)", lineHeight: 1.7, margin: 0 }}>
         &ldquo;{text}&rdquo;
       </p>
       {reference && (
-        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", letterSpacing: "0.1em", color: "var(--color-muted)", marginTop: "var(--space-2)", textTransform: "uppercase" }}>
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.68rem", letterSpacing: "0.08em", color: "rgba(255,255,255,0.3)", marginTop: 6, textTransform: "uppercase" }}>
           — {reference}
         </p>
       )}
@@ -352,159 +265,40 @@ function ScriptureBlock({ text, reference }) {
   )
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ─────────────────────────────────────────────────────────────
    SAVE BUTTON
-   - Saved: shows confirmation
-   - Not auth: shows "Sign in to save" that opens InlineSignInModal
-   - Auth: shows "Save this moment" button
-══════════════════════════════════════════════════════════ */
+───────────────────────────────────────────────────────────── */
 function SaveButton({ saved, isAuthenticated, onSave, onSignInToSave }) {
-  const borderTop = { marginTop: "var(--space-4)", paddingTop: "var(--space-3)", borderTop: "1px solid rgba(240,192,96,0.1)" }
-
-  if (saved) {
-    return (
-      <div style={{ ...borderTop, display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--color-gold-warm)" stroke="none">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-        </svg>
-        <span style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-gold-warm)", letterSpacing: "0.05em" }}>
-          Saved to your journey
-        </span>
-      </div>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div style={borderTop}>
-        <button
-          onClick={onSignInToSave}
-          style={{
-            background: "none", border: "none", padding: 0, cursor: "pointer",
-            display: "flex", alignItems: "center", gap: "var(--space-2)",
-            color: "var(--color-muted)", fontFamily: "var(--font-body)",
-            fontSize: "0.72rem", letterSpacing: "0.05em",
-            transition: "color 0.2s ease", minHeight: "32px",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-gold-warm)")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-muted)")}
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-          </svg>
-          Sign in to save this moment
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div style={borderTop}>
-      <button
-        onClick={onSave}
-        style={{
-          background: "none", border: "none", padding: 0, cursor: "pointer",
-          display: "flex", alignItems: "center", gap: "var(--space-2)",
-          color: "var(--color-muted)", fontFamily: "var(--font-body)",
-          fontSize: "0.72rem", letterSpacing: "0.05em",
-          transition: "color 0.2s ease", minHeight: "32px",
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-gold-warm)")}
-        onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-muted)")}
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-        </svg>
-        Save this moment
-      </button>
+  if (saved) return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="rgba(240,192,96,0.8)" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      <span style={{ fontFamily: "var(--font-body)", fontSize: "0.68rem", color: "rgba(240,192,96,0.7)", letterSpacing: "0.03em" }}>Saved to journey</span>
     </div>
+  )
+
+  const handler = isAuthenticated ? onSave : onSignInToSave
+  return (
+    <button onClick={handler} style={{
+      display: "flex", alignItems: "center", gap: 6,
+      marginTop: 12, paddingTop: 10,
+      borderTop: "1px solid rgba(255,255,255,0.05)",
+      background: "none", border: "none", padding: "10px 0 0",
+      cursor: "pointer", color: "rgba(255,255,255,0.2)",
+      fontFamily: "var(--font-body)", fontSize: "0.7rem",
+      letterSpacing: "0.03em", transition: "color 0.15s ease",
+    }}
+      onMouseEnter={e => e.currentTarget.style.color = "rgba(240,192,96,0.8)"}
+      onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.2)"}
+    >
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      {isAuthenticated ? "Save this moment" : "Sign in to save"}
+    </button>
   )
 }
 
-/* ══════════════════════════════════════════════════════════
-   VERSE OF THE DAY CARD
-══════════════════════════════════════════════════════════ */
-function DailyVerseCard({ verse, onReflect }) {
-  if (!verse) return null
-  const bibleHref     = `/bible?ref=${encodeURIComponent(verse.ref)}`
-  const reflectPrompt = `I'd like to reflect on today's verse — ${verse.ref}${verse.text ? `: "${verse.text}"` : ""}. What does this mean for my life today?`
-
-  return (
-    <div style={{
-      background: "linear-gradient(135deg, rgba(20,29,53,0.9) 0%, rgba(13,20,40,0.9) 100%)",
-      border: "1px solid rgba(240,192,96,0.25)", borderLeft: "2px solid var(--color-gold-warm)",
-      borderRadius: "var(--radius-xl)", padding: "var(--space-5) var(--space-6)",
-      marginBottom: "var(--space-4)", animation: "fadeUp 0.6s var(--ease-divine) forwards",
-    }}>
-      <p style={{ fontFamily: "var(--font-display)", fontSize: "0.55rem", letterSpacing: "0.25em", textTransform: "uppercase", color: "var(--color-gold-warm)", marginBottom: "var(--space-4)", opacity: 0.8 }}>
-        Verse of the Day
-      </p>
-      {verse.text ? (
-        <p style={{ fontFamily: "var(--font-heading)", fontSize: "clamp(1rem, 2.5vw, 1.15rem)", fontWeight: 300, fontStyle: "italic", color: "var(--color-divine)", lineHeight: "var(--leading-relaxed)", marginBottom: "var(--space-2)" }}>
-          &ldquo;{verse.text}&rdquo;
-        </p>
-      ) : (
-        <p style={{ fontFamily: "var(--font-heading)", fontSize: "0.9rem", fontStyle: "italic", color: "var(--color-muted)", marginBottom: "var(--space-2)" }}>Loading verse…</p>
-      )}
-      <p style={{ fontFamily: "var(--font-body)", fontSize: "0.7rem", letterSpacing: "0.1em", color: "var(--color-gold-warm)", marginBottom: "var(--space-3)", opacity: 0.85 }}>— {verse.ref}</p>
-      <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-soft)", lineHeight: "var(--leading-relaxed)", marginBottom: "var(--space-5)", opacity: 0.85 }}>
-        {verse.thought}
-      </p>
-      <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
-        <button onClick={() => onReflect(reflectPrompt)} style={{ background: "var(--gradient-gold)", border: "none", borderRadius: "var(--radius-full)", padding: "0.5rem 1.25rem", color: "#060912", fontFamily: "var(--font-display)", fontSize: "0.62rem", letterSpacing: "0.12em", cursor: "pointer", boxShadow: "var(--shadow-gold-sm)", minHeight: "44px" }}>
-          REFLECT WITH KAIROS
-        </button>
-        <a href={bibleHref} style={{ background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-full)", padding: "0.5rem 1.25rem", color: "var(--color-muted)", fontFamily: "var(--font-display)", fontSize: "0.62rem", letterSpacing: "0.12em", textDecoration: "none", display: "inline-flex", alignItems: "center", minHeight: "44px", transition: "all 0.2s ease" }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--color-gold-warm)"; e.currentTarget.style.color = "var(--color-gold-warm)" }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; e.currentTarget.style.color = "var(--color-muted)" }}>
-          OPEN IN BIBLE
-        </a>
-      </div>
-    </div>
-  )
-}
-
-/* ══════════════════════════════════════════════════════════
-   ACTIVE PLAN CARD
-══════════════════════════════════════════════════════════ */
-function ActivePlanCard({ plan }) {
-  if (!plan?.enrollment) return null
-  const { current_day } = plan.enrollment
-  const totalDays = plan.total_days || plan.day_count || 1
-  const progress  = Math.min(((current_day - 1) / totalDays) * 100, 100)
-  const href      = `/plans/${plan.id}/day/${current_day}`
-  if (plan.enrollment.status === "completed") return null
-
-  return (
-    <div style={{
-      background: "linear-gradient(135deg, rgba(20,29,53,0.7) 0%, rgba(13,20,40,0.7) 100%)",
-      border: "1px solid var(--color-border)", borderRadius: "var(--radius-xl)",
-      padding: "var(--space-4) var(--space-6)", marginBottom: "var(--space-4)",
-      animation: "fadeUp 0.7s var(--ease-divine) forwards",
-      display: "flex", alignItems: "center", gap: "var(--space-4)",
-    }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontFamily: "var(--font-display)", fontSize: "0.55rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-muted)", marginBottom: "var(--space-1)" }}>Today's Plan</p>
-        <p style={{ fontFamily: "var(--font-heading)", fontSize: "0.9rem", fontWeight: 300, color: "var(--color-divine)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: "var(--space-2)" }}>{plan.name}</p>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-          <div style={{ flex: 1, height: "3px", background: "rgba(255,255,255,0.06)", borderRadius: "var(--radius-full)", overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${progress}%`, background: "var(--gradient-gold)", borderRadius: "var(--radius-full)", transition: "width 0.6s ease" }} />
-          </div>
-          <span style={{ fontFamily: "var(--font-body)", fontSize: "0.65rem", color: "var(--color-muted)", whiteSpace: "nowrap", flexShrink: 0 }}>Day {current_day} of {totalDays}</span>
-        </div>
-      </div>
-      <a href={href} style={{ background: "transparent", border: "1px solid rgba(240,192,96,0.3)", borderRadius: "var(--radius-full)", padding: "0.5rem 1rem", color: "var(--color-gold-warm)", fontFamily: "var(--font-display)", fontSize: "0.6rem", letterSpacing: "0.12em", textDecoration: "none", display: "inline-flex", alignItems: "center", minHeight: "44px", whiteSpace: "nowrap", flexShrink: 0, transition: "all 0.2s ease" }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(240,192,96,0.1)"; e.currentTarget.style.borderColor = "var(--color-gold-warm)" }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "rgba(240,192,96,0.3)" }}>
-        CONTINUE
-      </a>
-    </div>
-  )
-}
-
-/* ══════════════════════════════════════════════════════════
+/* ─────────────────────────────────────────────────────────────
    MESSAGE BUBBLE
-══════════════════════════════════════════════════════════ */
+───────────────────────────────────────────────────────────── */
 function Message({ role, content, isNew, verseData, onSave, onSignInToSave, saved, isAuthenticated, wasTruncated }) {
   const isKairos = role === "assistant"
 
@@ -512,17 +306,17 @@ function Message({ role, content, isNew, verseData, onSave, onSignInToSave, save
     const parts = text.split(/\[scripture\](.*?)\[\/scripture\]/gs)
     return parts.map((part, i) => {
       if (i % 2 === 1) {
-        const [scriptureText, ref] = part.split("|")
-        return <ScriptureBlock key={i} text={scriptureText} reference={ref} />
+        const [t, ref] = part.split("|")
+        return <ScriptureBlock key={i} text={t} reference={ref} />
       }
       return part ? (
-        <p key={i} style={{
+        <p key={i} className="cc-msg-content" style={{
           fontFamily: isKairos ? "var(--font-heading)" : "var(--font-body)",
-          fontSize:   isKairos ? "var(--text-body-lg)" : "var(--text-body-md)",
+          fontSize: isKairos ? "0.95rem" : "0.9rem",
           fontWeight: isKairos ? 300 : 400,
-          lineHeight: "var(--leading-relaxed)",
-          color:      "var(--color-divine)",
-          margin:     "0 0 var(--space-3) 0",
+          lineHeight: isKairos ? 1.8 : 1.7,
+          color: isKairos ? "rgba(255,255,255,0.82)" : "rgba(255,255,255,0.75)",
+          margin: "0 0 6px",
           whiteSpace: "pre-wrap",
         }}>{part}</p>
       ) : null
@@ -531,39 +325,60 @@ function Message({ role, content, isNew, verseData, onSave, onSignInToSave, save
 
   return (
     <div style={{
-      display: "flex", flexDirection: "column",
-      alignItems: isKairos ? "flex-start" : "flex-end",
-      marginBottom: "var(--space-6)",
-      animation: isNew ? "fadeUp 0.5s var(--ease-divine) forwards" : "none",
+      display: "flex",
+      flexDirection: isKairos ? "row" : "row-reverse",
+      alignItems: "flex-start",
+      gap: 12,
+      marginBottom: 20,
+      animation: isNew ? "cc-fade 0.4s ease" : "none",
     }}>
-      {isKairos && (
-        <p style={{ fontFamily: "var(--font-display)", fontSize: "0.65rem", letterSpacing: "0.25em", textTransform: "uppercase", color: "var(--color-gold-warm)", marginBottom: "var(--space-2)" }}>
-          Kairos
-        </p>
-      )}
+      {/* Avatar */}
       <div style={{
-        maxWidth:     "88%",
-        background:   isKairos ? "linear-gradient(135deg, rgba(20,29,53,0.8) 0%, rgba(13,20,40,0.8) 100%)" : "rgba(42,58,92,0.5)",
-        border:       `1px solid ${isKairos ? "var(--color-border)" : "rgba(42,58,92,0.8)"}`,
-        borderRadius: isKairos ? "0 var(--radius-lg) var(--radius-lg) var(--radius-lg)" : "var(--radius-lg) 0 var(--radius-lg) var(--radius-lg)",
-        padding:      "var(--space-5)",
-        boxShadow:    isKairos ? "var(--shadow-card)" : "none",
-        borderLeft:   isKairos ? "2px solid rgba(240,192,96,0.2)" : "none",
-        width:        "100%",
+        flexShrink: 0,
+        width: 30, height: 30, borderRadius: "50%",
+        background: isKairos
+          ? "linear-gradient(135deg, rgba(240,192,96,0.2) 0%, rgba(200,140,40,0.2) 100%)"
+          : "rgba(255,255,255,0.07)",
+        border: isKairos ? "1px solid rgba(240,192,96,0.3)" : "1px solid rgba(255,255,255,0.1)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        marginTop: 2,
       }}>
+        {isKairos ? (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(240,192,96,0.8)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+        ) : (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+        )}
+      </div>
+
+      {/* Bubble */}
+      <div style={{
+        maxWidth: "82%",
+        padding: "14px 16px",
+        background: isKairos ? "rgba(255,255,255,0.03)" : "rgba(240,192,96,0.06)",
+        border: isKairos ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(240,192,96,0.15)",
+        borderRadius: isKairos ? "4px 14px 14px 14px" : "14px 4px 14px 14px",
+        minWidth: 0,
+      }}>
+        {isKairos && (
+          <p style={{ fontFamily: "var(--font-display)", fontSize: "0.5rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(240,192,96,0.6)", marginBottom: 8 }}>
+            Kairos
+          </p>
+        )}
         {renderContent(content)}
         {wasTruncated && isKairos && (
-          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.7rem", color: "var(--color-muted)", fontStyle: "italic", marginTop: "var(--space-2)", marginBottom: 0 }}>
-            Response may be incomplete — you can ask Kairos to continue.
+          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "rgba(255,255,255,0.25)", fontStyle: "italic", marginTop: 6 }}>
+            Response may be incomplete — ask Kairos to continue.
           </p>
         )}
         {verseData && <BibleVerse reference={verseData.reference} text={verseData.text} translation={verseData.translation} />}
         {isKairos && (
           <SaveButton
-            saved={saved}
-            isAuthenticated={isAuthenticated}
-            onSave={onSave}
-            onSignInToSave={onSignInToSave}
+            saved={saved} isAuthenticated={isAuthenticated}
+            onSave={onSave} onSignInToSave={onSignInToSave}
           />
         )}
       </div>
@@ -571,14 +386,251 @@ function Message({ role, content, isNew, verseData, onSave, onSignInToSave, save
   )
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ─────────────────────────────────────────────────────────────
+   TYPING INDICATOR
+───────────────────────────────────────────────────────────── */
+function TypingIndicator() {
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 20 }}>
+      <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg, rgba(240,192,96,0.2) 0%, rgba(200,140,40,0.2) 100%)", border: "1px solid rgba(240,192,96,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(240,192,96,0.8)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+      </div>
+      <div style={{
+        padding: "14px 16px",
+        background: "rgba(255,255,255,0.03)",
+        border: "1px solid rgba(255,255,255,0.06)",
+        borderRadius: "4px 14px 14px 14px",
+        display: "flex", alignItems: "center", gap: 5,
+      }}>
+        <span style={{ fontFamily: "var(--font-heading)", fontStyle: "italic", fontSize: "0.78rem", color: "rgba(240,192,96,0.5)", marginRight: 4 }}>Kairos is listening</span>
+        {[0,1,2].map(i => (
+          <div key={i} style={{ width: 4, height: 4, borderRadius: "50%", background: "rgba(240,192,96,0.6)", animation: `cc-pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────
+   VERSE OF THE DAY CARD
+───────────────────────────────────────────────────────────── */
+function VotDCard({ verse, onReflect }) {
+  if (!verse) return null
+  const reflectPrompt = `I'd like to reflect on today's verse — ${verse.ref}${verse.text ? `: "${verse.text}"` : ""}. What does this mean for my life today?`
+
+  return (
+    <div style={{
+      background: "rgba(240,192,96,0.04)",
+      border: "1px solid rgba(240,192,96,0.15)",
+      borderLeft: "2px solid rgba(240,192,96,0.5)",
+      borderRadius: 14, padding: "20px 20px 16px",
+      marginBottom: 12, animation: "cc-fade 0.6s ease",
+    }}>
+      <p style={{ fontFamily: "var(--font-display)", fontSize: "0.48rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "rgba(240,192,96,0.6)", marginBottom: 10 }}>
+        Verse of the Day
+      </p>
+      {verse.text ? (
+        <p style={{ fontFamily: "var(--font-heading)", fontSize: "clamp(0.88rem, 2vw, 1rem)", fontWeight: 300, fontStyle: "italic", color: "rgba(255,255,255,0.78)", lineHeight: 1.7, marginBottom: 6 }}>
+          &ldquo;{verse.text}&rdquo;
+        </p>
+      ) : (
+        <p style={{ fontFamily: "var(--font-heading)", fontSize: "0.88rem", fontStyle: "italic", color: "rgba(255,255,255,0.3)", marginBottom: 6 }}>Loading verse…</p>
+      )}
+      <p style={{ fontFamily: "var(--font-body)", fontSize: "0.68rem", letterSpacing: "0.08em", color: "rgba(240,192,96,0.55)", marginBottom: verse.thought ? 10 : 16 }}>
+        — {verse.ref}
+      </p>
+      {verse.thought && (
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "rgba(255,255,255,0.35)", lineHeight: 1.7, marginBottom: 16 }}>
+          {verse.thought}
+        </p>
+      )}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button onClick={() => onReflect(reflectPrompt)} style={{
+          padding: "7px 16px", borderRadius: 100,
+          background: "var(--gradient-gold)", border: "none",
+          color: "#060912", fontFamily: "var(--font-display)",
+          fontSize: "0.56rem", letterSpacing: "0.12em",
+          cursor: "pointer", boxShadow: "var(--shadow-gold-sm)",
+          minHeight: 34,
+        }}>
+          REFLECT WITH KAIROS
+        </button>
+        <a href={`/bible?ref=${encodeURIComponent(verse.ref)}`} style={{
+          display: "inline-flex", alignItems: "center",
+          padding: "7px 16px", borderRadius: 100,
+          background: "transparent",
+          borderWidth: 1, borderStyle: "solid", borderColor: "rgba(255,255,255,0.1)",
+          color: "rgba(255,255,255,0.35)",
+          fontFamily: "var(--font-display)", fontSize: "0.56rem",
+          letterSpacing: "0.12em", textDecoration: "none",
+          minHeight: 34, transition: "all 0.15s ease",
+        }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"; e.currentTarget.style.color = "rgba(255,255,255,0.65)" }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "rgba(255,255,255,0.35)" }}
+        >
+          OPEN IN BIBLE
+        </a>
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ACTIVE PLAN CARD
+───────────────────────────────────────────────────────────── */
+function ActivePlanCard({ plan }) {
+  if (!plan?.enrollment || plan.enrollment.status === "completed") return null
+  const { current_day } = plan.enrollment
+  const total = plan.total_days || plan.day_count || 1
+  const pct = Math.min(((current_day - 1) / total) * 100, 100)
+
+  return (
+    <a href={`/plans/${plan.id}/day/${current_day}`} style={{
+      display: "flex", alignItems: "center", gap: 14,
+      padding: "14px 16px", borderRadius: 12,
+      background: "rgba(255,255,255,0.02)",
+      borderWidth: 1, borderStyle: "solid", borderColor: "rgba(255,255,255,0.06)",
+      textDecoration: "none", marginBottom: 12,
+      transition: "all 0.15s ease", animation: "cc-fade 0.7s ease",
+    }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.background = "rgba(255,255,255,0.04)" }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; e.currentTarget.style.background = "rgba(255,255,255,0.02)" }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontFamily: "var(--font-display)", fontSize: "0.46rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.2)", marginBottom: 4 }}>Today's Plan</p>
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", fontWeight: 400, color: "rgba(255,255,255,0.65)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: 6 }}>{plan.name || plan.title}</p>
+        <div style={{ height: 2, background: "rgba(255,255,255,0.06)", borderRadius: 2, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${pct}%`, background: "var(--gradient-gold)", borderRadius: 2, transition: "width 0.5s ease" }} />
+        </div>
+      </div>
+      <div style={{ flexShrink: 0 }}>
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.68rem", color: "rgba(255,255,255,0.2)", textAlign: "right" }}>Day {current_day}</p>
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.64rem", color: "rgba(255,255,255,0.15)", textAlign: "right" }}>of {total}</p>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+    </a>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SIDEBAR
+───────────────────────────────────────────────────────────── */
+function Sidebar({ userName, initials }) {
+  const currentPath = typeof window !== "undefined" ? window.location.pathname : "/journey"
+
+  return (
+    <div className="cc-sidebar">
+      {/* Logo */}
+      <div style={{ padding: "20px 20px 0" }}>
+        <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", marginBottom: 28 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg, rgba(240,192,96,0.3) 0%, rgba(200,140,40,0.3) 100%)", border: "1px solid rgba(240,192,96,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(240,192,96,0.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          </div>
+          <span style={{ fontFamily: "var(--font-display)", fontSize: "0.75rem", letterSpacing: "0.22em", background: "var(--gradient-text)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+            KAIROS
+          </span>
+        </a>
+
+        {/* Nav links */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <p style={{ fontFamily: "var(--font-display)", fontSize: "0.46rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.2)", padding: "4px 16px 6px", marginBottom: 0 }}>Navigation</p>
+          {NAV.map(item => {
+            const active = currentPath === item.href || (item.href !== "/journey" && currentPath.startsWith(item.href)) || (item.href === "/journey" && currentPath === "/journey")
+            return (
+              <a
+                key={item.href}
+                href={item.href}
+                className={`cc-nav-link${active ? " active" : ""}`}
+                style={{ color: active ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.38)", fontFamily: "var(--font-body)", fontSize: "0.82rem" }}
+              >
+                <span style={{ color: active ? "rgba(240,192,96,0.8)" : "rgba(255,255,255,0.25)", flexShrink: 0 }}>{item.icon}</span>
+                {item.label}
+                {active && <div style={{ marginLeft: "auto", width: 5, height: 5, borderRadius: "50%", background: "rgba(240,192,96,0.7)", flexShrink: 0 }} />}
+              </a>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Bottom: user */}
+      <div style={{ marginTop: "auto", padding: "16px 20px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+        {userName ? (
+          <a href="/account" style={{
+            display: "flex", alignItems: "center", gap: 10,
+            textDecoration: "none", padding: "8px 10px",
+            borderRadius: 10, transition: "background 0.15s ease",
+          }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+          >
+            <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg, rgba(240,192,96,0.2) 0%, rgba(200,140,40,0.2) 100%)", border: "1px solid rgba(240,192,96,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", fontSize: "0.52rem", color: "rgba(240,192,96,0.8)", flexShrink: 0 }}>
+              {initials}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "rgba(255,255,255,0.65)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userName.split(" ")[0]}</p>
+              <p style={{ fontFamily: "var(--font-body)", fontSize: "0.68rem", color: "rgba(255,255,255,0.2)" }}>View account →</p>
+            </div>
+          </a>
+        ) : (
+          <a href="/login" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 10, textDecoration: "none", background: "rgba(240,192,96,0.06)", borderWidth: 1, borderStyle: "solid", borderColor: "rgba(240,192,96,0.15)", transition: "all 0.15s ease" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(240,192,96,0.1)"; e.currentTarget.style.borderColor = "rgba(240,192,96,0.3)" }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(240,192,96,0.06)"; e.currentTarget.style.borderColor = "rgba(240,192,96,0.15)" }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(240,192,96,0.7)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            <span style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "rgba(240,192,96,0.7)" }}>Sign in</span>
+          </a>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MOBILE BOTTOM NAV BAR
+───────────────────────────────────────────────────────────── */
+function MobileNav() {
+  const currentPath = typeof window !== "undefined" ? window.location.pathname : "/journey"
+  const items = NAV.slice(0, 5) // show first 5
+
+  return (
+    <div className="cc-mobile-nav" style={{
+      position: "fixed", bottom: 0, left: 0, right: 0,
+      height: 58, zIndex: 100,
+      background: "rgba(8,10,18,0.96)",
+      backdropFilter: "blur(16px)",
+      borderTop: "1px solid rgba(255,255,255,0.07)",
+      alignItems: "center", justifyContent: "space-around",
+      paddingBottom: "env(safe-area-inset-bottom)",
+    }}>
+      {items.map(item => {
+        const active = currentPath === item.href || (item.href === "/journey" && currentPath === "/journey")
+        return (
+          <a key={item.href} href={item.href} style={{
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+            textDecoration: "none", padding: "4px 10px",
+            color: active ? "rgba(240,192,96,0.9)" : "rgba(255,255,255,0.3)",
+            transition: "color 0.15s ease",
+            minWidth: 44, minHeight: 44, justifyContent: "center",
+          }}>
+            {item.icon}
+            <span style={{ fontFamily: "var(--font-display)", fontSize: "0.45rem", letterSpacing: "0.08em" }}>{item.label}</span>
+          </a>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────
    MAIN COMPANION COMPONENT
-══════════════════════════════════════════════════════════ */
+───────────────────────────────────────────────────────────── */
 export default function CompanionCore({ profile = null }) {
   const { settings, updateSetting } = useSettings()
-
-  // ✅ Reactive auth — single source of truth for session state
-  const { isAuth, profileId, loading: authLoading } = useAuthState()
+  const { isAuth, profileId, loading: authLoading, user } = useAuthState()
 
   const [messages,       setMessages]       = useState([])
   const [input,          setInput]          = useState("")
@@ -589,15 +641,11 @@ export default function CompanionCore({ profile = null }) {
   const [savedMsgIds,    setSavedMsgIds]    = useState(new Set())
   const [showConsent,    setShowConsent]    = useState(false)
   const [lastModelId,    setLastModelId]    = useState(null)
-
-  // Daily cards
-  const [votd,       setVotd]       = useState(null)
-  const [activePlan, setActivePlan] = useState(null)
-
-  // Save modal state
-  const [pendingSave,      setPendingSave]      = useState(null)  // msg index
-  const [savingModal,      setSavingModal]      = useState(false)
-  const [showInlineSignIn, setShowInlineSignIn] = useState(false) // inline auth
+  const [votd,           setVotd]           = useState(null)
+  const [activePlan,     setActivePlan]     = useState(null)
+  const [pendingSave,    setPendingSave]    = useState(null)
+  const [savingModal,    setSavingModal]    = useState(false)
+  const [showInlineSignIn, setShowInlineSignIn] = useState(false)
 
   const bottomRef   = useRef(null)
   const inputRef    = useRef(null)
@@ -605,53 +653,53 @@ export default function CompanionCore({ profile = null }) {
 
   const translation = settings.bibleTranslation || "WEB"
 
-  // Consent check
+  // Derive user display info
+  const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || null
+  const initials = userName ? userName.trim().split(" ").slice(0,2).map(p => p[0]).join("").toUpperCase() : "K"
+
+  // Consent
   useEffect(() => {
-    const accepted = document.cookie.split("; ").find((r) => r.startsWith("kairos_consent="))
+    const accepted = document.cookie.split("; ").find(r => r.startsWith("kairos_consent="))
     if (!accepted) setShowConsent(true)
   }, [])
 
   const handleConsentAccept = () => {
-    const expires = new Date()
-    expires.setFullYear(expires.getFullYear() + 1)
-    document.cookie = `kairos_consent=1; expires=${expires.toUTCString()}; path=/; SameSite=Lax`
+    const exp = new Date(); exp.setFullYear(exp.getFullYear() + 1)
+    document.cookie = `kairos_consent=1; expires=${exp.toUTCString()}; path=/; SameSite=Lax`
     setShowConsent(false)
   }
 
-  // Restore verse context from Bible reader handoff
+  // Bible verse handoff from Bible reader
   useEffect(() => {
     try {
-      const verseCtx = sessionStorage.getItem("kairos_verse_context")
-      if (verseCtx) {
-        sessionStorage.removeItem("kairos_verse_context")
-        setInput(verseCtx)
-        setStarted(true)
-      }
+      const ctx = sessionStorage.getItem("kairos_verse_context")
+      if (ctx) { sessionStorage.removeItem("kairos_verse_context"); setInput(ctx); setStarted(true) }
     } catch (_) {}
   }, [])
 
-  // Fetch verse of the day
+  // Verse of the day
   useEffect(() => {
     const { ref, thought } = getTodaysVerse()
     setVotd({ ref, thought, text: null })
     fetch(`/api/bible/verse?ref=${encodeURIComponent(ref)}&translation=WEB`)
-      .then((r) => r.json())
-      .then((data) => { if (data.success) setVotd({ ref, thought, text: data.text }) })
+      .then(r => r.json())
+      .then(d => { if (d.success) setVotd({ ref, thought, text: d.text }) })
       .catch(() => {})
   }, [])
 
-  // Fetch active plan when auth resolves
+  // Active plan (only when authenticated)
   useEffect(() => {
     if (!isAuth || !profileId) return
     fetch(`/api/plans?userId=${profileId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        const active = (data.plans || []).find((p) => p.enrollment?.status === "active")
+      .then(r => r.json())
+      .then(d => {
+        const active = (d.plans || []).find(p => p.enrollment?.status === "active")
         if (active) setActivePlan(active)
       })
       .catch(() => {})
   }, [isAuth, profileId])
 
+  // Auto-scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, loading])
@@ -660,140 +708,89 @@ export default function CompanionCore({ profile = null }) {
     setInput(e.target.value)
     const ta = e.target
     ta.style.height = "auto"
-    ta.style.height = Math.min(ta.scrollHeight, 160) + "px"
+    ta.style.height = Math.min(ta.scrollHeight, 140) + "px"
   }
 
   const fetchVerse = async (reference) => {
     try {
-      const res  = await fetch(`/api/bible/verse?ref=${encodeURIComponent(reference)}&translation=${translation}`)
-      const data = await res.json()
-      if (data.success) return data
-    } catch (err) {
-      console.warn("[Kairos Bible] Verse fetch failed:", err.message)
-    }
+      const r = await fetch(`/api/bible/verse?ref=${encodeURIComponent(reference)}&translation=${translation}`)
+      const d = await r.json()
+      if (d.success) return d
+    } catch { }
     return null
   }
 
-  // ── Save flow ─────────────────────────────────────────────
-  const handleSave = (msgIndex) => {
-    if (savedMsgIds.has(msgIndex)) return
-    setPendingSave(msgIndex)
-  }
-
-  // Called when unauthenticated user clicks "Sign in to save"
-  const handleSignInToSave = (msgIndex) => {
-    setPendingSave(msgIndex)    // remember which message to save
-    setShowInlineSignIn(true)   // show inline auth — DO NOT navigate
-  }
-
-  // Called after successful inline sign-in
-  const handleInlineSignInSuccess = () => {
-    setShowInlineSignIn(false)
-    // pendingSave is already set — open the save modal immediately
-    // (isAuth will now be true via onAuthStateChange)
-  }
+  // ── Save flow ──
+  const handleSave = (idx) => { if (!savedMsgIds.has(idx)) setPendingSave(idx) }
+  const handleSignInToSave = (idx) => { setPendingSave(idx); setShowInlineSignIn(true) }
+  const handleInlineSignInSuccess = () => { setShowInlineSignIn(false) }
 
   const handleSaveConfirm = async ({ title, entry_type }) => {
-    const msgIndex = pendingSave
-    if (msgIndex === null) return
-    const msg = messages[msgIndex]
+    const idx = pendingSave
+    if (idx === null) return
+    const msg = messages[idx]
     if (!msg) return
-
     setSavingModal(true)
     try {
-      const scripture_ref = msg.verseData
-        ? `${msg.verseData.reference} (${msg.verseData.translation})`
-        : null
-
+      const scripture_ref = msg.verseData ? `${msg.verseData.reference} (${msg.verseData.translation})` : null
       const res = await fetch("/api/journey/save", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          content:         msg.content,
-          title,
-          entry_type,
-          scripture_ref,
-          conversation_id: conversationId,
-          userId:          profileId || null,
-        }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: msg.content, title, entry_type, scripture_ref, conversation_id: conversationId, userId: profileId || null }),
       })
-      const data = await res.json()
-      if (data.success) setSavedMsgIds((prev) => new Set([...prev, msgIndex]))
-      else console.error("[Kairos] Save failed:", data.error)
-    } catch (err) {
-      console.error("[Kairos] Save error:", err.message)
-    } finally {
-      setSavingModal(false)
-      setPendingSave(null)
-    }
+      const d = await res.json()
+      if (d.success) setSavedMsgIds(prev => new Set([...prev, idx]))
+      else console.error("[Kairos] Save failed:", d.error)
+    } catch (err) { console.error("[Kairos] Save error:", err.message) }
+    finally { setSavingModal(false); setPendingSave(null) }
   }
 
   const handleReflectFromVerse = (prompt) => {
-    setInput(prompt)
-    setStarted(true)
+    setInput(prompt); setStarted(true)
     setTimeout(() => {
       inputRef.current?.focus()
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto"
-        textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 160) + "px"
+        textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 140) + "px"
       }
     }, 50)
+  }
+
+  const handlePromptClick = (prompt) => {
+    setInput(prompt)
+    setTimeout(() => inputRef.current?.focus(), 50)
   }
 
   const handleSend = async () => {
     const text = input.trim()
     if (!text || loading) return
-
-    setStarted(true)
-    setInput("")
+    setStarted(true); setInput("")
     if (textareaRef.current) textareaRef.current.style.height = "auto"
-
-    const userMsg        = { role: "user", content: text }
+    const userMsg = { role: "user", content: text }
     const updatedHistory = [...messages, userMsg]
-    setMessages(updatedHistory)
-    setNewMsgIdx(updatedHistory.length - 1)
-    setLoading(true)
-
+    setMessages(updatedHistory); setNewMsgIdx(updatedHistory.length - 1); setLoading(true)
     try {
-      const verseRef  = detectVerseRequest(text)
-      const isSearch  = detectBibleSearch(text)
-      let   verseData = null
+      const verseRef = detectVerseRequest(text)
+      const isSearch = detectBibleSearch(text)
+      let verseData = null
       if (verseRef) verseData = await fetchVerse(verseRef)
-
       const res = await fetch("/api/ai/companion", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          message:        text,
-          history:        messages.map((m) => ({ role: m.role, content: m.content })),
-          profile,
-          userId:         profileId || null,
-          conversationId,
-          verseContext:   verseData
-            ? `Exact text already retrieved: "${verseData.text}" — ${verseData.reference} (${verseData.translation}). Reference this directly, do not paraphrase it.`
-            : null,
-          isVerseRequest: !!verseRef,
-          isSearch,
-          lastModelId,
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: text,
+          history: messages.map(m => ({ role: m.role, content: m.content })),
+          profile, userId: profileId || null, conversationId,
+          verseContext: verseData ? `Exact text already retrieved: "${verseData.text}" — ${verseData.reference} (${verseData.translation}). Reference this directly, do not paraphrase it.` : null,
+          isVerseRequest: !!verseRef, isSearch, lastModelId,
         }),
       })
-
       const data = await res.json()
       if (data.conversationId && !conversationId) setConversationId(data.conversationId)
       if (data.modelId) setLastModelId(data.modelId)
-
-      const assistantMsg = {
-        role:         "assistant",
-        content:      data.reply || "Something stilled. Please try again.",
-        escalated:    data.escalated || false,
-        verseData,
-        wasTruncated: data.wasTruncated || false,
-      }
+      const assistantMsg = { role: "assistant", content: data.reply || "Something stilled. Please try again.", escalated: data.escalated || false, verseData, wasTruncated: data.wasTruncated || false }
       const finalMessages = [...updatedHistory, assistantMsg]
-      setMessages(finalMessages)
-      setNewMsgIdx(finalMessages.length - 1)
+      setMessages(finalMessages); setNewMsgIdx(finalMessages.length - 1)
     } catch {
-      setMessages((prev) => [...prev, { role: "assistant", content: "Something stilled for a moment. Please share what is on your heart again." }])
+      setMessages(prev => [...prev, { role: "assistant", content: "Something stilled for a moment. Please share what is on your heart again." }])
     } finally {
       setLoading(false)
       setTimeout(() => inputRef.current?.focus(), 100)
@@ -805,23 +802,20 @@ export default function CompanionCore({ profile = null }) {
   }
 
   const pendingMsg = pendingSave !== null ? messages[pendingSave] : null
-
-  // Show save modal only when authenticated and pendingSave is set
   const showSaveModal = pendingSave !== null && isAuth && !showInlineSignIn
 
   return (
-    <div style={{ position: "relative", minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--gradient-hero)", overflow: "hidden" }}>
-      {showConsent && <ConsentModal onAccept={handleConsentAccept} />}
+    <>
+      <style>{css}</style>
 
-      {/* Inline sign-in modal — shown when unauthenticated user tries to save */}
+      {/* Modals */}
+      {showConsent && <ConsentModal onAccept={handleConsentAccept} />}
       {showInlineSignIn && (
         <InlineSignInModal
           onSuccess={handleInlineSignInSuccess}
           onCancel={() => { setShowInlineSignIn(false); setPendingSave(null) }}
         />
       )}
-
-      {/* Save moment modal — shown when authenticated and save triggered */}
       <SaveMomentModal
         isOpen={showSaveModal}
         content={pendingMsg?.content || ""}
@@ -831,118 +825,218 @@ export default function CompanionCore({ profile = null }) {
         saving={savingModal}
       />
 
-      <GlowOrb size="500px" left="60%" top="30%"  color="rgba(240,192,96,0.08)"  delay="0s" />
-      <GlowOrb size="300px" left="20%" top="70%"  color="rgba(64,144,208,0.06)"  delay="2s" />
-      <GlowOrb size="200px" left="80%" top="80%"  color="rgba(240,192,96,0.05)"  delay="1s" />
+      <div className="cc-layout">
 
-      {/* ── HEADER ── */}
-      <div style={{ padding: "var(--space-5) var(--space-5) var(--space-4)", borderBottom: "1px solid var(--color-border)", background: "rgba(6,9,18,0.6)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div>
-          <a href="/" style={{ textDecoration: "none" }}>
-            <span style={{ fontFamily: "var(--font-display)", fontSize: "1.1rem", letterSpacing: "0.2em", background: "var(--gradient-text)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>KAIROS</span>
-          </a>
-          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.7rem", color: "var(--color-muted)", marginTop: "2px", letterSpacing: "0.05em" }}>Your companion is present</p>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-          <select
-            value={translation}
-            onChange={(e) => updateSetting("bibleTranslation", e.target.value)}
-            style={{ background: "rgba(13,20,40,0.8)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-full)", padding: "4px 10px", color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.65rem", letterSpacing: "0.08em", cursor: "pointer", outline: "none" }}
-          >
-            <option value="WEB">WEB</option>
-            <option value="KJV">KJV</option>
-            <option value="ASV">ASV</option>
-            <option value="BBE">BBE</option>
-          </select>
-          <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "var(--color-life)", boxShadow: "0 0 8px var(--color-life)", animation: "pulse 2s ease-in-out infinite" }} />
-        </div>
-      </div>
+        {/* ── SIDEBAR (desktop) ── */}
+        <Sidebar userName={userName} initials={initials} />
 
-      {/* ── MESSAGES ── */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-8) var(--space-5)", maxWidth: "760px", width: "100%", margin: "0 auto", paddingBottom: "var(--space-6)" }}>
+        {/* ── MAIN CHAT COLUMN ── */}
+        <div className="cc-main" style={{ background: "var(--color-void)" }}>
 
-        {!started && messages.length === 0 && (
-          <div style={{ paddingTop: "var(--space-10)", animation: "sacredEnter 1s var(--ease-divine) forwards" }}>
-            <DailyVerseCard verse={votd} onReflect={handleReflectFromVerse} />
-            <ActivePlanCard plan={activePlan} />
-            <div style={{ textAlign: "center", paddingTop: "var(--space-6)" }}>
-              <p style={{ fontFamily: "var(--font-display)", fontSize: "0.7rem", letterSpacing: "0.3em", textTransform: "uppercase", color: "var(--color-gold-warm)", marginBottom: "var(--space-5)" }}>
-                Your appointed moment
-              </p>
-              <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "clamp(1.8rem, 4vw, 3rem)", fontWeight: 300, color: "var(--color-divine)", lineHeight: 1.4, marginBottom: "var(--space-10)" }}>
-                What are you carrying today?
-              </h2>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-3)", justifyContent: "center", maxWidth: "600px", margin: "0 auto" }}>
-                {[
-                  "I have questions about faith I'm afraid to ask",
-                  "I've been hurt by the church",
-                  "I don't know if God is real",
-                  "I'm going through something really hard",
-                  "I'm from a different religion and I'm curious",
-                  "I just feel lost",
-                ].map((prompt) => (
-                  <button key={prompt} onClick={() => { setInput(prompt); inputRef.current?.focus() }}
-                    style={{ background: "rgba(20,29,53,0.8)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-full)", padding: "var(--space-2) var(--space-4)", color: "var(--color-soft)", fontFamily: "var(--font-body)", fontSize: "0.8rem", cursor: "pointer", transition: "all var(--duration-fast) var(--ease-sacred)", textAlign: "left", minHeight: "44px" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--color-gold-warm)"; e.currentTarget.style.color = "var(--color-gold-warm)"; e.currentTarget.style.background = "rgba(240,192,96,0.08)" }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; e.currentTarget.style.color = "var(--color-soft)"; e.currentTarget.style.background = "rgba(20,29,53,0.8)" }}>
-                    {prompt}
-                  </button>
-                ))}
+          {/* ── Top bar ── */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "0 20px",
+            height: 56, flexShrink: 0,
+            borderBottom: "1px solid rgba(255,255,255,0.05)",
+            background: "rgba(8,10,18,0.6)", backdropFilter: "blur(12px)",
+          }}>
+            {/* Mobile: logo (desktop has sidebar) */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <a href="/" className="cc-mobile-logo" style={{ display: "none", alignItems: "center", gap: 6, textDecoration: "none" }}>
+                <style>{`.cc-mobile-logo { display: none !important; } @media(max-width:768px){.cc-mobile-logo{display:flex!important}}`}</style>
+                <span style={{ fontFamily: "var(--font-display)", fontSize: "0.75rem", letterSpacing: "0.22em", background: "var(--gradient-text)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>KAIROS</span>
+              </a>
+              <div className="cc-desktop-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <style>{`.cc-desktop-title{display:flex!important} @media(max-width:768px){.cc-desktop-title{display:none!important}}`}</style>
+                <p style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "rgba(255,255,255,0.3)" }}>Companion</p>
+                <div style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(100,220,100,0.7)", boxShadow: "0 0 6px rgba(100,220,100,0.5)", animation: "cc-pulse 2.5s ease-in-out infinite" }} />
               </div>
             </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {/* Translation selector */}
+              <select
+                value={translation}
+                onChange={e => updateSetting("bibleTranslation", e.target.value)}
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  borderWidth: 1, borderStyle: "solid", borderColor: "rgba(255,255,255,0.08)",
+                  borderRadius: 8, padding: "5px 10px",
+                  color: "rgba(255,255,255,0.4)",
+                  fontFamily: "var(--font-body)", fontSize: "0.72rem",
+                  cursor: "pointer", outline: "none",
+                }}
+                onFocus={e => e.target.style.borderColor = "rgba(240,192,96,0.4)"}
+                onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.08)"}
+              >
+                {["WEB","KJV","ASV","BBE"].map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
           </div>
-        )}
 
-        {messages.map((msg, i) => (
-          <Message
-            key={i}
-            role={msg.role}
-            content={msg.content}
-            isNew={i === newMsgIdx}
-            verseData={msg.verseData || null}
-            isAuthenticated={isAuth}
-            saved={savedMsgIds.has(i)}
-            onSave={() => handleSave(i)}
-            onSignInToSave={() => handleSignInToSave(i)}
-            wasTruncated={msg.wasTruncated || false}
-          />
-        ))}
+          {/* ── Messages area ── */}
+          <div style={{
+            flex: 1, overflowY: "auto",
+            padding: "24px 24px 12px",
+            scrollbarWidth: "thin",
+            scrollbarColor: "rgba(255,255,255,0.08) transparent",
+          }}>
+            <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
-        {loading && <TypingIndicator />}
-        <div ref={bottomRef} />
-      </div>
+              {/* Pre-conversation state */}
+              {!started && messages.length === 0 && (
+                <div style={{ animation: "cc-fade 0.8s ease" }}>
+                  {/* VotD — respects settings.showVotD */}
+                  {settings.showVotD !== false && (
+                    <VotDCard verse={votd} onReflect={handleReflectFromVerse} />
+                  )}
+                  {/* Active plan — respects settings.showActivePlan */}
+                  {settings.showActivePlan !== false && (
+                    <ActivePlanCard plan={activePlan} />
+                  )}
 
-      {/* ── INPUT ── */}
-      <div style={{ position: "sticky", bottom: 0, padding: "var(--space-4) var(--space-5) var(--space-6)", background: "linear-gradient(to top, rgba(6,9,18,0.98) 80%, transparent)", backdropFilter: "blur(12px)" }}>
-        <div style={{ maxWidth: "760px", margin: "0 auto", display: "flex", gap: "var(--space-3)", alignItems: "center" }}>
-          <div style={{ flex: 1, position: "relative" }}>
-            <textarea
-              ref={(el) => { textareaRef.current = el; inputRef.current = el }}
-              value={input}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Share what is on your heart..."
-              rows={1}
-              style={{ width: "100%", background: "rgba(13,20,40,0.9)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-xl)", padding: "var(--space-4) var(--space-5)", color: "var(--color-divine)", fontFamily: "var(--font-body)", fontSize: "var(--text-body-md)", lineHeight: "var(--leading-normal)", resize: "none", outline: "none", minHeight: "52px", maxHeight: "160px", overflowY: "auto", display: "block", transition: "border-color var(--duration-fast) var(--ease-sacred), box-shadow var(--duration-fast) var(--ease-sacred)" }}
-              onFocus={(e) => { e.target.style.borderColor = "var(--color-gold-warm)"; e.target.style.boxShadow = "0 0 0 3px rgba(240,192,96,0.1)" }}
-              onBlur={(e)  => { e.target.style.borderColor = "var(--color-border)"; e.target.style.boxShadow = "none" }}
-            />
+                  {/* Headline */}
+                  <div style={{ textAlign: "center", padding: "32px 0 28px" }}>
+                    <p style={{ fontFamily: "var(--font-display)", fontSize: "0.55rem", letterSpacing: "0.28em", textTransform: "uppercase", color: "rgba(240,192,96,0.5)", marginBottom: 14 }}>
+                      Your appointed moment
+                    </p>
+                    <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "clamp(1.5rem, 3vw, 2.2rem)", fontWeight: 300, color: "rgba(255,255,255,0.85)", lineHeight: 1.3, marginBottom: 0 }}>
+                      What are you carrying today?
+                    </h2>
+                  </div>
+
+                  {/* Example prompts — respects settings.showExamplePrompts */}
+                  {settings.showExamplePrompts !== false && (
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                    gap: 8, marginBottom: 24,
+                  }}>
+                    {PROMPTS.map(prompt => (
+                      <button
+                        key={prompt}
+                        onClick={() => handlePromptClick(prompt)}
+                        style={{
+                          padding: "12px 14px", borderRadius: 10,
+                          background: "rgba(255,255,255,0.02)",
+                          borderWidth: 1, borderStyle: "solid", borderColor: "rgba(255,255,255,0.07)",
+                          color: "rgba(255,255,255,0.5)",
+                          fontFamily: "var(--font-body)", fontSize: "0.82rem",
+                          cursor: "pointer", textAlign: "left", lineHeight: 1.5,
+                          transition: "all 0.15s ease", minHeight: 48,
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(240,192,96,0.2)"; e.currentTarget.style.background = "rgba(240,192,96,0.04)"; e.currentTarget.style.color = "rgba(255,255,255,0.78)" }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; e.currentTarget.style.background = "rgba(255,255,255,0.02)"; e.currentTarget.style.color = "rgba(255,255,255,0.5)" }}
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                  )}
+                </div>
+              )}
+
+              {/* Messages */}
+              {messages.map((msg, i) => (
+                <Message
+                  key={i}
+                  role={msg.role}
+                  content={msg.content}
+                  isNew={i === newMsgIdx}
+                  verseData={msg.verseData || null}
+                  isAuthenticated={isAuth}
+                  saved={savedMsgIds.has(i)}
+                  onSave={() => handleSave(i)}
+                  onSignInToSave={() => handleSignInToSave(i)}
+                  wasTruncated={msg.wasTruncated || false}
+                />
+              ))}
+
+              {loading && <TypingIndicator />}
+              <div ref={bottomRef} />
+            </div>
           </div>
-          <button onClick={handleSend} disabled={!input.trim() || loading} aria-label="Send message"
-            style={{ width: "52px", height: "52px", borderRadius: "50%", background: input.trim() && !loading ? "var(--gradient-gold)" : "var(--color-surface)", border: "1px solid var(--color-border)", display: "flex", alignItems: "center", justifyContent: "center", cursor: input.trim() && !loading ? "pointer" : "not-allowed", flexShrink: 0, transition: "all var(--duration-fast) var(--ease-sacred)", boxShadow: input.trim() && !loading ? "var(--shadow-gold-sm)" : "none" }}>
-            {loading ? (
-              <div style={{ width: "18px", height: "18px", border: "2px solid var(--color-border)", borderTop: "2px solid var(--color-gold-warm)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={input.trim() ? "#060912" : "var(--color-muted)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" />
-              </svg>
-            )}
-          </button>
-        </div>
-        <p style={{ textAlign: "center", fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-muted)", marginTop: "var(--space-3)", letterSpacing: "0.03em" }}>
-          Press Enter to send · Shift+Enter for new line · Kairos is grounded in Biblical truth
-        </p>
-      </div>
-    </div>
+
+          {/* ── Input bar ── */}
+          <div style={{
+            flexShrink: 0,
+            padding: "12px 24px 16px",
+            borderTop: "1px solid rgba(255,255,255,0.05)",
+            background: "rgba(8,10,18,0.8)",
+            backdropFilter: "blur(12px)",
+            paddingBottom: "calc(16px + env(safe-area-inset-bottom))",
+          }}>
+            {/* On mobile add bottom padding for nav bar */}
+            <style>{`@media(max-width:768px){.cc-input-wrap{padding-bottom:66px!important}}`}</style>
+            <div className="cc-input-wrap" style={{ maxWidth: 720, margin: "0 auto" }}>
+              <div style={{
+                display: "flex", alignItems: "flex-end", gap: 10,
+                background: "rgba(255,255,255,0.03)",
+                borderWidth: 1, borderStyle: "solid", borderColor: "rgba(255,255,255,0.08)",
+                borderRadius: 14, padding: "10px 12px",
+                transition: "border-color 0.2s ease",
+              }}
+                onFocusCapture={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"}
+                onBlurCapture={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"}
+              >
+                <textarea
+                  ref={el => { textareaRef.current = el; inputRef.current = el }}
+                  className="cc-input"
+                  value={input}
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Share what is on your heart…"
+                  rows={1}
+                  style={{
+                    flex: 1,
+                    background: "transparent", border: "none", outline: "none",
+                    color: "rgba(255,255,255,0.85)",
+                    fontFamily: "var(--font-body)", fontSize: "0.92rem",
+                    lineHeight: 1.6, resize: "none",
+                    minHeight: "24px", maxHeight: "140px",
+                    overflowY: "auto", display: "block",
+                    padding: 0,
+                  }}
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={!input.trim() || loading}
+                  aria-label="Send message"
+                  style={{
+                    flexShrink: 0,
+                    width: 36, height: 36, borderRadius: 10,
+                    background: input.trim() && !loading ? "var(--gradient-gold)" : "rgba(255,255,255,0.06)",
+                    border: "none",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: input.trim() && !loading ? "pointer" : "not-allowed",
+                    transition: "all 0.15s ease",
+                    boxShadow: input.trim() && !loading ? "var(--shadow-gold-sm)" : "none",
+                    marginBottom: 1,
+                  }}
+                  onMouseEnter={e => { if (input.trim() && !loading) e.currentTarget.style.opacity = "0.85" }}
+                  onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+                >
+                  {loading ? (
+                    <div style={{ width: 14, height: 14, border: "1.5px solid rgba(255,255,255,0.2)", borderTop: "1.5px solid rgba(255,255,255,0.7)", borderRadius: "50%", animation: "cc-spin 0.7s linear infinite" }} />
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={input.trim() ? "#060912" : "rgba(255,255,255,0.2)"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/>
+                    </svg>
+                  )}
+                </button>
+              </div>
+              <p style={{ textAlign: "center", fontFamily: "var(--font-body)", fontSize: "0.68rem", color: "rgba(255,255,255,0.15)", marginTop: 8, letterSpacing: "0.02em" }}>
+                Enter to send · Shift+Enter for new line · Grounded in Biblical truth
+              </p>
+            </div>
+          </div>
+
+        </div>{/* end cc-main */}
+      </div>{/* end cc-layout */}
+
+      {/* Mobile bottom nav */}
+      <MobileNav />
+    </>
   )
 }
