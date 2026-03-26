@@ -168,11 +168,11 @@ export default function HomepageNavbar() {
 
         {/* ── Desktop marketing links ── */}
         <div className="hn-desktop" style={{
-          display:         "flex",
-          alignItems:      "center",
-          gap:             2,
-          flex:            1,
-          justifyContent:  "center",
+          display:        "flex",
+          alignItems:     "center",
+          gap:            2,
+          flex:           1,
+          justifyContent: "center",
         }}>
           {MARKETING_LINKS.map(item => (
             <a
@@ -201,15 +201,15 @@ export default function HomepageNavbar() {
           {user ? (
             <>
               <Link href="/account" style={{
-                display:    "flex",
-                alignItems: "center",
-                gap:        7,
-                padding:    "4px 12px 4px 4px",
-                borderRadius: 100,
-                background:   "rgba(255,255,255,0.05)",
-                border:       "1px solid rgba(255,255,255,0.09)",
+                display:        "flex",
+                alignItems:     "center",
+                gap:            7,
+                padding:        "4px 12px 4px 4px",
+                borderRadius:   100,
+                background:     "rgba(255,255,255,0.05)",
+                border:         "1px solid rgba(255,255,255,0.09)",
                 textDecoration: "none",
-                transition:   "all 0.15s ease",
+                transition:     "all 0.15s ease",
               }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(240,192,96,0.4)"; e.currentTarget.style.background = "rgba(240,192,96,0.06)" }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.09)"; e.currentTarget.style.background = "rgba(255,255,255,0.05)" }}
@@ -331,212 +331,6 @@ export default function HomepageNavbar() {
           ))}
         </button>
 
-        {/* ── Mobile full-screen overlay ── */}
-        <div
-          className="hn-mobile-menu"
-          style={{
-            position:             "fixed",
-            inset:                0,
-            background:           "rgba(6,9,18,0.98)",
-            backdropFilter:       "blur(28px)",
-            WebkitBackdropFilter: "blur(28px)",
-            zIndex:               400,
-            display:              "flex",
-            flexDirection:        "column",
-            padding:              "88px 28px 36px",
-            opacity:              menuOpen ? 1 : 0,
-            pointerEvents:        menuOpen ? "all" : "none",
-            transition:           "opacity 0.25s ease",
-          }}
-        >
-          <div aria-hidden="true" style={{
-            position:     "absolute",
-            bottom:       "10%",
-            right:        "5%",
-            width:        260,
-            height:       260,
-            background:   "radial-gradient(circle, rgba(240,192,96,0.07) 0%, transparent 70%)",
-            borderRadius: "50%",
-            pointerEvents: "none",
-          }} />
-
-          <div style={{ flex: 1 }}>
-            <p style={{
-              fontFamily:     "var(--font-display)",
-              fontSize:       "0.5rem",
-              letterSpacing:  "0.2em",
-              textTransform:  "uppercase",
-              color:          "rgba(255,255,255,0.2)",
-              marginBottom:   6,
-              opacity:        menuOpen ? 1 : 0,
-              transition:     "opacity 0.3s ease",
-              transitionDelay: "40ms",
-            }}>
-              Explore
-            </p>
-            {MARKETING_LINKS.map((item, i) => (
-              <a
-                key={item.href}
-                href={item.href}
-                onClick={() => setMenuOpen(false)}
-                style={{
-                  display:         "block",
-                  fontFamily:      "var(--font-heading)",
-                  fontSize:        "clamp(1.3rem, 5vw, 1.7rem)",
-                  fontWeight:      300,
-                  color:           "rgba(255,255,255,0.65)",
-                  textDecoration:  "none",
-                  padding:         "10px 0",
-                  borderBottom:    "1px solid rgba(255,255,255,0.05)",
-                  opacity:         menuOpen ? 1 : 0,
-                  transform:       menuOpen ? "translateX(0)" : "translateX(-14px)",
-                  transition:      "opacity 0.3s ease, transform 0.3s ease, color 0.15s ease",
-                  transitionDelay: menuOpen ? `${i * 45 + 60}ms` : "0ms",
-                }}
-                onMouseEnter={e => { e.currentTarget.style.color = "rgba(255,255,255,0.9)" }}
-                onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.65)" }}
-              >
-                {item.label}
-              </a>
-            ))}
-
-            <p style={{
-              fontFamily:      "var(--font-display)",
-              fontSize:        "0.5rem",
-              letterSpacing:   "0.2em",
-              textTransform:   "uppercase",
-              color:           "rgba(255,255,255,0.2)",
-              marginTop:       20,
-              marginBottom:    6,
-              opacity:         menuOpen ? 1 : 0,
-              transition:      "opacity 0.3s ease",
-              transitionDelay: menuOpen ? `${MARKETING_LINKS.length * 45 + 60}ms` : "0ms",
-            }}>
-              The App
-            </p>
-            {APP_LINKS.map((item, i) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMenuOpen(false)}
-                style={{
-                  display:         "block",
-                  fontFamily:      "var(--font-heading)",
-                  fontSize:        "clamp(1.3rem, 5vw, 1.7rem)",
-                  fontWeight:      300,
-                  color:           "rgba(255,255,255,0.55)",
-                  textDecoration:  "none",
-                  padding:         "10px 0",
-                  borderBottom:    "1px solid rgba(255,255,255,0.05)",
-                  opacity:         menuOpen ? 1 : 0,
-                  transform:       menuOpen ? "translateX(0)" : "translateX(-14px)",
-                  transition:      "opacity 0.3s ease, transform 0.3s ease, color 0.15s ease",
-                  transitionDelay: menuOpen ? `${(MARKETING_LINKS.length + i) * 45 + 80}ms` : "0ms",
-                }}
-                onMouseEnter={e => { e.currentTarget.style.color = "var(--color-gold-warm)" }}
-                onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.55)" }}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
-
-          {/* Auth — bottom */}
-          <div style={{
-            opacity:         menuOpen ? 1 : 0,
-            transform:       menuOpen ? "translateY(0)" : "translateY(10px)",
-            transition:      "opacity 0.3s ease, transform 0.3s ease",
-            transitionDelay: menuOpen ? `${(MARKETING_LINKS.length + APP_LINKS.length) * 45 + 100}ms` : "0ms",
-          }}>
-            {user ? (
-              <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 20 }}>
-                <Link href="/account" onClick={() => setMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: 14, textDecoration: "none", marginBottom: 14 }}>
-                  <div style={{
-                    width:          42,
-                    height:         42,
-                    borderRadius:   "50%",
-                    background:     "linear-gradient(135deg,rgba(240,192,96,0.22) 0%,rgba(240,150,60,0.22) 100%)",
-                    border:         "1px solid rgba(240,192,96,0.3)",
-                    display:        "flex",
-                    alignItems:     "center",
-                    justifyContent: "center",
-                    fontFamily:     "var(--font-display)",
-                    fontSize:       "0.65rem",
-                    color:          "var(--color-gold-warm)",
-                    flexShrink:     0,
-                  }}>
-                    {initials}
-                  </div>
-                  <div>
-                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "rgba(255,255,255,0.75)", margin: 0 }}>{firstNameOnly}</p>
-                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.7rem", color: "rgba(255,255,255,0.3)", margin: "2px 0 0" }}>View account →</p>
-                  </div>
-                </Link>
-                <button
-                  onClick={() => { setMenuOpen(false); setShowSignOutConfirm(true) }}
-                  style={{
-                    width:       "100%",
-                    padding:     "12px 0",
-                    background:  "rgba(255,255,255,0.04)",
-                    border:      "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: 12,
-                    color:       "rgba(255,255,255,0.4)",
-                    fontFamily:  "var(--font-body)",
-                    fontSize:    "0.85rem",
-                    cursor:      "pointer",
-                    transition:  "all 0.15s ease",
-                    minHeight:   "44px",
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(240,80,80,0.4)"; e.currentTarget.style.color = "#f08080" }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "rgba(255,255,255,0.4)" }}
-                >
-                  Sign out
-                </button>
-              </div>
-            ) : (
-              <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
-                <Link href="/journey" onClick={() => setMenuOpen(false)} style={{
-                  display:        "block",
-                  textAlign:      "center",
-                  padding:        "14px 0",
-                  background:     "var(--gradient-gold)",
-                  borderRadius:   14,
-                  color:          "#060912",
-                  fontFamily:     "var(--font-display)",
-                  fontSize:       "0.7rem",
-                  letterSpacing:  "0.15em",
-                  textDecoration: "none",
-                  boxShadow:      "var(--shadow-gold-sm)",
-                  minHeight:      "48px",
-                  lineHeight:     "20px",
-                }}>
-                  BEGIN JOURNEY
-                </Link>
-                <Link href="/login" onClick={() => setMenuOpen(false)} style={{
-                  display:        "block",
-                  textAlign:      "center",
-                  padding:        "12px 0",
-                  background:     "transparent",
-                  border:         "1px solid rgba(255,255,255,0.08)",
-                  borderRadius:   14,
-                  color:          "rgba(255,255,255,0.4)",
-                  fontFamily:     "var(--font-body)",
-                  fontSize:       "0.85rem",
-                  textDecoration: "none",
-                  minHeight:      "48px",
-                  lineHeight:     "24px",
-                  transition:     "all 0.15s ease",
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.color = "rgba(255,255,255,0.75)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)" }}
-                  onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.4)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)" }}
-                >
-                  Sign in
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-
         <style>{`
           @media (max-width: 700px) {
             .hn-desktop   { display: none !important; }
@@ -564,6 +358,215 @@ export default function HomepageNavbar() {
           }
         `}</style>
       </nav>
+
+      {/* ── Mobile full-screen overlay ──
+          SIBLING to <nav>, NOT a child. This breaks out of the nav's stacking
+          context so zIndex: 190 is truly below the nav (200) globally,
+          keeping the hamburger button always clickable above the overlay.     */}
+      <div
+        className="hn-mobile-menu"
+        style={{
+          position:             "fixed",
+          inset:                0,
+          background:           "rgba(6,9,18,0.98)",
+          backdropFilter:       "blur(28px)",
+          WebkitBackdropFilter: "blur(28px)",
+          zIndex:               190,
+          display:              "flex",
+          flexDirection:        "column",
+          padding:              "88px 28px 36px",
+          opacity:              menuOpen ? 1 : 0,
+          pointerEvents:        menuOpen ? "all" : "none",
+          transition:           "opacity 0.25s ease",
+        }}
+      >
+        <div aria-hidden="true" style={{
+          position:      "absolute",
+          bottom:        "10%",
+          right:         "5%",
+          width:         260,
+          height:        260,
+          background:    "radial-gradient(circle, rgba(240,192,96,0.07) 0%, transparent 70%)",
+          borderRadius:  "50%",
+          pointerEvents: "none",
+        }} />
+
+        <div style={{ flex: 1 }}>
+          <p style={{
+            fontFamily:      "var(--font-display)",
+            fontSize:        "0.5rem",
+            letterSpacing:   "0.2em",
+            textTransform:   "uppercase",
+            color:           "rgba(255,255,255,0.2)",
+            marginBottom:    6,
+            opacity:         menuOpen ? 1 : 0,
+            transition:      "opacity 0.3s ease",
+            transitionDelay: "40ms",
+          }}>
+            Explore
+          </p>
+          {MARKETING_LINKS.map((item, i) => (
+            <a
+              key={item.href}
+              href={item.href}
+              onClick={() => setMenuOpen(false)}
+              style={{
+                display:         "block",
+                fontFamily:      "var(--font-heading)",
+                fontSize:        "clamp(1.3rem, 5vw, 1.7rem)",
+                fontWeight:      300,
+                color:           "rgba(255,255,255,0.65)",
+                textDecoration:  "none",
+                padding:         "10px 0",
+                borderBottom:    "1px solid rgba(255,255,255,0.05)",
+                opacity:         menuOpen ? 1 : 0,
+                transform:       menuOpen ? "translateX(0)" : "translateX(-14px)",
+                transition:      "opacity 0.3s ease, transform 0.3s ease, color 0.15s ease",
+                transitionDelay: menuOpen ? `${i * 45 + 60}ms` : "0ms",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = "rgba(255,255,255,0.9)" }}
+              onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.65)" }}
+            >
+              {item.label}
+            </a>
+          ))}
+
+          <p style={{
+            fontFamily:      "var(--font-display)",
+            fontSize:        "0.5rem",
+            letterSpacing:   "0.2em",
+            textTransform:   "uppercase",
+            color:           "rgba(255,255,255,0.2)",
+            marginTop:       20,
+            marginBottom:    6,
+            opacity:         menuOpen ? 1 : 0,
+            transition:      "opacity 0.3s ease",
+            transitionDelay: menuOpen ? `${MARKETING_LINKS.length * 45 + 60}ms` : "0ms",
+          }}>
+            The App
+          </p>
+          {APP_LINKS.map((item, i) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setMenuOpen(false)}
+              style={{
+                display:         "block",
+                fontFamily:      "var(--font-heading)",
+                fontSize:        "clamp(1.3rem, 5vw, 1.7rem)",
+                fontWeight:      300,
+                color:           "rgba(255,255,255,0.55)",
+                textDecoration:  "none",
+                padding:         "10px 0",
+                borderBottom:    "1px solid rgba(255,255,255,0.05)",
+                opacity:         menuOpen ? 1 : 0,
+                transform:       menuOpen ? "translateX(0)" : "translateX(-14px)",
+                transition:      "opacity 0.3s ease, transform 0.3s ease, color 0.15s ease",
+                transitionDelay: menuOpen ? `${(MARKETING_LINKS.length + i) * 45 + 80}ms` : "0ms",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = "var(--color-gold-warm)" }}
+              onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.55)" }}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
+
+        {/* Auth — bottom */}
+        <div style={{
+          opacity:         menuOpen ? 1 : 0,
+          transform:       menuOpen ? "translateY(0)" : "translateY(10px)",
+          transition:      "opacity 0.3s ease, transform 0.3s ease",
+          transitionDelay: menuOpen ? `${(MARKETING_LINKS.length + APP_LINKS.length) * 45 + 100}ms` : "0ms",
+        }}>
+          {user ? (
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 20 }}>
+              <Link href="/account" onClick={() => setMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: 14, textDecoration: "none", marginBottom: 14 }}>
+                <div style={{
+                  width:          42,
+                  height:         42,
+                  borderRadius:   "50%",
+                  background:     "linear-gradient(135deg,rgba(240,192,96,0.22) 0%,rgba(240,150,60,0.22) 100%)",
+                  border:         "1px solid rgba(240,192,96,0.3)",
+                  display:        "flex",
+                  alignItems:     "center",
+                  justifyContent: "center",
+                  fontFamily:     "var(--font-display)",
+                  fontSize:       "0.65rem",
+                  color:          "var(--color-gold-warm)",
+                  flexShrink:     0,
+                }}>
+                  {initials}
+                </div>
+                <div>
+                  <p style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "rgba(255,255,255,0.75)", margin: 0 }}>{firstNameOnly}</p>
+                  <p style={{ fontFamily: "var(--font-body)", fontSize: "0.7rem", color: "rgba(255,255,255,0.3)", margin: "2px 0 0" }}>View account →</p>
+                </div>
+              </Link>
+              <button
+                onClick={() => { setMenuOpen(false); setShowSignOutConfirm(true) }}
+                style={{
+                  width:        "100%",
+                  padding:      "12px 0",
+                  background:   "rgba(255,255,255,0.04)",
+                  border:       "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 12,
+                  color:        "rgba(255,255,255,0.4)",
+                  fontFamily:   "var(--font-body)",
+                  fontSize:     "0.85rem",
+                  cursor:       "pointer",
+                  transition:   "all 0.15s ease",
+                  minHeight:    "44px",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(240,80,80,0.4)"; e.currentTarget.style.color = "#f08080" }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "rgba(255,255,255,0.4)" }}
+              >
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+              <Link href="/journey" onClick={() => setMenuOpen(false)} style={{
+                display:        "block",
+                textAlign:      "center",
+                padding:        "14px 0",
+                background:     "var(--gradient-gold)",
+                borderRadius:   14,
+                color:          "#060912",
+                fontFamily:     "var(--font-display)",
+                fontSize:       "0.7rem",
+                letterSpacing:  "0.15em",
+                textDecoration: "none",
+                boxShadow:      "var(--shadow-gold-sm)",
+                minHeight:      "48px",
+                lineHeight:     "20px",
+              }}>
+                BEGIN JOURNEY
+              </Link>
+              <Link href="/login" onClick={() => setMenuOpen(false)} style={{
+                display:        "block",
+                textAlign:      "center",
+                padding:        "12px 0",
+                background:     "transparent",
+                border:         "1px solid rgba(255,255,255,0.08)",
+                borderRadius:   14,
+                color:          "rgba(255,255,255,0.4)",
+                fontFamily:     "var(--font-body)",
+                fontSize:       "0.85rem",
+                textDecoration: "none",
+                minHeight:      "48px",
+                lineHeight:     "24px",
+                transition:     "all 0.15s ease",
+              }}
+                onMouseEnter={e => { e.currentTarget.style.color = "rgba(255,255,255,0.75)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)" }}
+                onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.4)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)" }}
+              >
+                Sign in
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
     </>
   )
 }
