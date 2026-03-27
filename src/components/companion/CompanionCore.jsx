@@ -689,15 +689,15 @@ export default function CompanionCore({ profile = null }) {
 
   // Active plan (only when authenticated)
   useEffect(() => {
-    if (!isAuth || !profileId) return
-    fetch(`/api/plans?userId=${profileId}`)
+    if (!isAuth) return
+    fetch("/api/plans")
       .then(r => r.json())
       .then(d => {
         const active = (d.plans || []).find(p => p.enrollment?.status === "active")
         if (active) setActivePlan(active)
       })
       .catch(() => {})
-  }, [isAuth, profileId])
+  }, [isAuth])
 
   // Auto-scroll
   useEffect(() => {
@@ -735,7 +735,7 @@ export default function CompanionCore({ profile = null }) {
       const scripture_ref = msg.verseData ? `${msg.verseData.reference} (${msg.verseData.translation})` : null
       const res = await fetch("/api/journey/save", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: msg.content, title, entry_type, scripture_ref, conversation_id: conversationId, userId: profileId || null }),
+        body: JSON.stringify({ content: msg.content, title, entry_type, scripture_ref, conversation_id: conversationId }),
       })
       const d = await res.json()
       if (d.success) setSavedMsgIds(prev => new Set([...prev, idx]))
@@ -778,7 +778,6 @@ export default function CompanionCore({ profile = null }) {
         body: JSON.stringify({
           message: text,
           history: messages.map(m => ({ role: m.role, content: m.content })),
-          profile, userId: profileId || null, conversationId,
           verseContext: verseData ? `Exact text already retrieved: "${verseData.text}" — ${verseData.reference} (${verseData.translation}). Reference this directly, do not paraphrase it.` : null,
           isVerseRequest: !!verseRef, isSearch, lastModelId,
         }),

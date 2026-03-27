@@ -138,7 +138,6 @@ export default function DayPage() {
   const [day,         setDay]         = useState(null)
   const [enrollment,  setEnrollment]  = useState(null)
   const [pageLoading, setPageLoading] = useState(true)
-  const [profileId,   setProfileId]   = useState(null)
   const [userPlanId,  setUserPlanId]  = useState(null)
   const [authUser,    setAuthUser]    = useState(null)
 
@@ -149,11 +148,8 @@ export default function DayPage() {
   const [notesOpen,     setNotesOpen]     = useState(false)
 
   // ── Load ───────────────────────────────────────────────────
-  const loadDay = useCallback(async (uid) => {
-    const url = uid
-      ? `/api/plans/${planId}?userId=${uid}`
-      : `/api/plans/${planId}`
-    const res  = await fetch(url)
+  const loadDay = useCallback(async () => {
+    const res  = await fetch(`/api/plans/${planId}`)
     const data = await res.json()
 
     if (!data.success) {
@@ -181,24 +177,13 @@ export default function DayPage() {
 
   useEffect(() => {
     const init = async () => {
-      let uid = null
       const { data: { user } } = await supabase.auth.getUser()
 
       if (user && !user.is_anonymous) {
-        const { data: profile } = await supabase
-          .from("users")
-          .select("id")
-          .eq("auth_id", user.id)
-          .maybeSingle()
-
-        if (profile) {
-          uid = profile.id
-          setProfileId(profile.id)
-          setAuthUser(user)
-        }
+        setAuthUser(user)
       }
 
-      await loadDay(uid)
+      await loadDay()
     }
 
     init()
@@ -206,7 +191,7 @@ export default function DayPage() {
 
   // ── Complete day ───────────────────────────────────────────
   const handleComplete = async () => {
-    if (!userPlanId || !profileId || completing || completed) return
+    if (!userPlanId || !authUser || completing || completed) return
     setCompleting(true)
 
     try {
@@ -214,7 +199,6 @@ export default function DayPage() {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
-          userId:           profileId,
           userPlanId,
           action:           "complete",
           dayNumber:        dayNum,
@@ -742,7 +726,7 @@ export default function DayPage() {
             </div>
 
             {/* ── Personal notes ────────────────────────────── */}
-            {profileId && (
+            {authUser && (
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
                 <button
                   onClick={() => setNotesOpen(v => !v)}
@@ -816,7 +800,7 @@ export default function DayPage() {
             )}
 
             {/* ── Complete day CTA ──────────────────────────── */}
-            {profileId && !completed && (isCurrentDay || isPastDay) && (
+            {authUser && !completed && (isCurrentDay || isPastDay) && (
               <div className="dp-complete-wrap">
                 <button
                   onClick={handleComplete}

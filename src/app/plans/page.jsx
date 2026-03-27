@@ -423,7 +423,7 @@ export default function PlansPage() {
   const router   = useRouter()
   const pathname = usePathname()
 
-  const { isAuth, profileId, loading: authLoading, user } = useAuthState()
+  const { isAuth, loading: authLoading, user } = useAuthState()
 
   const [plans,       setPlans]       = useState([])
   const [plansLoaded, setPlansLoaded] = useState(false)
@@ -437,21 +437,20 @@ export default function PlansPage() {
   useEffect(() => {
     if (authLoading) return
     const load = async () => {
-      const url  = profileId ? `/api/plans?userId=${profileId}` : "/api/plans"
-      const res  = await fetch(url)
+      const res  = await fetch("/api/plans")
       const data = await res.json()
       if (data.success) setPlans(data.plans || [])
       setPlansLoaded(true)
     }
     load()
-  }, [authLoading, profileId])
+  }, [authLoading])
 
   const handleStart = async (planId, alreadyEnrolled) => {
     if (!isAuth) { router.push(`/login?returnTo=/plans`); return }
     if (alreadyEnrolled) { router.push(`/plans/${planId}`); return }
     setEnrolling(planId)
     try {
-      const res  = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: profileId, planId }) })
+      const res  = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId }) })
       const data = await res.json()
       if (data.success) router.push(`/plans/${planId}`)
     } catch (err) { console.error("[Plans] Enroll failed:", err.message) }

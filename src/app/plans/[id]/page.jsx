@@ -227,7 +227,6 @@ export default function PlanDetailPage() {
   const [days,        setDays]        = useState([])
   const [enrollment,  setEnrollment]  = useState(null)
   const [pageLoading, setPageLoading] = useState(true)
-  const [profileId,   setProfileId]   = useState(null)
   const [isAuth,      setIsAuth]      = useState(false)
   const [enrolling,   setEnrolling]   = useState(false)
   const [catchingUp,  setCatchingUp]  = useState(false)
@@ -235,9 +234,8 @@ export default function PlanDetailPage() {
   const [user,        setUser]        = useState(null)
 
   // ── Load ───────────────────────────────────────────────────
-  const loadPlan = useCallback(async (uid) => {
-    const url = uid ? `/api/plans/${planId}?userId=${uid}` : `/api/plans/${planId}`
-    const res  = await fetch(url)
+  const loadPlan = useCallback(async () => {
+    const res  = await fetch(`/api/plans/${planId}`)
     const data = await res.json()
 
     if (!data.success) {
@@ -253,25 +251,14 @@ export default function PlanDetailPage() {
 
   useEffect(() => {
     const init = async () => {
-      let uid = null
       const { data: { user: authUser } } = await supabase.auth.getUser()
 
       if (authUser && !authUser.is_anonymous) {
-        const { data: profile } = await supabase
-          .from("users")
-          .select("id")
-          .eq("auth_id", authUser.id)
-          .maybeSingle()
-
-        if (profile) {
-          uid = profile.id
-          setProfileId(profile.id)
-          setIsAuth(true)
-          setUser(authUser)
-        }
+        setIsAuth(true)
+        setUser(authUser)
       }
 
-      await loadPlan(uid)
+      await loadPlan()
     }
 
     init()
@@ -279,7 +266,7 @@ export default function PlanDetailPage() {
 
   // ── Enroll ─────────────────────────────────────────────────
   const handleEnroll = async () => {
-    if (!isAuth || !profileId) {
+    if (!isAuth) {
       router.push("/login")
       return
     }
@@ -289,11 +276,11 @@ export default function PlanDetailPage() {
       const res = await fetch("/api/plans", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ userId: profileId, planId }),
+        body:    JSON.stringify({ planId }),
       })
       const data = await res.json()
       if (data.success) {
-        await loadPlan(profileId)
+        await loadPlan()
       }
     } catch (err) {
       console.error("[Plan Detail] Enroll failed:", err.message)
@@ -311,7 +298,6 @@ export default function PlanDetailPage() {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
-          userId:     profileId,
           userPlanId: enrollment.id,
           action:     "catch_up",
         }),

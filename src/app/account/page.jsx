@@ -324,7 +324,7 @@ export default function AccountPage() {
 
   const handleExport = () => {
     if (!profile?.id) return
-    window.open(`/api/account/export?userId=${profile.id}`, "_blank")
+    window.open('/api/account/export', '_blank')
   }
 
   /* ── Derived display values ── */

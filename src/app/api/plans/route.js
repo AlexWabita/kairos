@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
-import { NextResponse }  from 'next/server'
+
+import { getRequestAppUser } from '@/lib/server/auth/getRequestAppUser'
+import { requireRequestAppUser } from '@/lib/server/auth/requireRequestAppUser'
+import { ok, badRequest, serverError } from '@/lib/server/http/responses'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -8,81 +11,76 @@ const admin = createClient(
 
 // ─────────────────────────────────────────────────────────────
 // GET /api/plans
-// Returns all curated plans + user's enrolled plans (if userId provided)
-// Query params: ?userId=xxx (optional)
+// Returns all curated plans + user's enrolled plans (if authenticated)
 // ─────────────────────────────────────────────────────────────
-export async function GET(req) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url)
-    const userId = searchParams.get('userId')
+    const { appUser } = await getRequestAppUser()
 
-    // Always fetch all curated plans
+    // Always fetch curated plans
     const { data: plans, error: plansError } = await admin
       .from('reading_plans')
-      .select('id, title, description, duration_days, category, cover_image_url, is_curated, created_by, created_at')
+      .select(
+        'id, title, description, duration_days, category, cover_image_url, is_curated, created_by, created_at'
+      )
       .order('is_curated', { ascending: false })
       .order('created_at', { ascending: true })
 
     if (plansError) throw plansError
 
-    // If userId provided, also fetch user's enrollments
     let userPlans = []
-    if (userId) {
-      const { data: user, error: userError } = await admin
-        .from('users')
-        .select('id, is_anonymous')
-        .eq('id', userId)
-        .maybeSingle()
 
-      if (!userError && user && !user.is_anonymous) {
-        const { data, error: enrollError } = await admin
-          .from('user_plans')
-          .select('id, plan_id, current_day, status, started_at, catch_up_used_at')
-          .eq('user_id', userId)
+    // Only fetch enrollments if user exists and is not anonymous
+    if (appUser && !appUser.is_anonymous) {
+      const { data, error: enrollError } = await admin
+        .from('user_plans')
+        .select(
+          'id, plan_id, current_day, status, started_at, catch_up_used_at'
+        )
+        .eq('user_id', appUser.id)
 
-        if (!enrollError) userPlans = data || []
-      }
+      if (!enrollError) userPlans = data || []
     }
 
-    // Merge enrollment state onto each plan
-    const enriched = plans.map(plan => {
-      const enrollment = userPlans.find(up => up.plan_id === plan.id) || null
+    const enriched = plans.map((plan) => {
+      const enrollment =
+        userPlans.find((up) => up.plan_id === plan.id) || null
       return { ...plan, enrollment }
     })
 
-    return NextResponse.json({ success: true, plans: enriched })
-
+    return ok({ success: true, plans: enriched })
   } catch (err) {
     console.error('[Plans GET]', err.message)
-    return NextResponse.json({ error: 'Failed to fetch plans' }, { status: 500 })
+    return serverError('Failed to fetch plans')
   }
 }
 
 // ─────────────────────────────────────────────────────────────
 // POST /api/plans
-// Enroll user in a plan
-// Body: { userId, planId, isPrivate? }
+// Enroll authenticated user in a plan
+// Body: { planId, isPrivate? }
 // ─────────────────────────────────────────────────────────────
 export async function POST(req) {
   try {
-    const { userId, planId, isPrivate = false } = await req.json()
+    const { appUser, response } = await requireRequestAppUser()
 
-    if (!userId) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    if (response) {
+      return response
     }
+
+    const body = await req.json()
+
+    const planId =
+      typeof body.planId === 'string' ? body.planId.trim() : null
+
+    const isPrivate = Boolean(body.isPrivate)
+
     if (!planId) {
-      return NextResponse.json({ error: 'Plan ID is required' }, { status: 400 })
+      return badRequest('Plan ID is required')
     }
 
-    // Verify user
-    const { data: user, error: userError } = await admin
-      .from('users')
-      .select('id, is_anonymous')
-      .eq('id', userId)
-      .maybeSingle()
-
-    if (userError || !user || user.is_anonymous) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    if (appUser.is_anonymous) {
+      return badRequest('Authentication required')
     }
 
     // Verify plan exists
@@ -93,31 +91,32 @@ export async function POST(req) {
       .maybeSingle()
 
     if (planError || !plan) {
-      return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
+      return badRequest('Plan not found')
     }
 
-    // Upsert enrollment — if already enrolled, return existing
     const { data, error } = await admin
       .from('user_plans')
       .upsert(
         {
-          user_id:     userId,
-          plan_id:     planId,
-          is_private:  isPrivate,
+          user_id: appUser.id,
+          plan_id: planId,
+          is_private: isPrivate,
           current_day: 1,
-          status:      'active',
+          status: 'active',
         },
-        { onConflict: 'user_id,plan_id', ignoreDuplicates: true }
+        {
+          onConflict: 'user_id,plan_id',
+          ignoreDuplicates: true,
+        }
       )
       .select('id, plan_id, current_day, status, started_at')
       .single()
 
     if (error) throw error
 
-    return NextResponse.json({ success: true, enrollment: data })
-
+    return ok({ success: true, enrollment: data })
   } catch (err) {
     console.error('[Plans POST]', err.message)
-    return NextResponse.json({ error: 'Failed to enroll in plan' }, { status: 500 })
+    return serverError('Failed to enroll in plan')
   }
 }
