@@ -524,7 +524,6 @@ export default function BiblePage() {
   const [saveModalOpen,  setSaveModalOpen]  = useState(false)
   const [savingNote,     setSavingNote]     = useState(false)
 
-  const [userId,          setUserId]          = useState(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [userName,        setUserName]        = useState(null)
 
@@ -534,10 +533,9 @@ export default function BiblePage() {
 
   /* ── Auth ── */
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
       if (user && !user.is_anonymous) {
-        const { data: profile } = await supabase.from("users").select("id").eq("auth_id", user.id).maybeSingle()
-        if (profile) { setUserId(profile.id); setIsAuthenticated(true) }
+        setIsAuthenticated(true)
         setUserName(user.user_metadata?.full_name || user.email?.split("@")[0] || null)
       }
     })
@@ -665,7 +663,7 @@ export default function BiblePage() {
     try {
       await fetch("/api/journey/save", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: noteText, title, entry_type, scripture_ref: ref, userId }),
+        body: JSON.stringify({ content: noteText, title, entry_type, scripture_ref: ref }),
       })
     } catch (err) { console.error("[Bible] Save note failed:", err.message) }
     finally { setSavingNote(false); setSaveModalOpen(false); setNoteDrawerOpen(false); setNoteText("") }

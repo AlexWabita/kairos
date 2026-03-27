@@ -1,67 +1,86 @@
 import { createClient } from '@supabase/supabase-js'
-import { NextResponse }  from 'next/server'
 
-// Use service role — bypasses cookie session, verifies user directly in DB
+import { requireRequestAppUser } from '@/lib/server/auth/requireRequestAppUser'
+import {
+  badRequest,
+  ok,
+  serverError,
+  unauthorized,
+} from '@/lib/server/http/responses'
+
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
-// Valid entry types — must match DB check constraint exactly
-const VALID_ENTRY_TYPES = ['reflection', 'prayer', 'milestone', 'question', 'scripture']
+const VALID_ENTRY_TYPES = [
+  'reflection',
+  'prayer',
+  'milestone',
+  'question',
+  'scripture',
+]
 
 export async function POST(req) {
   try {
-    const {
-      content,
-      title,
-      entry_type,
-      scripture_ref,
-      conversation_id,
-      userId,
-    } = await req.json()
+    const { appUser, response } = await requireRequestAppUser()
+
+    if (response) {
+      return response
+    }
+
+    const body = await req.json()
+
+    const content =
+      typeof body.content === 'string' ? body.content.trim() : ''
+
+    const title =
+      typeof body.title === 'string' && body.title.trim().length > 0
+        ? body.title.trim()
+        : null
+
+    const scriptureRef =
+      typeof body.scripture_ref === 'string' && body.scripture_ref.trim().length > 0
+        ? body.scripture_ref.trim()
+        : null
+
+    const conversationId =
+      typeof body.conversation_id === 'string' && body.conversation_id.trim().length > 0
+        ? body.conversation_id.trim()
+        : null
+
+    const safeType = VALID_ENTRY_TYPES.includes(body.entry_type)
+      ? body.entry_type
+      : 'reflection'
 
     if (!content) {
-      return NextResponse.json({ error: 'Content is required' }, { status: 400 })
+      return badRequest('Content is required')
     }
 
-    if (!userId) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    // Validate entry_type — fall back to 'reflection' if missing or invalid
-    const safeType = VALID_ENTRY_TYPES.includes(entry_type) ? entry_type : 'reflection'
-
-    // Verify this is a real, non-anonymous user in our DB
-    const { data: user, error: userError } = await admin
-      .from('users')
-      .select('id, is_anonymous')
-      .eq('id', userId)
-      .maybeSingle()
-
-    if (userError || !user || user.is_anonymous) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    if (appUser.is_anonymous) {
+      return unauthorized('Authentication required')
     }
 
     const { data, error } = await admin
       .from('journey_entries')
       .insert({
-        user_id:         userId,
-        conversation_id: conversation_id || null,
-        entry_type:      safeType,
+        user_id: appUser.id,
+        conversation_id: conversationId,
+        entry_type: safeType,
         content,
-        title:           title || null,
-        scripture_ref:   scripture_ref || null,
+        title,
+        scripture_ref: scriptureRef,
       })
       .select('id')
       .single()
 
-    if (error) throw error
+    if (error) {
+      throw error
+    }
 
-    return NextResponse.json({ success: true, id: data.id })
-
+    return ok({ success: true, id: data.id })
   } catch (err) {
     console.error('[Journey Save]', err.message)
-    return NextResponse.json({ error: 'Failed to save' }, { status: 500 })
+    return serverError('Failed to save')
   }
 }
