@@ -25,11 +25,12 @@
  *   - Rate limiting (20 req/min per user or IP)
  */
 
-import { NextResponse }       from "next/server"
-import { rateLimit }          from "@/lib/rateLimit"
-import { buildSystemPrompt }  from "@/lib/ai/prompts"
-import { createClient }       from "@supabase/supabase-js"
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import { NextResponse }          from "next/server"
+import { rateLimit }             from "@/lib/rateLimit"
+import { buildSystemPrompt }     from "@/lib/ai/prompts"
+import { searchKnowledgeBase }   from "@/lib/rag/search"
+import { createClient }          from "@supabase/supabase-js"
+import { GoogleGenerativeAI }    from "@google/generative-ai"
 
 /* ── Supabase admin client ──────────────────────────────────────────────── */
 const adminClient = createClient(
@@ -50,18 +51,18 @@ const MAX_TOKENS       = 1800     // Enough for a full Kairos response
  */
 const GROQ_MODELS = [
   {
-    id:   "groq/llama-3.3-70b-versatile",
-    name: "Groq Llama 3.3 70B",
+    id:    "groq/llama-3.3-70b-versatile",
+    name:  "Groq Llama 3.3 70B",
     model: "llama-3.3-70b-versatile",
   },
   {
-    id:   "groq/llama-3.1-70b-versatile",
-    name: "Groq Llama 3.1 70B",
+    id:    "groq/llama-3.1-70b-versatile",
+    name:  "Groq Llama 3.1 70B",
     model: "llama-3.1-70b-versatile",
   },
   {
-    id:   "groq/mixtral-8x7b-32768",
-    name: "Groq Mixtral 8x7B",
+    id:    "groq/mixtral-8x7b-32768",
+    name:  "Groq Mixtral 8x7B",
     model: "mixtral-8x7b-32768",
   },
 ]
@@ -80,23 +81,23 @@ const GROQ_MODELS = [
  */
 const OPENROUTER_MODELS = [
   {
-    id:   "openrouter/stepfun-step-3.5-flash",
-    name: "StepFun Step 3.5 Flash",
+    id:    "openrouter/stepfun-step-3.5-flash",
+    name:  "StepFun Step 3.5 Flash",
     model: "stepfun-ai/step-3.5-flash",
   },
   {
-    id:   "openrouter/qwen-2.5-72b-free",
-    name: "Qwen 2.5 72B",
+    id:    "openrouter/qwen-2.5-72b-free",
+    name:  "Qwen 2.5 72B",
     model: "qwen/qwen-2.5-72b-instruct:free",
   },
   {
-    id:   "openrouter/mistral-7b-free",
-    name: "Mistral 7B",
+    id:    "openrouter/mistral-7b-free",
+    name:  "Mistral 7B",
     model: "mistralai/mistral-7b-instruct:free",
   },
   {
-    id:   "openrouter/glm-4.5-air",
-    name: "GLM 4.5 Air",
+    id:    "openrouter/glm-4.5-air",
+    name:  "GLM 4.5 Air",
     model: "thudm/glm-4.5-air",
   },
 ]
@@ -107,9 +108,9 @@ const OPENROUTER_MODELS = [
  * Env: GEMINI_API_KEY
  */
 const GEMINI_MODELS = [
-  { id: "gemini/flash-2.0",   name: "Gemini 2.0 Flash",   model: "gemini-2.0-flash"   },
-  { id: "gemini/flash-1.5",   name: "Gemini 1.5 Flash",   model: "gemini-1.5-flash"   },
-  { id: "gemini/flash-lite",  name: "Gemini Flash Lite",  model: "gemini-1.5-flash-8b" },
+  { id: "gemini/flash-2.0",  name: "Gemini 2.0 Flash",  model: "gemini-2.0-flash"    },
+  { id: "gemini/flash-1.5",  name: "Gemini 1.5 Flash",  model: "gemini-1.5-flash"    },
+  { id: "gemini/flash-lite", name: "Gemini Flash Lite", model: "gemini-1.5-flash-8b" },
 ]
 
 /* ── Detect if this is a continuation request ───────────────────────────── */
@@ -131,54 +132,13 @@ function isContinuationRequest(message) {
 /* ── Detect truncated responses ─────────────────────────────────────────── */
 function isTruncated(text) {
   if (!text || text.length < 50) return true
-  const trimmed = text.trimEnd()
-  // Ends mid-word, mid-sentence without terminal punctuation
+  const trimmed  = text.trimEnd()
   const lastChar = trimmed[trimmed.length - 1]
+  // Ends mid-word or mid-sentence without terminal punctuation
   const endsAbruptly = ![".", "!", "?", '"', "'", "…", ")", "]"].includes(lastChar)
   // Also flag if very short for what should be a Kairos response
   const tooShort = trimmed.length < 100
   return endsAbruptly || tooShort
-}
-
-/* ── RAG: fetch similar entries from knowledge base ─────────────────────── */
-async function fetchRagEntries(message, limit = 3) {
-  try {
-    const embeddingRes = await fetch("https://api.openai.com/v1/embeddings", {
-      method:  "POST",
-      headers: {
-        "Content-Type":  "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        input: message,
-        model: "text-embedding-3-small",
-      }),
-    })
-
-    if (!embeddingRes.ok) return []
-
-    const embeddingData = await embeddingRes.json()
-    const embedding     = embeddingData.data?.[0]?.embedding
-
-    if (!embedding) return []
-
-    const { data: entries } = await adminClient.rpc("match_rag_entries", {
-      query_embedding: embedding,
-      match_threshold: 0.6,
-      match_count:     limit,
-    })
-
-    if (entries?.length) {
-      const topSimilarity = entries[0]?.similarity?.toFixed(3) ?? "n/a"
-      console.log(`[Kairos RAG] Found ${entries.length} relevant entries (top similarity: ${topSimilarity})`)
-    }
-
-    return entries || []
-
-  } catch (err) {
-    console.warn("[Kairos RAG] Failed:", err.message)
-    return []
-  }
 }
 
 /* ── Fetch user profile for personalisation ─────────────────────────────── */
@@ -279,7 +239,7 @@ async function callGemini(modelDef, systemPrompt, messages) {
 
   const chat = model.startChat({ history })
 
-  // Gemini doesn't support AbortSignal natively, handled by outer timeout
+  // Gemini doesn't support AbortSignal natively — handled by outer timeout
   const result = await chat.sendMessage(lastMessage)
   const reply  = result.response.text()?.trim()
 
@@ -324,7 +284,6 @@ async function runModelChain(systemPrompt, messages, preferredModelId = null) {
   const timestamp = new Date().toLocaleTimeString("en-US", { hour12: true })
   const failures  = []
 
-  // Build priority chain — put preferred model first if specified
   const groqModels       = [...GROQ_MODELS]
   const openrouterModels = [...OPENROUTER_MODELS]
   const geminiModels     = [...GEMINI_MODELS]
@@ -340,8 +299,8 @@ async function runModelChain(systemPrompt, messages, preferredModelId = null) {
       console.log(`[Kairos AI] ${timestamp} — Continuation: preferring ${preferred.name}`)
 
       const provider =
-        groqModels.find(m => m.id === preferredModelId) ? "groq" :
-        openrouterModels.find(m => m.id === preferredModelId) ? "openrouter" : "gemini"
+        groqModels.find(m => m.id === preferredModelId)       ? "groq"        :
+        openrouterModels.find(m => m.id === preferredModelId) ? "openrouter"  : "gemini"
 
       const result = await tryModel(provider, preferred, systemPrompt, messages, failures)
       if (result) return { ...result, failures }
@@ -466,17 +425,18 @@ export async function POST(request) {
     // ── 2. Escalation check ───────────────────────────────────────────────
     const escalated = isEscalated(message)
 
-    // ── 3. Fetch profile + RAG context ────────────────────────────────────
-    const [profile, ragEntries] = await Promise.all([
+    // ── 3. Fetch profile + RAG context in parallel ────────────────────────
+    // searchKnowledgeBase uses Jina AI (768-dim) — matches the stored vectors.
+    // It handles substantive-message filtering, formatting, and silent failure
+    // internally, so this call is always safe and never throws.
+    const [profile, ragContext] = await Promise.all([
       profileOverride ? Promise.resolve(profileOverride) : fetchProfile(userId),
-      fetchRagEntries(message),
+      searchKnowledgeBase(message),
     ])
 
     // ── 4. Build system prompt ────────────────────────────────────────────
     const systemPrompt = buildSystemPrompt({
-      ragContext:     ragEntries.length ? ragEntries.map((e, i) =>
-        `[${i+1}] ${e.title}\n${e.content}${e.scripture_ref ? `\nScripture: ${e.scripture_ref}` : ""}`
-      ).join("\n\n") : "",
+      ragContext:     ragContext || "",
       profileContext: profile ? [
         profile.display_name         && `User's name: ${profile.display_name}`,
         profile.background_faith     && `Faith background: ${profile.background_faith}`,
@@ -516,7 +476,7 @@ export async function POST(request) {
 
     let { reply, modelId, modelName, failures } = result
 
-    // ── 8. Truncation detection — if cut off, append a note ───────────────
+    // ── 8. Truncation detection ───────────────────────────────────────────
     const wasTruncated = isTruncated(reply)
     if (wasTruncated) {
       console.warn(`[Kairos AI] Truncation detected from ${modelName}`)
@@ -537,7 +497,7 @@ export async function POST(request) {
           model_used:      modelName,
         })
       } catch {
-        // Non-fatal
+        // Non-fatal — conversation persistence should never break a response
       }
     }
 
