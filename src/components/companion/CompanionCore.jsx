@@ -778,7 +778,6 @@ export default function CompanionCore({ profile = null }) {
         body: JSON.stringify({
           message: text,
           history: messages.map(m => ({ role: m.role, content: m.content })),
-          profile, userId: profileId || null, conversationId,
           verseContext: verseData ? `Exact text already retrieved: "${verseData.text}" — ${verseData.reference} (${verseData.translation}). Reference this directly, do not paraphrase it.` : null,
           isVerseRequest: !!verseRef, isSearch, lastModelId,
         }),
