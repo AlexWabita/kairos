@@ -970,13 +970,14 @@ export default function CompanionCore({ profile = null }) {
             <style>{`@media(max-width:768px){.cc-input-wrap{padding-bottom:66px!important}}`}</style>
             <div className="cc-input-wrap" style={{ maxWidth: 720, margin: "0 auto" }}>
               <div style={{
-                display: "flex", alignItems: "flex-end", gap: 10,
-                background: "rgba(255,255,255,0.03)",
-                borderWidth: 1, borderStyle: "solid", borderColor: "rgba(255,255,255,0.08)",
-                borderRadius: 14, padding: "10px 12px",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "4px 0",
+                borderBottom: "1px solid rgba(255,255,255,0.08)",
                 transition: "border-color 0.2s ease",
               }}
-                onFocusCapture={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"}
+                onFocusCapture={e => e.currentTarget.style.borderColor = "rgba(240,192,96,0.3)"}
                 onBlurCapture={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"}
               >
                 <textarea
@@ -993,7 +994,7 @@ export default function CompanionCore({ profile = null }) {
                     color: "rgba(255,255,255,0.85)",
                     fontFamily: "var(--font-body)", fontSize: "0.92rem",
                     lineHeight: 1.6, resize: "none",
-                    minHeight: "24px", maxHeight: "140px",
+                    minHeight: "36px", maxHeight: "140px",
                     overflowY: "auto", display: "block",
                     padding: 0,
                   }}
