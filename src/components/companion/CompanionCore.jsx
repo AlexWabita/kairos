@@ -102,13 +102,61 @@ const NAV = [
   { label: "Settings",  href: "/settings",      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> },
 ]
 
-const PROMPTS = [
-  "I have questions about faith I'm afraid to ask",
-  "I've been hurt by the church",
-  "I don't know if God is real",
-  "I'm going through something really hard",
-  "I just feel lost",
-  "Help me understand a Bible passage",
+/* ─────────────────────────────────────────────────────────────
+   CAPABILITY CARDS
+   Grouped by emotional state. Each item injects a Kairos
+   framing bubble into the conversation immediately on click.
+───────────────────────────────────────────────────────────── */
+const CAPABILITIES = [
+  {
+    group: "When something is wrong",
+    items: [
+      { label: "What You're Feeling Right Now",   mode: "PASTORAL",    frame: "You don't need to explain it perfectly. Start with whatever is closest to the surface." },
+      { label: "I'm Angry at God",                mode: "LAMENT",      frame: "That anger is not something you need to clean up before bringing it here. Say what you actually feel." },
+      { label: "I Don't Know If I Believe Anymore", mode: "APOLOGETICS", frame: "You don't have to pretend certainty you don't have. Tell me where the doubt started." },
+    ],
+  },
+  {
+    group: "When you need truth",
+    items: [
+      { label: "Honest Life Audit",               mode: "CLARITY",     frame: "Let's look at your life without softening it. Answer honestly — we'll find where things are out of alignment." },
+      { label: "A Question I'm Afraid to Ask",    mode: "CLARITY",     frame: "There is no question too dangerous to ask here. Say what you've been holding back." },
+      { label: "Help Me Understand a Bible Passage", mode: "CLARITY",  frame: "Tell me the passage — or describe what you're trying to understand. We'll work through it together." },
+    ],
+  },
+  {
+    group: "When you're searching at depth",
+    items: [
+      { label: "A Deep Question About God or Reality", mode: "APOLOGETICS", frame: "Bring the full weight of the question. I won't soften the edges of it." },
+      { label: "Suffering and Divine Justice",     mode: "APOLOGETICS", frame: "This is one of the oldest and most honest questions a person can bring. Let's go into it seriously." },
+      { label: "Prayer, Silence, or Mystical Experience", mode: "CLARITY", frame: "Tell me where you are in your prayer life — what you're experiencing, what's missing, what confuses you." },
+      { label: "I'm Questioning Everything I Believe", mode: "APOLOGETICS", frame: "Deconstruction is not the end. Tell me what's unravelling and where it started." },
+    ],
+  },
+  {
+    group: "When you need to change",
+    items: [
+      { label: "Hidden Patterns",                 mode: "FORMATION",   frame: "Self-sabotage usually runs on a loop you haven't named yet. Tell me what keeps happening — we'll slow it down and look at it." },
+      { label: "Personal Rule of Life",           mode: "FORMATION",   frame: "A rule of life isn't a schedule. It's a framework for who you want to become. Let's build yours." },
+      { label: "Build an Accountability System",  mode: "FORMATION",   frame: "Real accountability isn't about streaks. Tell me what you're trying to change — we'll build something honest around it." },
+    ],
+  },
+  {
+    group: "When you need courage",
+    items: [
+      { label: "Practice a Hard Conversation",    mode: "COURAGE",     frame: "Tell me the conversation you've been avoiding — who it's with, what needs to be said. We'll work through it together." },
+      { label: "I Need to Forgive Someone",       mode: "COURAGE",     frame: "Forgiveness is not the same as saying it was acceptable. Tell me what happened." },
+      { label: "I Need to Ask for Forgiveness",   mode: "COURAGE",     frame: "The hardest direction. Tell me what you did and who you hurt." },
+    ],
+  },
+  {
+    group: "When you need to let go",
+    items: [
+      { label: "Write the Letter You Never Sent", mode: "RELEASE",     frame: "Some things need to be said even if they're never delivered. Who is this letter to?" },
+      { label: "I'm Grieving Something",          mode: "LAMENT",      frame: "Grief doesn't need to be explained or justified. Tell me what you lost." },
+      { label: "Help Me Find Closure",            mode: "RELEASE",     frame: "Closure rarely arrives on its own. Tell me what's still open." },
+    ],
+  },
 ]
 
 /* ─────────────────────────────────────────────────────────────
@@ -594,7 +642,7 @@ function Sidebar({ userName, initials }) {
 ───────────────────────────────────────────────────────────── */
 function MobileNav() {
   const currentPath = typeof window !== "undefined" ? window.location.pathname : "/journey"
-  const items = NAV.slice(0, 5) // show first 5
+  const items = NAV.slice(0, 5)
 
   return (
     <div className="cc-mobile-nav" style={{
@@ -632,19 +680,19 @@ export default function CompanionCore({ profile = null }) {
   const { settings, updateSetting } = useSettings()
   const { isAuth, profileId, loading: authLoading, user } = useAuthState()
 
-  const [messages,       setMessages]       = useState([])
-  const [input,          setInput]          = useState("")
-  const [loading,        setLoading]        = useState(false)
-  const [started,        setStarted]        = useState(false)
-  const [newMsgIdx,      setNewMsgIdx]      = useState(null)
-  const [conversationId, setConversationId] = useState(null)
-  const [savedMsgIds,    setSavedMsgIds]    = useState(new Set())
-  const [showConsent,    setShowConsent]    = useState(false)
-  const [lastModelId,    setLastModelId]    = useState(null)
-  const [votd,           setVotd]           = useState(null)
-  const [activePlan,     setActivePlan]     = useState(null)
-  const [pendingSave,    setPendingSave]    = useState(null)
-  const [savingModal,    setSavingModal]    = useState(false)
+  const [messages,         setMessages]         = useState([])
+  const [input,            setInput]            = useState("")
+  const [loading,          setLoading]          = useState(false)
+  const [started,          setStarted]          = useState(false)
+  const [newMsgIdx,        setNewMsgIdx]        = useState(null)
+  const [conversationId,   setConversationId]   = useState(null)
+  const [savedMsgIds,      setSavedMsgIds]      = useState(new Set())
+  const [showConsent,      setShowConsent]      = useState(false)
+  const [lastModelId,      setLastModelId]      = useState(null)
+  const [votd,             setVotd]             = useState(null)
+  const [activePlan,       setActivePlan]       = useState(null)
+  const [pendingSave,      setPendingSave]      = useState(null)
+  const [savingModal,      setSavingModal]      = useState(false)
   const [showInlineSignIn, setShowInlineSignIn] = useState(false)
 
   const bottomRef   = useRef(null)
@@ -653,9 +701,8 @@ export default function CompanionCore({ profile = null }) {
 
   const translation = settings.bibleTranslation || "WEB"
 
-  // Derive user display info
   const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || null
-  const initials = userName ? userName.trim().split(" ").slice(0,2).map(p => p[0]).join("").toUpperCase() : "K"
+  const initials  = userName ? userName.trim().split(" ").slice(0,2).map(p => p[0]).join("").toUpperCase() : "K"
 
   // Consent
   useEffect(() => {
@@ -755,8 +802,17 @@ export default function CompanionCore({ profile = null }) {
     }, 50)
   }
 
-  const handlePromptClick = (prompt) => {
-    setInput(prompt)
+  // ── Capability card click — injects framing bubble immediately ──
+  const handleCapabilityClick = (item) => {
+    const frameMsg = {
+      role:              "assistant",
+      content:           item.frame,
+      isCapabilityFrame: true,
+      wasTruncated:      false,
+    }
+    setMessages([frameMsg])
+    setNewMsgIdx(0)
+    setStarted(true)
     setTimeout(() => inputRef.current?.focus(), 50)
   }
 
@@ -800,7 +856,7 @@ export default function CompanionCore({ profile = null }) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend() }
   }
 
-  const pendingMsg = pendingSave !== null ? messages[pendingSave] : null
+  const pendingMsg    = pendingSave !== null ? messages[pendingSave] : null
   const showSaveModal = pendingSave !== null && isAuth && !showInlineSignIn
 
   return (
@@ -840,7 +896,6 @@ export default function CompanionCore({ profile = null }) {
             borderBottom: "1px solid rgba(255,255,255,0.05)",
             background: "rgba(8,10,18,0.6)", backdropFilter: "blur(12px)",
           }}>
-            {/* Mobile: logo (desktop has sidebar) */}
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <a href="/" className="cc-mobile-logo" style={{ display: "none", alignItems: "center", gap: 6, textDecoration: "none" }}>
                 <style>{`.cc-mobile-logo { display: none !important; } @media(max-width:768px){.cc-mobile-logo{display:flex!important}}`}</style>
@@ -854,7 +909,6 @@ export default function CompanionCore({ profile = null }) {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {/* Translation selector */}
               <select
                 value={translation}
                 onChange={e => updateSetting("bibleTranslation", e.target.value)}
@@ -886,16 +940,13 @@ export default function CompanionCore({ profile = null }) {
               {/* Pre-conversation state */}
               {!started && messages.length === 0 && (
                 <div style={{ animation: "cc-fade 0.8s ease" }}>
-                  {/* VotD — respects settings.showVotD */}
                   {settings.showVotD !== false && (
                     <VotDCard verse={votd} onReflect={handleReflectFromVerse} />
                   )}
-                  {/* Active plan — respects settings.showActivePlan */}
                   {settings.showActivePlan !== false && (
                     <ActivePlanCard plan={activePlan} />
                   )}
 
-                  {/* Headline */}
                   <div style={{ textAlign: "center", padding: "32px 0 28px" }}>
                     <p style={{ fontFamily: "var(--font-display)", fontSize: "0.55rem", letterSpacing: "0.28em", textTransform: "uppercase", color: "rgba(240,192,96,0.5)", marginBottom: 14 }}>
                       Your appointed moment
@@ -905,33 +956,65 @@ export default function CompanionCore({ profile = null }) {
                     </h2>
                   </div>
 
-                  {/* Example prompts — respects settings.showExamplePrompts */}
+                  {/* Capability cards — grouped by emotional state */}
                   {settings.showExamplePrompts !== false && (
-                  <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                    gap: 8, marginBottom: 24,
-                  }}>
-                    {PROMPTS.map(prompt => (
-                      <button
-                        key={prompt}
-                        onClick={() => handlePromptClick(prompt)}
-                        style={{
-                          padding: "12px 14px", borderRadius: 10,
-                          background: "rgba(255,255,255,0.02)",
-                          borderWidth: 1, borderStyle: "solid", borderColor: "rgba(255,255,255,0.07)",
-                          color: "rgba(255,255,255,0.5)",
-                          fontFamily: "var(--font-body)", fontSize: "0.82rem",
-                          cursor: "pointer", textAlign: "left", lineHeight: 1.5,
-                          transition: "all 0.15s ease", minHeight: 48,
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(240,192,96,0.2)"; e.currentTarget.style.background = "rgba(240,192,96,0.04)"; e.currentTarget.style.color = "rgba(255,255,255,0.78)" }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; e.currentTarget.style.background = "rgba(255,255,255,0.02)"; e.currentTarget.style.color = "rgba(255,255,255,0.5)" }}
-                      >
-                        {prompt}
-                      </button>
-                    ))}
-                  </div>
+                    <div style={{ marginBottom: 24 }}>
+                      {CAPABILITIES.map(group => (
+                        <div key={group.group} style={{ marginBottom: 20 }}>
+                          <p style={{
+                            fontFamily: "var(--font-display)",
+                            fontSize: "0.46rem",
+                            letterSpacing: "0.18em",
+                            textTransform: "uppercase",
+                            color: "rgba(255,255,255,0.2)",
+                            marginBottom: 8,
+                            paddingLeft: 2,
+                          }}>
+                            {group.group}
+                          </p>
+                          <div style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                            gap: 6,
+                          }}>
+                            {group.items.map(item => (
+                              <button
+                                key={item.label}
+                                onClick={() => handleCapabilityClick(item)}
+                                style={{
+                                  padding: "11px 14px",
+                                  borderRadius: 10,
+                                  background: "rgba(255,255,255,0.02)",
+                                  borderWidth: 1,
+                                  borderStyle: "solid",
+                                  borderColor: "rgba(255,255,255,0.07)",
+                                  color: "rgba(255,255,255,0.5)",
+                                  fontFamily: "var(--font-body)",
+                                  fontSize: "0.82rem",
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  lineHeight: 1.5,
+                                  transition: "all 0.15s ease",
+                                  minHeight: 44,
+                                }}
+                                onMouseEnter={e => {
+                                  e.currentTarget.style.borderColor = "rgba(240,192,96,0.25)"
+                                  e.currentTarget.style.background   = "rgba(240,192,96,0.04)"
+                                  e.currentTarget.style.color        = "rgba(255,255,255,0.78)"
+                                }}
+                                onMouseLeave={e => {
+                                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"
+                                  e.currentTarget.style.background   = "rgba(255,255,255,0.02)"
+                                  e.currentTarget.style.color        = "rgba(255,255,255,0.5)"
+                                }}
+                              >
+                                {item.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               )}
@@ -966,7 +1049,6 @@ export default function CompanionCore({ profile = null }) {
             backdropFilter: "blur(12px)",
             paddingBottom: "calc(16px + env(safe-area-inset-bottom))",
           }}>
-            {/* On mobile add bottom padding for nav bar */}
             <style>{`@media(max-width:768px){.cc-input-wrap{padding-bottom:66px!important}}`}</style>
             <div className="cc-input-wrap" style={{ maxWidth: 720, margin: "0 auto" }}>
               <div style={{
@@ -978,7 +1060,7 @@ export default function CompanionCore({ profile = null }) {
                 transition: "border-color 0.2s ease",
               }}
                 onFocusCapture={e => e.currentTarget.style.borderColor = "rgba(240,192,96,0.3)"}
-                onBlurCapture={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"}
+                onBlurCapture={e  => e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"}
               >
                 <textarea
                   ref={el => { textareaRef.current = el; inputRef.current = el }}
