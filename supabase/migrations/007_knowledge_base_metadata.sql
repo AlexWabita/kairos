@@ -8,28 +8,48 @@
 --   what specific topics it covers.
 --
 -- New columns:
---   tags          text[]   — granular topic tags (e.g. repentance, grief, prayer)
---   audience      text[]   — who this entry is written for; multiple allowed
---                            values: anyone, seeker, new_believer, growing, mature
---   mode_affinity text[]   — which Kairos response modes this entry best serves
---                            values: PASTORAL, CLARITY, LAMENT, FORMATION,
---                                    APOLOGETICS, COURAGE, RELEASE
---   weight        integer  — retrieval priority weight (default 1, higher = boosted)
---                            use later to prioritise core theology over edge content
+--   tags          text[]   — granular topic tags (lowercase, snake_case)
+--   audience      text[]   — who this entry is for; multiple values allowed
+--                            valid: anyone | seeker | new_believer | growing | mature
+--   mode_affinity text[]   — Kairos response modes this entry best serves
+--                            valid: PASTORAL | CLARITY | LAMENT | FORMATION |
+--                                   APOLOGETICS | COURAGE | RELEASE
+--   weight        integer  — retrieval priority (default 1; higher = boosted)
 --
--- All columns are nullable and default to safe values — existing rows are
--- unaffected and the seed route continues to work unchanged.
+-- Convention:
+--   - tags are always lowercase snake_case (e.g. spiritual_dryness, not Dryness)
+--   - audience defaults to {anyone} — treat {} as "needs tagging"
+--   - mode_affinity is enforced by CHECK constraint — no typos allowed
 -- ─────────────────────────────────────────────────────────────────────────────
 
 ALTER TABLE knowledge_base
-  ADD COLUMN IF NOT EXISTS tags         text[]  DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS audience     text[]  DEFAULT '{"anyone"}',
-  ADD COLUMN IF NOT EXISTS mode_affinity text[] DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS weight       integer DEFAULT 1;
+  ADD COLUMN IF NOT EXISTS tags          text[]  DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS audience      text[]  DEFAULT ARRAY['anyone'],
+  ADD COLUMN IF NOT EXISTS mode_affinity text[]  DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS weight        integer DEFAULT 1;
 
--- ── Indexes ──────────────────────────────────────────────────────────────────
--- GIN indexes on array columns allow efficient overlap queries (&&).
--- Useful when filtering by audience or mode before vector similarity search.
+-- ── CHECK constraint: mode_affinity values must match the 7 Kairos modes ─────
+-- Prevents silent data corruption from typos or case inconsistency.
+-- Uses the <@ (contained by) operator — every element in mode_affinity must
+-- be a member of the allowed set.
+
+ALTER TABLE knowledge_base
+  ADD CONSTRAINT mode_affinity_valid
+  CHECK (
+    mode_affinity <@ ARRAY[
+      'PASTORAL',
+      'CLARITY',
+      'LAMENT',
+      'FORMATION',
+      'APOLOGETICS',
+      'COURAGE',
+      'RELEASE'
+    ]
+  );
+
+-- ── GIN indexes on array columns ──────────────────────────────────────────────
+-- Enables efficient overlap queries (&&) when pre-filtering by audience
+-- or mode before running vector similarity search.
 
 CREATE INDEX IF NOT EXISTS idx_knowledge_base_tags
   ON knowledge_base USING GIN (tags);
@@ -40,42 +60,51 @@ CREATE INDEX IF NOT EXISTS idx_knowledge_base_audience
 CREATE INDEX IF NOT EXISTS idx_knowledge_base_mode_affinity
   ON knowledge_base USING GIN (mode_affinity);
 
--- ── Backfill defaults for existing rows ──────────────────────────────────────
--- Existing entries get sensible defaults so retrieval continues to work
--- before each entry is individually tagged in the corpus expansion pass.
+-- ── Partial index for boosted content (future use) ───────────────────────────
+-- No entries have weight > 1 yet. Index activates automatically
+-- when you begin boosting core theological entries.
 
--- Apologetics entries → APOLOGETICS + CLARITY modes, mature/growing audience
+CREATE INDEX IF NOT EXISTS idx_knowledge_base_high_weight
+  ON knowledge_base (weight)
+  WHERE weight > 1;
+
+-- ── Backfill defaults for existing 63 entries ────────────────────────────────
+-- Applies sensible mode_affinity and audience by category so retrieval
+-- continues working before each entry is individually tagged.
+-- Condition: mode_affinity = '{}' catches DEFAULT-initialised rows.
+
+-- Apologetics entries
 UPDATE knowledge_base
 SET
   mode_affinity = ARRAY['APOLOGETICS', 'CLARITY'],
   audience      = ARRAY['anyone', 'seeker', 'growing', 'mature'],
   weight        = 1
 WHERE category = 'apologetics'
-  AND (mode_affinity IS NULL OR mode_affinity = '{}');
+  AND mode_affinity = '{}';
 
--- Pastoral entries → PASTORAL + LAMENT + COURAGE modes, broad audience
+-- Pastoral entries
 UPDATE knowledge_base
 SET
   mode_affinity = ARRAY['PASTORAL', 'LAMENT', 'COURAGE'],
   audience      = ARRAY['anyone'],
   weight        = 1
 WHERE category = 'pastoral'
-  AND (mode_affinity IS NULL OR mode_affinity = '{}');
+  AND mode_affinity = '{}';
 
--- Scripture context entries → CLARITY mode, broad audience
+-- Scripture context entries
 UPDATE knowledge_base
 SET
   mode_affinity = ARRAY['CLARITY'],
   audience      = ARRAY['anyone'],
   weight        = 1
 WHERE category = 'scripture_context'
-  AND (mode_affinity IS NULL OR mode_affinity = '{}');
+  AND mode_affinity = '{}';
 
--- FAQ entries → CLARITY + APOLOGETICS modes, seeker-friendly
+-- FAQ entries
 UPDATE knowledge_base
 SET
   mode_affinity = ARRAY['CLARITY', 'APOLOGETICS'],
   audience      = ARRAY['anyone', 'seeker'],
   weight        = 1
 WHERE category = 'faq'
-  AND (mode_affinity IS NULL OR mode_affinity = '{}');
+  AND mode_affinity = '{}';
