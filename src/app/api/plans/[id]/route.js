@@ -19,7 +19,7 @@ const admin = createClient(
 // ─────────────────────────────────────────────────────────────
 export async function GET(req, { params }) {
   try {
-    const { id } = params
+    const { id } = await params
 
     // ✅ Server-derived identity (safe, optional)
     const { appUser } = await getRequestAppUser()
