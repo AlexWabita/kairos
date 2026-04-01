@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { useSettings } from "@/context/SettingsContext"
 import { BIBLE_BOOKS } from "@/lib/bible/client"
 import { supabase }     from "@/lib/supabase/client"
@@ -499,6 +499,34 @@ function MobileDrawer({ open, onClose, children }) {
 ───────────────────────────────────────────────────────────── */
 export default function BiblePage() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  // ── PARSE REF HELPER ──
+  function parseRef(refStr) {
+    if (!refStr) return null
+    const match = refStr.match(/^([A-Za-z\s]+?)\s+(\d+):(\d+)(?:-\d+)?$/)
+    if (!match) return null
+    const [, bookName, chapterStr, verseStr] = match
+    const nameLower = bookName.trim().toLowerCase()
+    const book = BIBLE_BOOKS.find(b => 
+      b.name.toLowerCase() === nameLower || 
+      b.name.toLowerCase().includes(nameLower) ||
+      nameLower.includes(b.name.toLowerCase().split(' ')[0])
+    )
+    if (!book) return null
+    const chapter = parseInt(chapterStr)
+    const verse = parseInt(verseStr)
+    if (chapter < 1 || chapter > book.chapters || verse < 1) return null
+    return { book, chapter, verse }
+  }
+
+  console.log('[BiblePage] URL params:', {
+    book: searchParams.get('book'),
+    chapter: searchParams.get('chapter'),
+    verse: searchParams.get('verse'),
+    ref: searchParams.get('ref'),
+    parsedRef: searchParams.get('ref') ? parseRef(searchParams.get('ref')) : null
+  })
 
   /* ── State (all preserved) ── */
   const [activeTab,       setActiveTab]       = useState("OT")
@@ -536,21 +564,89 @@ export default function BiblePage() {
     })
   }, [])
 
-  /* ── Restore position ── */
+  /* ── Restore position OR URL params ── */
   useEffect(() => {
+    // ── Check ?ref= first ──
+    const refParam = searchParams.get('ref')
+    if (refParam) {
+      const parsed = parseRef(refParam)
+      if (parsed) {
+        const { book, chapter, verse } = parsed
+        setSelectedBook(book)
+        setSelectedChapter(chapter)
+        setActiveTab(book.testament)
+        setShowChapters(true)
+        
+        // Load chapter immediately
+        loadChapter(book, chapter, translation)
+        
+        // Auto-highlight verse
+        setTimeout(() => {
+          setHighlightedVerses(new Set([verse]))
+        // Scroll to verse
+        setTimeout(() => {
+          const verseEl = Array.from(document.querySelectorAll('.br-verse')).find(el => {
+            const numEl = el.querySelector('.br-verse-num')
+            return numEl && numEl.textContent.trim() === verse.toString()
+          })
+          if (verseEl && scrollRef.current) {
+            verseEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            // Add temporary highlight
+            verseEl.style.background = 'rgba(240,192,96,0.25)'
+            verseEl.style.transition = 'background 2s ease-out'
+            setTimeout(() => { verseEl.style.background = '' }, 2000)
+          }
+        }, 300)
+        }, 600)
+        return
+      }
+    }
+    
+    const bookParam = searchParams.get('book')
+    const chapterParam = searchParams.get('chapter')
+    const verseParam = searchParams.get('verse')
+    
+    if (bookParam && chapterParam) {
+      const book = BIBLE_BOOKS.find(b => b.id === bookParam.toUpperCase())
+      if (book) {
+        const chapter = parseInt(chapterParam)
+        if (chapter >= 1 && chapter <= book.chapters) {
+          setSelectedBook(book)
+          setSelectedChapter(chapter)
+          setActiveTab(book.testament)
+          setShowChapters(true)
+          
+          loadChapter(book, chapter, translation)
+          
+          if (verseParam) {
+            setTimeout(() => {
+              const verseNum = parseInt(verseParam)
+              if (verseNum) setHighlightedVerses(new Set([verseNum]))
+            }, 500)
+          }
+          return
+        }
+      }
+    }
+    
+    // Fallback to localStorage/default
     const pos = loadPosition()
     let book = null
     if (pos) {
       book = BIBLE_BOOKS.find(b => b.id === pos.bookId)
       if (book) {
         setSelectedBook(book); setSelectedChapter(pos.chapter || 1)
-  // updateSetting("bibleTranslation", pos.translation || "WEB")
         setActiveTab(book.testament)
-        setShowChapters(true); return
+        setShowChapters(true)
+        loadChapter(book, pos.chapter || 1, translation)
+        return
       }
     }
+    
+    // Default
     book = BIBLE_BOOKS.find(b => b.id === "JHN")
     setSelectedBook(book); setSelectedChapter(1); setActiveTab("NT"); setShowChapters(true)
+    loadChapter(book, 1, translation)
   }, [])
 
   const { settings, updateSetting } = useSettings()

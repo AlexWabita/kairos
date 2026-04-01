@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useRouter, useParams, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase/client"
+import { BIBLE_BOOKS } from "@/lib/bible/client"
 
 // ── Scripture pill ────────────────────────────────────────────
 function ScripturePill({ ref: scriptureRef, onClick }) {
@@ -234,9 +235,50 @@ export default function DayPage() {
     router.push("/journey")
   }
 
-  // ── Open scripture in Bible reader ─────────────────────────
-  const openInBible = (ref) => {
-    router.push("/bible")
+// ── Parse verse reference e.g. "John 3:16" → {bookId: "JHN", chapter: 3, verse: 16}
+// ── Open scripture in Bible reader ─────────────────────────
+  const parseAndOpenInBible = (refStr) => {
+    // Normalize: trim, replace "1st/2nd/3rd" → "1/2/3"
+    const normalized = refStr.replace(/(\d+)(st|nd|rd|th)/gi, "$1").trim()
+    
+    // Handle "John 8:36" → bookName="John", chapter=8, verse=36
+    // Also handles "John 3", "John 3:16-18"
+    const match = normalized.match(/^(.+?)\s+(\d+)(?::(\d+)(?:-(\d+))?)?$/i)
+    if (!match) {
+      router.push("/bible")
+      return
+    }
+    
+    const [, bookName, chapterStr, verseStartStr, verseEndStr] = match
+    const chapter = parseInt(chapterStr, 10)
+    
+    // Find book - exact or partial match, handle common abbreviations
+    const bookNameClean = bookName.trim().toLowerCase()
+    const book = BIBLE_BOOKS.find(b => {
+      const bookLower = b.name.toLowerCase()
+      return bookLower === bookNameClean || 
+             bookLower.startsWith(bookNameClean) || 
+             bookNameClean.startsWith(bookLower)
+    })
+    
+    if (!book) {
+      console.warn(`Book not found for "${bookName}"`)
+      router.push("/bible")
+      return
+    }
+    
+    console.log(`Navigating to: /bible?book=${book.id}&chapter=${chapter}&verse=${verseStartStr}`)
+    
+    // Build search params - ?book=JHN&chapter=8&verse=36
+    const params = new URLSearchParams({ 
+      book: book.id, 
+      chapter: chapter.toString() 
+    })
+    if (verseStartStr) {
+      params.append("verse", verseStartStr)
+    }
+    
+    router.push(`/bible?${params.toString()}`)
   }
 
   // ── Navigation between days ────────────────────────────────
@@ -574,7 +616,7 @@ export default function DayPage() {
                     <ScripturePill
                       key={i}
                       ref={ref}
-                      onClick={() => openInBible(ref)}
+                      onClick={() => parseAndOpenInBible(ref)}
                     />
                   ))}
                 </div>
