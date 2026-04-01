@@ -498,17 +498,19 @@ const KNOWLEDGE_ENTRIES = [
     audience:     ["anyone", "new_believer", "growing"],
     mode_affinity: ["FORMATION", "CLARITY", "COURAGE"],
     weight:       2,
-    content: `Repentance is one of the most misunderstood words in the Christian vocabulary. In many religious environments it has been used as a synonym for shame — for feeling as bad as possible about what you have done. But that is not what the New Testament means by it.
-  
-The Greek word is metanoia — a change of mind, a turning. Not a feeling, primarily. A  direction. The Prodigal Son "came to himself" in the pigsty — he did not wallow in self-hatred for months before returning. He turned and walked home.
-  
-Paul draws a crucial distinction in 2 Corinthians 7:10: "Godly sorrow brings repentance that leads to salvation and leaves no regret, but worldly sorrow brings death." Worldly sorrow is  shame that curves inward, consuming the person. Godly sorrow looks outward and moves — toward  God, toward restoration, toward change.
-  
-What repentance is not: it is not achieving a sufficient level of guilt before God will  accept you. It is not a performance of remorse. It is not the guarantee that you will never  fail in the same way again.
-  
-What it is: a genuine turning. An acknowledgment of what was wrong. A change of direction. And in the economy of God, that turning is met — like the father in the parable — while you are still a long way off.
-  
-Repentance is the door, not the hallway. You do not have to stand in it indefinitely before  entering.`,
+    content: `You keep coming back to the same sin. You confess it, you mean it, you fail again, and now the confession itself feels hollow — like you are saying words you do not believe anymore. You wonder if you are even capable of repentance, or whether you have used it up.
+ 
+That loop is not what repentance is. And understanding the difference matters more than trying harder.
+ 
+The Greek word metanoia means a change of mind, a turning. Not a feeling. Not a performance of sufficient remorse. A direction. The Prodigal Son "came to himself" in the pigsty — he did not wallow in self-hatred for months before returning. He turned and walked home.
+ 
+Paul draws a crucial distinction in 2 Corinthians 7:10: "Godly sorrow brings repentance that leads to salvation and leaves no regret, but worldly sorrow brings death." Worldly sorrow is shame that curves inward — it consumes the person without producing change. Godly sorrow looks outward and moves. Toward God, toward restoration, toward a different direction.
+ 
+Repentance is not achieving a sufficient level of guilt before God will accept you. It is not a performance of remorse. It is not the guarantee that you will never fail in the same way again.
+ 
+It is a genuine turning. An acknowledgment of what was wrong. A change in direction. And in the economy of God, that turning is met — like the father in the parable — while you are still a long way off.
+ 
+The door does not require a hallway. The turning is the thing.`,
   },
 
   {
@@ -520,15 +522,17 @@ Repentance is the door, not the hallway. You do not have to stand in it indefini
     audience:     ["new_believer", "growing"],
     mode_affinity: ["FORMATION", "CLARITY"],
     weight:       2,
-    content: `One of the most important questions in the Christian life is: who is responsible for my growth? If the answer is entirely "me" — through effort, discipline, and willpower — the result is either pride when it works or despair when it doesn't. If the answer is entirely "God" — and I simply wait for transformation to happen — the result is passivity that never produces change.
-  
-The New Testament holds both together, but with a clear order. Ezekiel 36:26-27 is God's promise through the prophet: "I will give you a new heart... I will put my Spirit in you and  move you to follow my decrees." The initiative is God's. The movement comes from within, placed there by God, not manufactured by the person.
-  
-Paul builds on this in Romans 8:13: "If by the Spirit you put to death the misdeeds of the body, you will live." The action is yours — putting to death. But the agent is the Spirit — by the Spirit. Both are present in the same sentence.
-  
-Galatians 5 describes the fruit of the Spirit — not the fruit you produce for the Spirit, but  what the Spirit produces in you as you remain connected. The image is organic, not mechanical. Fruit is not manufactured; it grows from the inside out when the conditions are right.
-  
-The practical implication: spiritual transformation is not primarily about trying harder. It is about remaining in close relationship with the Holy Spirit — through prayer, through Scripture, through community, through honest confession — and trusting that He will do from the inside what willpower alone cannot do from the outside.`,
+    content: `You have tried to change through discipline and willpower, through resolution and prayer, and the same patterns keep winning. The effort is genuine — and it keeps failing. That failure is not the evidence of weak faith. It may be evidence that you have been trying to do alone what was never designed to be done alone.
+ 
+The question of who is responsible for transformation in the Christian life is one the New Testament holds carefully. If the answer is entirely "you" — through effort and discipline — the result is pride when it works and despair when it does not. If the answer is entirely "God" — and you simply wait — the result is passivity that never produces change.
+ 
+Ezekiel 36:26-27 is God's promise: "I will give you a new heart... I will put my Spirit in you and move you to follow my decrees." The initiative is God's. The movement comes from within, placed there by God, not manufactured by the person.
+ 
+Paul builds on this in Romans 8:13: "If by the Spirit you put to death the misdeeds of the body, you will live." The action is yours — putting to death. But the agent is the Spirit — by the Spirit. Both in the same sentence.
+ 
+Galatians 5 describes the fruit of the Spirit — not the fruit you produce for the Spirit, but what the Spirit produces in you as you remain connected. Fruit is not manufactured. It grows from the inside out when the conditions are right.
+ 
+The practical shift: transformation is not about trying harder. It is about remaining in close connection with the Holy Spirit — through prayer, Scripture, honest confession, community — and trusting that He will do from the inside what willpower alone cannot do.`,
   },
 
   {
@@ -540,15 +544,17 @@ The practical implication: spiritual transformation is not primarily about tryin
     audience:     ["growing", "mature"],
     mode_affinity: ["FORMATION", "CLARITY"],
     weight:       1,
-    content: `Sanctification is the theological word for the long, ongoing process of  becoming more like Christ. It is distinct from justification — the moment of being declared righteous before God — which is immediate and complete. Sanctification is  neither immediate nor complete in this life. It is the work of a lifetime.
-  
-This matters because many sincere believers carry guilt about how slowly they seem to be changing. They expected that conversion would mean their struggles would significantly  diminish. When they find the same patterns, the same temptations, the same failures recurring  years later, they wonder if they are doing something wrong — or if they are truly saved at all.
-  
-Paul's letter to the Philippians was written to mature believers he deeply loved. And he does  not say to them: "By now you should have it together." He says: "He who began a good work in you will carry it on to completion until the day of Christ Jesus." The completion is not in this lifetime. It is in the day of Christ.
-  
-Hebrews 12:14 says: "Make every effort to live in peace with everyone and to be holy." Make  every effort — so human agency is real. But the standard of holiness described throughout the  New Testament is not a bar to clear before God will accept you; it is a direction to walk in for the rest of your life.
-  
-Sanctification is not a sprint. It is more like walking in a direction — sometimes stumbling,  sometimes moving well, but fundamentally oriented toward something. The question is not  whether you have arrived. It is whether you are still moving.`,
+    content: `You have been following Christ for years. And you are still fighting the same battles you were fighting in year one. The same temptations, the same failures, the same patterns that were supposed to be behind you by now. And the question underneath it all is: is something wrong with me?
+ 
+No. But what you may have been told about how sanctification works was incomplete.
+ 
+Sanctification is the theological word for the long, ongoing process of becoming more like Christ. It is distinct from justification — the moment of being declared righteous before God — which is immediate and complete. Sanctification is neither immediate nor complete in this life. It is the work of a lifetime.
+ 
+Paul's letter to the Philippians was written to mature believers he loved deeply. And he does not say: "By now you should have it together." He says: "He who began a good work in you will carry it on to completion until the day of Christ Jesus." The completion is not in this lifetime. It is in the day of Christ.
+ 
+Hebrews 12:10-11 says discipline "produces a harvest of righteousness and peace for those who have been trained by it." The word is trained — an athletic metaphor. Training takes time. It includes setbacks. It requires repetition before it produces change.
+ 
+Sanctification is not a sprint. It is walking in a direction — sometimes stumbling, sometimes moving well, but fundamentally oriented toward something. The question is not whether you have arrived. It is whether you are still moving.`,
   },
 
   {
@@ -600,15 +606,18 @@ The practice requires discernment about who and when — not every sin needs to 
     audience:     ["growing", "mature"],
     mode_affinity: ["FORMATION", "CLARITY"],
     weight:       1,
-    content: `There is a version of spiritual discipline that is really just performance — accumulating practices to feel like a serious Christian, or to earn God's favour through  consistency. That version is exhausting and spiritually dangerous, because it subtly relocates the foundation from grace to effort.
-  
-But there is another way to understand spiritual disciplines that is entirely compatible with  grace. Dallas Willard used a helpful analogy: you do not lift weights to earn the ability to run a marathon. You train to become the kind of person who can run it. The training is not  the goal — it creates the capacity for the goal.
-  
-Paul says in 1 Timothy 4:7-8: "Train yourself to be godly. For physical training is of some  value, but godliness has value for all things." The word train is the root of our word gymnasium. Spiritual formation is an athletic metaphor — not effort to earn, but practice to  develop capacity.
-  
-Jesus himself practised disciplines: He withdrew to lonely places to pray (Luke 5:16). He  fasted. He kept the Sabbath. These were not performances for the crowds — they were the means  by which He maintained connection to the Father in the middle of an active, demanding  ministry.
-  
-Disciplines are not the point. They are the path. Prayer, fasting, solitude, Scripture,  service, community — these create the conditions in which God's grace can do its transforming  work. They do not compel God to act. They place us in the place where He tends to show up.`,
+    content: `You are trying to maintain a prayer life, to read Scripture consistently, to fast — and underneath all of it there is a creeping suspicion that you are doing it to earn something. Or you have given up on discipline entirely because it started to feel like performance. Both impulses are responses to the same misunderstanding.
+ 
+Spiritual disciplines are not about earning God's favour. They never were. But that does not make them optional or unimportant.
+ 
+Dallas Willard used a helpful analogy: you do not lift weights to earn the ability to run a marathon. You train to become the kind of person who can run it. The training is not the goal — it creates the capacity for the goal.
+ 
+Paul says in 1 Timothy 4:7-8: "Train yourself to be godly. For physical training is of some value, but godliness has value for all things." The word train is the root of our word gymnasium. This is athletic language — not effort to earn, but practice to develop capacity.
+ 
+Jesus himself practised disciplines: He withdrew to lonely places to pray (Luke 5:16). He fasted. He kept the Sabbath. These were not performances for the crowds — they were how He maintained connection to the Father during an active, demanding ministry.
+ 
+Disciplines create the conditions in which God's grace does its transforming work. They do not compel God to act. They place you in the place where He tends to show up. That is a fundamentally different motivation — and it changes the texture of the practice entirely.`,
+
   },
 
   {
@@ -808,17 +817,17 @@ Practiced over time, gratitude reshapes the perception of daily life. Not by den
     audience:     ["growing", "mature"],
     mode_affinity: ["PASTORAL", "LAMENT", "FORMATION"],
     weight:       2,
-    content: `Spiritual dryness — the experience of praying and feeling nothing, of seeking  God and finding only silence, of going through the motions of faith without any sense of life in them — is one of the most common and most disorienting experiences in the mature  Christian life. It is also one of the least talked about.
-  
-Many Christians experiencing spiritual dryness assume they have done something wrong, or that  their faith was never real, or that God has withdrawn from them in displeasure. None of these  is the most likely explanation.
-  
-John of the Cross, the 16th-century Spanish mystic, described what he called the "dark night of the soul" — a period of spiritual aridity that God uses not as punishment but as purification. The removal of the felt sense of God's presence is not the removal of God's actual presence. It is often the transition from an immature faith that depends on emotional  experience to a deeper faith that holds without feeling.
-  
-Psalm 88 ends in complete darkness — no resolution, no dawn, just "darkness is my closest  friend." This psalm exists in the canon. The Spirit of God preserved it. That means some seasons simply are that dark, and the testimony of Scripture does not demand a false  resolution.
-  
-Elijah under the broom tree (1 Kings 19) is the other model — God's response to profound spiritual and physical depletion was not a lesson in faith. It was sleep and food. Twice. Sometimes dryness needs rest before it needs theology.
-  
-The practice in dry seasons is not to generate what you do not feel but to continue showing  up — to maintain the forms of prayer and Scripture even when they seem empty, trusting that  the emptiness is not the whole truth.`,
+    content: `You sit down to pray and there is nothing there. You have been doing this for weeks — maybe months — and what used to feel alive now feels like talking into a room where no one is home. You wonder if you have done something to cause this. You wonder if it was ever real.
+ 
+This experience has a name. It has been lived by almost every serious believer across history. And the most important thing to know about it is this: the felt absence of God is not the same as His actual absence.
+ 
+John of the Cross described two movements he called the "dark night" — one affecting the senses, one affecting the spirit. The removal of the felt sense of God's presence is not, in his account, punishment or evidence of failure. It is often the transition from a faith that depends on emotional experience to a deeper faith that holds without feeling.
+ 
+Psalm 88 ends in complete darkness with no resolution — just "darkness is my closest friend." This psalm exists in the canon. The Spirit preserved it. That means some seasons simply are that dark, and the Scripture does not demand a false resolution.
+ 
+Elijah under the broom tree (1 Kings 19) is the other model. God's response to his profound depletion was not a lesson in faith. It was sleep and food. Twice. Sometimes dryness needs rest before it needs theology.
+ 
+The practice in dry seasons is not to generate what you do not feel. It is to keep showing up — to maintain the forms of prayer even when they seem empty, trusting that the emptiness is not the whole truth. The discipline of continuing to pray into silence builds a faith that is not dependent on feeling, because it has learned to exist without it.`,
   },
 
   {
@@ -1017,15 +1026,17 @@ The ordinary believer may not use mystical language, but they are participating 
     audience:     ["anyone"],
     mode_affinity: ["PASTORAL", "COURAGE"],
     weight:       2,
-    content: `There is a moment that comes before the decision to change — the moment of seeing. The Prodigal Son "came to himself." He saw his situation clearly, perhaps for the first time in a long time. That moment of honest seeing is not yet recovery. But it is  the beginning of the path toward it.
-  
-If you are reading this and something has surfaced — a pattern you keep returning to, a habit  that has gotten bigger than you intended, a behaviour you hide from people who know you —  that awareness is not something to suppress or minimise. It is something to honour. Many people live for years without it.
-  
-Romans 6:16 asks a stark question: "Don't you know that when you offer yourselves to someone as obedient slaves, you are slaves of the one you obey?" Dependency and bondage are real. They do not begin at a dramatic low point — they begin with a thousand small choices that seemed manageable, until the thing began to choose for you.
-  
-The first step is not willpower. It is honesty — with yourself, with God, and eventually with  at least one other person. The hiding is often more damaging than the thing itself. Shame  grows in secrecy. Light is what shrinks it.
-  
-You do not need to have everything figured out. You do not need to be ready to quit  completely right now. You need to be willing to look at the truth of what is happening without immediately explaining it away. That willingness is where every genuine story of  recovery begins.`,
+    content: `Something has shifted in the last few months. What started as a way to cope has gotten bigger than you intended. You find yourself hiding it, minimising it, making excuses — and noticing that you are doing all of those things, which means some part of you knows.
+ 
+That awareness is not something to suppress. It is the most important thing that is happening right now.
+ 
+The Prodigal Son "came to himself." That phrase in Luke 15 is the turning point of the whole story — not the moment he arrived home, but the moment he saw his situation clearly, perhaps for the first time. That moment of honest seeing is not yet recovery. But nothing that follows is possible without it.
+ 
+Romans 6:16 asks a direct question: "Don't you know that when you offer yourselves to someone as obedient slaves, you are slaves of the one you obey?" Dependency is real. It does not begin at a dramatic low point — it begins with a thousand small choices that seemed manageable, until the thing began to choose for you.
+ 
+The first step is not willpower. It is honesty — with yourself, with God, and eventually with at least one other person. The hiding is often more damaging than the thing itself. Shame grows in secrecy. What it cannot survive is light.
+ 
+You do not need to have everything figured out. You do not need to be ready to quit completely right now. You need to be willing to look at what is actually happening without immediately explaining it away. That willingness is where every genuine story of recovery begins.`,
   },
 
   {
@@ -1182,15 +1193,17 @@ Philippians 4:11 says Paul learned contentment — implying it was not natural, 
     audience:     ["anyone", "growing", "mature"],
     mode_affinity: ["PASTORAL", "LAMENT", "FORMATION"],
     weight:       2,
-    content: `Psalm 13 asks the question that long-unanswered prayer produces: "How long,  Lord? Will you forget me forever? How long will you hide your face from me?" This is not a moment of weak faith. It is David, the man described as after God's own heart, writing  from within years of praying and not receiving what he asked for.
-  
-The psalm does not resolve the question — it does not explain why God has been silent or promise that an answer is coming soon. It moves from lament to a declaration of trust: "But I trust in your unfailing love; my heart rejoices in your salvation." The movement is not from  doubt to certainty but from doubt to chosen trust.
-  
-Jesus tells the parable of the persistent widow specifically for "those who should always  pray and not give up." The widow's persistence is not about changing God's mind — it is about  maintaining the relationship and the posture of expectation in the face of apparent  unresponsiveness. The practice of continuing to pray is itself formative, regardless of when the answer comes.
-  
-Paul prayed three times to have his thorn removed. He received instead something different:  "My grace is sufficient for you, for my power is made perfect in weakness." Not the removal  of the difficulty — the presence of grace within it. This is not always the answer we want.  It is often a better one.
-  
-The hardest theology in unanswered prayer is this: God is good, God hears, and God sometimes says no or not yet for reasons we cannot fully see. Holding all three of those together without collapsing any of them is one of the most demanding things faith asks of us.`,
+    content: `You have been praying for the same thing for years. In the beginning, you had faith. Now you have exhaustion, and underneath the exhaustion, a question you are almost afraid to ask: has God heard any of this? Does it matter at all?
+ 
+Psalm 13 asks what you are asking. "How long, Lord? Will you forget me forever? How long will you hide your face from me?" David is not in a weak moment of faith — he is the man described as after God's own heart, writing from inside years of unanswered prayer.
+ 
+The psalm does not explain why God has been silent or promise the answer is coming soon. It moves from lament to a declaration of chosen trust: "But I trust in your unfailing love." The movement is not from doubt to certainty — it is from doubt to a trust that is chosen rather than felt.
+ 
+Jesus tells the parable of the persistent widow specifically for "those who should always pray and not give up." Persistence in prayer is not about changing God's mind. It is about maintaining the posture of expectation in the face of apparent silence — and that posture is itself formative, regardless of when the answer comes.
+ 
+Paul prayed three times to have his thorn removed. He received instead: "My grace is sufficient for you, for my power is made perfect in weakness." Not the removal of the difficulty — the presence of grace within it. This is not always the answer we want. It is often a better one.
+ 
+The hardest theology in unanswered prayer holds three things together: God is good, God hears, and God sometimes says no or not yet for reasons we cannot fully see from inside the waiting.`,
   },
 
   {
@@ -1404,13 +1417,17 @@ The practice in this situation is patience — the long patience of continuing t
     audience:     ["anyone", "seeker", "new_believer"],
     mode_affinity: ["PASTORAL", "COURAGE", "CLARITY"],
     weight:       2,
-    content: `In many parts of the world and many family and cultural contexts, following  Christ carries a social cost that is largely invisible in Western Christian experience.  Conversion can mean rejection by family, loss of community, economic consequences, and in  some cases real danger. Even where the stakes are lower, the pressure to conform to  family or cultural religious expectations can be intense.
-  
-Shadrach, Meshach and Abednego's answer to Nebuchadnezzar is one of the most honest  statements in the Old Testament about faith under pressure: "If we are thrown into the blazing furnace, the God we serve is able to deliver us from it... But even if he does not, we want you to know, Your Majesty, that we will not serve your gods." Even if He does not.  The faith is not contingent on rescue. The loyalty is not based on a guaranteed outcome.
-  
-Acts 5:29 is the short theological statement: "We must obey God rather than human beings." Simple in principle, costly in practice. The disciples who said this had just been arrested,  were being threatened, and knew the power of the people threatening them.
-  
-The pastoral word for those navigating this tension is not a formula. It is: you are not alone, this cost is real, God sees it and honours it, and the people throughout history who have held their faith under social pressure are part of the same story you are living. Romans 12:2 — "Do not conform to the pattern of this world, but be transformed by the renewing of  your mind" — is addressed to exactly this situation. The pressure to conform is real and persistent. The renewal of the mind is what makes a different response possible.`,
+    content: `Your family's faith is not yours — or your faith is not your family's — and the pressure between those two realities is exhausting. Every gathering is a negotiation. Every conversation is either performance or confrontation. You are tired of both.
+ 
+Jesus was honest about this cost in a way that is rarely quoted: "Do you think I came to bring peace on earth? No, I tell you, but division. From now on there will be five in one family divided against each other." He is not celebrating this division — He is warning that it will come, because faith is real enough to create real difference.
+ 
+For people who came to faith in communities where that faith is not shared — or actively opposed — this passage is both a warning and a comfort. The tension is not evidence of failure. It is what Jesus said would happen.
+ 
+Shadrach, Meshach and Abednego's answer to Nebuchadnezzar names the posture: "If we are thrown into the blazing furnace, the God we serve is able to deliver us from it... But even if he does not, we will not serve your gods." Even if He does not. The faith is not contingent on rescue. The loyalty does not depend on a guaranteed outcome.
+ 
+1 Peter 3:1-2 gives the long-game approach: winning people "without words by the behavior of their lives, when they see the purity and reverence" of how you live. The primary witness is not argument. It is the visible difference that sustained, genuinely-lived faith makes in a person over time.
+ 
+The practice is patience — continuing to love family members well, without using faith as a point of superiority, without hiding your faith in false peace, and without treating every conversation as an opportunity to persuade. To be genuinely known and genuinely loving over years is the most persuasive witness there is.`,
   },
 
   {
@@ -1513,6 +1530,28 @@ Hebrews 10:25 continues to call toward community — "not giving up meeting toge
 1 Peter 2:9-10 grounds identity not in belonging to a specific community but in belonging to God: "You are a chosen people, a royal priesthood, a holy nation, God's special possession."  That belonging does not depend on a particular church remaining faithful. It is more durable than that.`,
   },
 
+
+{
+  title:        "Shame vs conviction — knowing the difference",
+  category:     "pastoral",
+  scripture_ref: "Romans 8:1, John 16:8, 2 Corinthians 7:10",
+  source:       "Kairos curated",
+  tags:         ["shame", "guilt", "conviction", "repentance", "formation", "shame_cycle"],
+  audience:     ["anyone", "growing"],
+  mode_affinity: ["PASTORAL", "FORMATION", "CLARITY"],
+  weight:       2,
+  content: `When you have done something wrong and the weight of it won't lift — when you find yourself rehearsing the failure over and over, feeling fundamentally bad rather than specifically guilty — you may be carrying shame rather than conviction. They can feel similar. They are not the same, and they move in entirely opposite directions.
+
+Conviction is specific. It says: that thing you did was wrong. It has a target — an action, a choice, a pattern — and it points toward something: repentance, confession, a change in direction. The Holy Spirit is described in John 16:8 as the one who convicts of sin — the word means to bring to light, to expose clearly. Conviction brings the specific thing into the light so it can be addressed.
+
+Shame is global. It does not say "what you did was wrong." It says "you are wrong." It attacks identity rather than behaviour. And crucially, it does not point toward repentance — it points toward hiding. People under shame withdraw, isolate, perform, or medicate. Shame cannot be resolved through repentance because repentance requires facing the thing, and shame makes the thing feel too large to face.
+
+2 Corinthians 7:10 draws the line precisely: "Godly sorrow brings repentance that leads to salvation and leaves no regret, but worldly sorrow brings death." Godly sorrow — conviction — moves. It arrives, it does its work, it leads somewhere. Worldly sorrow — shame — loops. It does not resolve. It accumulates.
+
+Romans 8:1 is the theological stake in the ground: "There is now no condemnation for those who are in Christ Jesus." Not "there is now no conviction" — conviction is the Spirit's legitimate work. There is no condemnation. The verdict on your identity has been settled. What remains is the ongoing work of the Spirit addressing specific things — not re-litigating who you are.
+
+The practical question: when you feel bad about something, does it move you toward God or away from Him? Toward honesty or toward hiding? Conviction draws you to confession. Shame drives you from it.`,
+  },
 
 ]
 
