@@ -1,1 +1,0 @@
-# Kairos Journey Input Fix\n\n## Steps\n\n- [ ] 1. Update CSS in src/components/companion/CompanionCore.jsx for .cc-input (radius transition, padding)\n- [ ] 2. Update input container class/style\n- [ ] 3. Test reload/focus/typing/label visibility\n- [ ] 4. attempt_completion\n\nCurrent: Starting step 1.
