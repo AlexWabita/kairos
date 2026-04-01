@@ -70,10 +70,25 @@ const css = `
   /* ── Message ── */
   .cc-msg-kairos { animation: cc-fade 0.4s ease forwards; }
 
-  /* ── Textarea auto-resize ── */
-  .cc-input { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
+/* ── Textarea auto-resize & input fix ── */
+  .cc-input { 
+    scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent;
+    padding: 0 0.75rem 0 1rem; border-radius: 0.5rem; 
+    transition: border-radius 0.25s cubic-bezier(0.25,0.46,0.45,0.94), padding-left 0.25s ease;
+  }
+  .cc-input:focus { border-radius: 1rem; padding-left: 1.25rem; }
   .cc-input::-webkit-scrollbar { width: 4px; }
   .cc-input::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+  
+  /* Input container */
+  .cc-input-container {
+    border-radius: 0.75rem; overflow: hidden; 
+    background: rgba(255,255,255,0.02);
+    transition: border-radius 0.25s ease, box-shadow 0.25s ease;
+  }
+  .cc-input-container:focus-within { 
+    box-shadow: 0 0 0 2px rgba(240,192,96,0.2); 
+  }
 
   /* ── Mobile: collapse sidebar into bottom bar ── */
   .cc-mobile-nav { display: none; }
