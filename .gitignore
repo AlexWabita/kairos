@@ -20,3 +20,5 @@ next-env.d.ts
 .vercel
 typings/LGD.FileParser.log
 typings/
+docs/KAIROS_PRINCIPLES.md
+docs/KAIROS_TAG_TAXONOMY.md
