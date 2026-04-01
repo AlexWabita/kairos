@@ -73,10 +73,12 @@ const css = `
 /* ── Textarea auto-resize & input fix ── */
   .cc-input { 
     scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent;
-    padding: 0 0.75rem 0 1rem; border-radius: 0.5rem; 
-    transition: border-radius 0.25s cubic-bezier(0.25,0.46,0.45,0.94), padding-left 0.25s ease;
+    padding: 1rem 1.25rem; border-radius: 0.625rem; 
+    transition: all 0.25s cubic-bezier(0.25,0.46,0.45,0.94);
   }
-  .cc-input:focus { border-radius: 1rem; padding-left: 1.25rem; }
+  .cc-input:focus { 
+    border-radius: 0.875rem; padding: 1.125rem 1.375rem; 
+  }
   .cc-input::-webkit-scrollbar { width: 4px; }
   .cc-input::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
   
