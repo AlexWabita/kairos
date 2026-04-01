@@ -30,7 +30,7 @@ const SettingsContext = createContext(null)
 
 /* ── Provider ────────────────────────────────────────────── */
 export function SettingsProvider({ children }) {
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  const [settings, setSettings] = useState({ ...DEFAULT_SETTINGS })
   const [userId,   setUserId]   = useState(null)
 
   // ── Init on mount ─────────────────────────────────────────

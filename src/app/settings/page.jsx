@@ -327,6 +327,8 @@ export default function SettingsPage() {
 
   const currentAccent = settings.accentColor || "gold"
   const currentFont   = settings.readingFont  || "default"
+  const currentSize   = settings.fontSize || "md"
+  const currentSpacing = settings.lineSpacing || "normal"
 
   return (
     <>
@@ -437,21 +439,21 @@ export default function SettingsPage() {
 
                 {/* Font size */}
                 <SettingRow label="Text size" hint="Applies in the Bible reader.">
-                  <OptionGroup
-                    value={settings.fontSize || "md"}
+<OptionGroup
+                    value={currentSize}
                     onChange={v => updateSetting("fontSize", v)}
                     options={[
-                      { value: "sm", label: "Small",  style: { fontSize: "0.75rem" } },
-                      { value: "md", label: "Medium", style: { fontSize: "0.82rem" } },
-                      { value: "lg", label: "Large",  style: { fontSize: "0.92rem" } },
+                      { value: "sm", label: "Small", style: { fontSize: "0.925rem" } },
+                      { value: "md", label: "Medium", style: { fontSize: "1.0625rem" } },
+                      { value: "lg", label: "Large", style: { fontSize: "1.28rem" } },
                     ]}
                   />
                 </SettingRow>
 
                 {/* Line spacing */}
                 <SettingRow label="Line spacing" hint="More breathing room between lines for easier reading.">
-                  <OptionGroup
-                    value={settings.lineSpacing || "normal"}
+<OptionGroup
+                    value={currentSpacing}
                     onChange={v => updateSetting("lineSpacing", v)}
                     options={[
                       { value: "tight",  label: "Tight"    },
