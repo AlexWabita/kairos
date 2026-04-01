@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { usePathname } from "next/navigation"
+import { useSettings } from "@/context/SettingsContext"
 import { BIBLE_BOOKS } from "@/lib/bible/client"
 import { supabase }     from "@/lib/supabase/client"
 import SaveMomentModal  from "@/components/companion/SaveMomentModal"
@@ -14,8 +15,7 @@ const NT_BOOKS     = BIBLE_BOOKS.filter(b => b.testament === "NT")
 const TRANSLATIONS = ["WEB", "KJV", "ASV", "BBE"]
 const STORAGE_KEY  = "kairos_bible_pos"
 
-const FONT_SIZES = { sm: "0.925rem", md: "1.0625rem", lg: "1.28rem" }
-const LINE_SPACINGS = { tight: 1.65, normal: 1.9, loose: 2.2 }
+
 
 function savePosition(bookId, chapter, translation) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ bookId, chapter, translation })) } catch (_) {}
@@ -510,11 +510,6 @@ export default function BiblePage() {
   const [showChapters,    setShowChapters]    = useState(false)
   const [drawerOpen,      setDrawerOpen]      = useState(false)
 
-  const [translation,  setTranslation]  = useState("WEB")
-  const [fontSize,     setFontSize]     = useState("md")
-  const [lineSpacing,  setLineSpacing]  = useState("normal")
-  const [settingsOpen, setSettingsOpen] = useState(false)
-
   const [selectedVerses,    setSelectedVerses]    = useState(new Set())
   const [highlightedVerses, setHighlightedVerses] = useState(new Set())
   const [copied,            setCopied]            = useState(false)
@@ -549,7 +544,8 @@ export default function BiblePage() {
       book = BIBLE_BOOKS.find(b => b.id === pos.bookId)
       if (book) {
         setSelectedBook(book); setSelectedChapter(pos.chapter || 1)
-        setTranslation(pos.translation || "WEB"); setActiveTab(book.testament)
+  // updateSetting("bibleTranslation", pos.translation || "WEB")
+        setActiveTab(book.testament)
         setShowChapters(true); return
       }
     }
@@ -557,11 +553,15 @@ export default function BiblePage() {
     setSelectedBook(book); setSelectedChapter(1); setActiveTab("NT"); setShowChapters(true)
   }, [])
 
+  const { settings, updateSetting } = useSettings()
+
+  const translation = settings.bibleTranslation || "WEB"
+
   /* ── Fetch chapter ── */
   useEffect(() => {
     if (!selectedBook) return
     loadChapter(selectedBook, selectedChapter, translation)
-  }, [selectedBook, selectedChapter, translation]) // eslint-disable-line
+  }, [selectedBook, selectedChapter, translation, updateSetting]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadChapter(book, chapter, trans) {
     setLoading(true); setError(null); clearSelection()
@@ -744,7 +744,7 @@ export default function BiblePage() {
             {/* Right controls */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
               {/* Translation selector */}
-              <select value={translation} onChange={e => setTranslation(e.target.value)} style={{
+              <select value={translation} onChange={e => updateSetting("bibleTranslation", e.target.value)} style={{
                 height: 32, padding: "0 10px",
                 background: "rgba(255,255,255,0.04)",
                 borderWidth: 1, borderStyle: "solid", borderColor: "rgba(255,255,255,0.08)",
@@ -753,32 +753,10 @@ export default function BiblePage() {
                 cursor: "pointer", outline: "none",
               }}
                 onFocus={e => e.target.style.borderColor = "rgba(240,192,96,0.4)"}
-                onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.08)"}
+                onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.08)"}  
               >
                 {TRANSLATIONS.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
-
-              {/* Settings */}
-              <div style={{ position: "relative" }}>
-                <button onClick={() => setSettingsOpen(v => !v)} style={{
-                  width: 32, height: 32, borderRadius: 8,
-                  background: settingsOpen ? "rgba(240,192,96,0.08)" : "rgba(255,255,255,0.04)",
-                  borderWidth: 1, borderStyle: "solid",
-                  borderColor: settingsOpen ? "rgba(240,192,96,0.3)" : "rgba(255,255,255,0.08)",
-                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                  color: settingsOpen ? "rgba(240,192,96,0.8)" : "rgba(255,255,255,0.4)",
-                  transition: "all 0.15s ease",
-                }} aria-label="Display settings">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                </button>
-                {settingsOpen && (
-                  <SettingsPopover
-                    fontSize={fontSize} setFontSize={setFontSize}
-                    lineSpacing={lineSpacing} setLineSpacing={setLineSpacing}
-                    onClose={() => setSettingsOpen(false)}
-                  />
-                )}
-              </div>
             </div>
           </div>
 
@@ -787,7 +765,7 @@ export default function BiblePage() {
             display: "flex", alignItems: "center", justifyContent: "space-between",
             padding: "10px 28px", flexShrink: 0,
             borderBottom: "1px solid rgba(255,255,255,0.04)",
-          }}>
+          }}> 
             <button onClick={goToPrev} disabled={atVeryStart} style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "6px 12px", borderRadius: 8,
@@ -882,8 +860,8 @@ export default function BiblePage() {
                     <span className="br-verse-num">{num}</span>
                     {/* Verse text */}
                     <p className="br-verse-text" style={{
-                      fontSize: FONT_SIZES[fontSize],
-                      lineHeight: LINE_SPACINGS[lineSpacing],
+                      fontSize: "var(--font-size-base)",
+                      lineHeight: "var(--line-height-reading)",
                     }}>
                       {verse.text}
                     </p>

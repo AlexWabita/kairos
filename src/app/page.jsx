@@ -1,3 +1,5 @@
+<meta name="msvalidate.01" content="15369B905988A21945FCE4603D0F4970" />
+
 import Navbar          from "@/components/shared/HomepageNavbar"
 import Footer          from "@/components/shared/Footer"
 import Hero            from "@/components/landing/Hero"
@@ -16,12 +18,16 @@ export const metadata = {
   description: "Kairos is a Biblical AI companion that meets you exactly where you are. Ask hard questions, find peace in scripture, and walk forward — no judgment, no agenda.",
   keywords:    ["biblical ai", "christian app", "faith companion", "bible study ai", "spiritual growth", "prayer app", "christian devotional"],
   authors:      [{ name: "Kairos" }],
-  metadataBase: new URL("https://kairos.app"),
+  metadataBase: new URL("https://kairos-ebon.vercel.app"),
+  verification: {
+    google: "VRnQo2aiDdytuMbHxXf1kkTeEVHx_0G8WnG9l0gtqBg",
+    bing: "15369B905988A21945FCE4603D0F4970"
+  },
   openGraph: {
     title:       "Kairos — A Biblical AI Life Companion",
     description: "Ask anything. Find truth. Walk forward. A companion grounded in scripture — built for the searching soul.",
     type:        "website",
-    url:         "https://kairos.app",
+    url:         "https://kairos-ebon.vercel.app",
     siteName:    "Kairos",
     images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Kairos — A Biblical AI Life Companion" }],
   },

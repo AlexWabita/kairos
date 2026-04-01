@@ -4,33 +4,63 @@ import { useEffect } from "react"
 import { useSettings } from "@/context/SettingsContext"
 
 /* ── Light theme CSS variable overrides ── */
+/* ── Light theme - Premium crisp navy-gold ── */
 const LIGHT_CSS = `
-  :root, [data-theme="light"] {
-    --color-void:          #f0ede6;
-    --color-deep:          #e8e4dc;
+  :root[data-theme="light"], [data-theme="light"] {
+    --color-void:          #f8f9fa;
+    --color-deep:          #e9ecef;
     --color-surface:       #ffffff;
-    --color-elevated:      #f7f5f0;
-    --color-border:        rgba(0,0,0,0.09);
-    --color-border-subtle: rgba(0,0,0,0.06);
+    --color-elevated:      #f8f9fa;
+    --color-border:        rgba(0,0,0,0.12);
+    --color-border-subtle: rgba(0,0,0,0.08);
 
-    --color-divine:        #1a1826;
-    --color-soft:          #2e2c3a;
-    --color-muted:         #5a5870;
-    --color-faint:         #8a889a;
+    --color-divine:        #0f172a; /* slate-900 */
+    --color-soft:          #1e293b; /* slate-800 */
+    --color-muted:         #475569; /* slate-600 */
+    --color-faint:         #64748b; /* slate-500 */
 
-    --color-gold-warm:     #b8860a;
-    --color-gold-deep:     #a07608;
-    --color-gold-subtle:   rgba(184,134,10,0.1);
+    --color-gold-warm:     #d4af37; /* premium gold */
+    --color-gold-deep:     #b8942f;
+    --color-gold-subtle:   rgba(212,175,55,0.12);
 
-    --gradient-hero:       linear-gradient(160deg, #f0ede6 0%, #e4e0d8 100%);
-    --gradient-text:       linear-gradient(135deg, #b8860a 0%, #d4a830 100%);
-    --gradient-gold:       linear-gradient(135deg, #c8980e 0%, #e0b820 100%);
-    --gradient-glow:       radial-gradient(ellipse at center, rgba(184,134,10,0.08) 0%, transparent 70%);
+    --gradient-hero:       linear-gradient(160deg, #f8f9fa 0%, #e9ecef 70%);
+    --gradient-text:       linear-gradient(135deg, #d4af37 0%, #eab308 70%);
+    --gradient-gold:       linear-gradient(135deg, #d4af37 0%, #eab308 50%, #ca8a04 100%);
+    --gradient-glow:       radial-gradient(circle at 30% 30%, rgba(212,175,55,0.15) 0%, transparent 60%);
 
-    --shadow-card:         0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
-    --shadow-gold-sm:      0 2px 12px rgba(184,134,10,0.25);
-    --shadow-gold-md:      0 4px 24px rgba(184,134,10,0.3);
-    --shadow-deep:         0 8px 32px rgba(0,0,0,0.1);
+    --shadow-card:         0 1px 3px rgba(0,0,0,0.1), 0 8px 32px rgba(0,0,0,0.08);
+    --shadow-gold-sm:      0 4px 16px rgba(212,175,55,0.25);
+    --shadow-gold-md:      0 8px 32px rgba(212,175,55,0.3);
+    --shadow-deep:         0 20px 60px rgba(0,0,0,0.15);
+
+    color-scheme: light;
+  }
+  :root, [data-theme="light"] {
+    --color-void:          #f8f9fa;
+    --color-deep:          #f1f3f4;
+    --color-surface:       #ffffff;
+    --color-elevated:      #f8f9fa;
+    --color-border:        rgba(0,0,0,0.12);
+    --color-border-subtle: rgba(0,0,0,0.08);
+
+    --color-divine:        #1a1a2e;
+    --color-soft:          #2d2d44;
+    --color-muted:         #5a5a7a;
+    --color-faint:         #8a8aa8;
+
+    --color-gold-warm:     #d4af37;
+    --color-gold-deep:     #b8942f;
+    --color-gold-subtle:   rgba(212,175,55,0.12);
+
+    --gradient-hero:       linear-gradient(160deg, #f8f9fa 0%, #f1f3f4 100%);
+    --gradient-text:       linear-gradient(135deg, #d4af37 0%, #e6b800 100%);
+    --gradient-gold:       linear-gradient(135deg, #d4af37 0%, #e6b800 100%);
+    --gradient-glow:       radial-gradient(ellipse at center, rgba(212,175,55,0.1) 0%, transparent 70%);
+
+    --shadow-card:         0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+    --shadow-gold-sm:      0 2px 12px rgba(212,175,55,0.3);
+    --shadow-gold-md:      0 4px 24px rgba(212,175,55,0.35);
+    --shadow-deep:         0 8px 32px rgba(0,0,0,0.12);
 
     color-scheme: light;
   }
@@ -131,7 +161,37 @@ const LIGHT_CSS = `
 `
 
 /* ── Dark theme (restores defaults) ── */
+/* ── Dark theme ── */
 const DARK_CSS = `
+  :root[data-theme="dark"], [data-theme="dark"] {
+    --color-void:          #02040a;
+    --color-deep:          #0a0f1e;
+    --color-surface:       rgba(15,23,42,0.85);
+    --color-elevated:      rgba(24,37,66,0.85);
+    --color-border:        rgba(255,255,255,0.1);
+    --color-border-subtle: rgba(255,255,255,0.06);
+
+    --color-divine:        rgba(255,255,255,0.95);
+    --color-soft:          rgba(255,255,255,0.8);
+    --color-muted:         rgba(148,163,184,0.9);
+    --color-faint:         rgba(148,163,184,0.6);
+
+    --color-gold-warm:     #facc15;
+    --color-gold-deep:     #eab308;
+    --color-gold-subtle:   rgba(250,204,21,0.12);
+
+    --gradient-hero:       linear-gradient(160deg, #02040a 0%, #0a0f1e 70%);
+    --gradient-text:       linear-gradient(135deg, #facc15 0%, #eab308 70%);
+    --gradient-gold:       linear-gradient(135deg, #facc15 0%, #eab308 50%, #ca8a04 100%);
+    --gradient-glow:       radial-gradient(circle at 30% 30%, rgba(250,204,21,0.15) 0%, transparent 60%);
+
+    --shadow-card:         0 4px 16px rgba(0,0,0,0.4), 0 0 1px rgba(250,204,21,0.2);
+    --shadow-gold-sm:      0 8px 24px rgba(250,204,21,0.25);
+    --shadow-gold-md:      0 16px 48px rgba(250,204,21,0.3);
+    --shadow-deep:         0 32px 80px rgba(0,0,0,0.7);
+
+    color-scheme: dark;
+  }
   :root, [data-theme="dark"] {
     --color-void:          #060912;
     --color-deep:          #0a0d18;
@@ -180,51 +240,51 @@ const FONT_CSS = {
   `,
 }
 
-/* ── Accent colour overrides ── */
+/* ── Accent colour overrides (premium light/dark) ── */
 const ACCENT_CSS = {
   gold: "",
   blue: `
     :root {
-      --color-gold-warm:   #60b4f0;
-      --color-gold-deep:   #4090d0;
-      --color-gold-subtle: rgba(96,180,240,0.08);
-      --gradient-gold:     linear-gradient(135deg, #60b4f0 0%, #3a80d0 100%);
-      --gradient-text:     linear-gradient(135deg, #60b4f0 0%, #4090d0 100%);
-      --shadow-gold-sm:    0 2px 12px rgba(96,180,240,0.25);
-      --shadow-gold-md:    0 4px 24px rgba(96,180,240,0.3);
+      --color-gold-warm:   #2563eb;
+      --color-gold-deep:   #1d4ed8;
+      --color-gold-subtle: rgba(37,99,235,0.12);
+      --gradient-gold:     linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      --gradient-text:     linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      --shadow-gold-sm:    0 2px 12px rgba(37,99,235,0.3);
+      --shadow-gold-md:    0 4px 24px rgba(37,99,235,0.35);
     }
   `,
   purple: `
     :root {
-      --color-gold-warm:   #c090f0;
-      --color-gold-deep:   #a060d0;
-      --color-gold-subtle: rgba(192,144,240,0.08);
-      --gradient-gold:     linear-gradient(135deg, #c090f0 0%, #9050d0 100%);
-      --gradient-text:     linear-gradient(135deg, #c090f0 0%, #a060d0 100%);
-      --shadow-gold-sm:    0 2px 12px rgba(192,144,240,0.25);
-      --shadow-gold-md:    0 4px 24px rgba(192,144,240,0.3);
+      --color-gold-warm:   #7c3aed;
+      --color-gold-deep:   #6d28d9;
+      --color-gold-subtle: rgba(124,58,237,0.12);
+      --gradient-gold:     linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+      --gradient-text:     linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+      --shadow-gold-sm:    0 2px 12px rgba(124,58,237,0.3);
+      --shadow-gold-md:    0 4px 24px rgba(124,58,237,0.35);
     }
   `,
   green: `
     :root {
-      --color-gold-warm:   #60d090;
-      --color-gold-deep:   #40b070;
-      --color-gold-subtle: rgba(96,208,144,0.08);
-      --gradient-gold:     linear-gradient(135deg, #60d090 0%, #30a060 100%);
-      --gradient-text:     linear-gradient(135deg, #60d090 0%, #40b070 100%);
-      --shadow-gold-sm:    0 2px 12px rgba(96,208,144,0.25);
-      --shadow-gold-md:    0 4px 24px rgba(96,208,144,0.3);
+      --color-gold-warm:   #059669;
+      --color-gold-deep:   #047857;
+      --color-gold-subtle: rgba(5,150,105,0.12);
+      --gradient-gold:     linear-gradient(135deg, #059669 0%, #047857 100%);
+      --gradient-text:     linear-gradient(135deg, #059669 0%, #047857 100%);
+      --shadow-gold-sm:    0 2px 12px rgba(5,150,105,0.3);
+      --shadow-gold-md:    0 4px 24px rgba(5,150,105,0.35);
     }
   `,
   rose: `
     :root {
-      --color-gold-warm:   #f090b0;
-      --color-gold-deep:   #d06080;
-      --color-gold-subtle: rgba(240,144,176,0.08);
-      --gradient-gold:     linear-gradient(135deg, #f090b0 0%, #d05080 100%);
-      --gradient-text:     linear-gradient(135deg, #f090b0 0%, #d06080 100%);
-      --shadow-gold-sm:    0 2px 12px rgba(240,144,176,0.25);
-      --shadow-gold-md:    0 4px 24px rgba(240,144,176,0.3);
+      --color-gold-warm:   #e11d48;
+      --color-gold-deep:   #be123c;
+      --color-gold-subtle: rgba(225,29,72,0.12);
+      --gradient-gold:     linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+      --gradient-text:     linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+      --shadow-gold-sm:    0 2px 12px rgba(225,29,72,0.3);
+      --shadow-gold-md:    0 4px 24px rgba(225,29,72,0.35);
     }
   `,
 }

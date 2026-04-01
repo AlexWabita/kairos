@@ -14,11 +14,14 @@ import { supabase } from "@/lib/supabase/client"
 
 /* ── Defaults ────────────────────────────────────────────── */
 export const DEFAULT_SETTINGS = {
-  theme:            "dark",   // "dark" | "system" — "light" coming soon
-  accentColor:      "covenant",
-  fontFamily:       "standard",
+  theme:            "dark",
+  accentColor:      "gold",
+  fontFamily:       "default",
+  fontSize:         "md",
+  lineSpacing:      "normal",
+  readingFont:      "default",
   bibleTranslation: "WEB",
-  language:         "en",     // "en" only — "sw" coming soon
+  language:         "en",
 }
 
 /* ── Accent palette ──────────────────────────────────────── */
@@ -30,15 +33,30 @@ export const ACCENT_COLORS = {
   dawn:         { hex: "#F59E0B", label: "Dawn",          description: "Hope, new beginnings"  },
   dusk:         { hex: "#7C3AED", label: "Dusk",          description: "Depth, royalty"        },
   selah:        { hex: "#64748B", label: "Selah",         description: "Timeless, understated" },
+  gold:         { hex: "#f0c060", label: "Golden Hour",   description: "Warm, sacred"          },
 }
 
 /* ── Font pairings ───────────────────────────────────────── */
 export const FONT_FAMILIES = {
-  standard: {
-    label:       "The Standard",
-    description: "Clean, modern, universally legible",
+  "default": {
+    label:       "Kairos Default",
+    description: "Reverent & readable",
     heading:     '"Cormorant Garamond", serif',
     body:        '"Nunito", sans-serif',
+    sample:      "He has made everything beautiful in its time.",
+  },
+  serif: {
+    label:       "Serif Classic",
+    description: "Timeless scripture feel",
+    heading:     '"Georgia", "Times New Roman", serif',
+    body:        '"Georgia", "Times New Roman", serif',
+    sample:      "He has made everything beautiful in its time.",
+  },
+  mono: {
+    label:       "Monospace Modern",
+    description: "Precise & structured",
+    heading:     '"JetBrains Mono", monospace',
+    body:        '"JetBrains Mono", monospace',
     sample:      "He has made everything beautiful in its time.",
   },
   scholar: {
@@ -52,7 +70,7 @@ export const FONT_FAMILIES = {
     label:       "The Pilgrim",
     description: "Reverent, warm — ancient made accessible",
     heading:     '"Cormorant Garamond", serif',
-    body: '"Source Sans 3", sans-serif',
+    body:        '"Source Sans 3", sans-serif',
     sample:      "He has made everything beautiful in its time.",
   },
 }
@@ -117,45 +135,45 @@ export async function syncSettingsFromDB(userId) {
 }
 
 /* ── Apply to DOM — called on every change ───────────────── */
-/* ── Apply to DOM — called on every change ───────────────── */
 export function applySettings(settings) {
   if (typeof document === "undefined") return
 
   const root = document.documentElement
-  const s    = { ...DEFAULT_SETTINGS, ...settings }
+  const s = { ...DEFAULT_SETTINGS, ...settings }
 
   // Theme
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-  const isDark      = s.theme === "dark" || (s.theme === "system" && prefersDark)
+  const isDark = s.theme === "dark" || (s.theme === "system" && prefersDark)
   root.setAttribute("data-theme", isDark ? "dark" : "light")
 
   // Accent colour
-  // Sets --color-accent for any new components that reference it directly.
-  // Also overrides --color-gold-bright and --color-gold-warm so ALL existing
-  // components (buttons, labels, focus rings, borders) respond immediately —
-  // they all reference gold variables which were the original interactive accent.
-  // The brand gradient (--gradient-gold, --gradient-text on the logo) is NOT
-  // touched — it stays gold regardless of accent choice.
-  const accent      = ACCENT_COLORS[s.accentColor] || ACCENT_COLORS.covenant
-  const { r, g, b } = hexToRgb(accent.hex)
-  const dimmed      = `rgba(${r}, ${g}, ${b}, 0.75)`
+  const accent = ACCENT_COLORS[s.accentColor] || ACCENT_COLORS.gold
+  const rgb = hexToRgb(accent.hex)
+  const dimmed = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.75)`
 
-  root.style.setProperty("--color-accent",        accent.hex)
-  root.style.setProperty("--color-accent-glow",   `rgba(${r}, ${g}, ${b}, 0.15)`)
-  root.style.setProperty("--color-accent-subtle",  `rgba(${r}, ${g}, ${b}, 0.08)`)
+  root.style.setProperty("--color-accent", accent.hex)
+  root.style.setProperty("--color-accent-glow", `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`)
+  root.style.setProperty("--color-accent-subtle", `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.08)`)
 
   // Override interactive gold with accent
-  root.style.setProperty("--color-gold-bright",   accent.hex)
-  root.style.setProperty("--color-gold-warm",      dimmed)
-  root.style.setProperty("--color-gold-glow",     `rgba(${r}, ${g}, ${b}, 0.15)`)
-  root.style.setProperty("--color-gold-subtle",   `rgba(${r}, ${g}, ${b}, 0.08)`)
-  // Input focus ring also picks up accent
-  root.style.setProperty("--shadow-input",        `0 0 0 3px rgba(${r}, ${g}, ${b}, 0.15)`)
+  root.style.setProperty("--color-gold-bright", accent.hex)
+  root.style.setProperty("--color-gold-warm", dimmed)
+  root.style.setProperty("--color-gold-glow", `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`)
+  root.style.setProperty("--color-gold-subtle", `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.08)`)
+  root.style.setProperty("--shadow-input", `0 0 0 3px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`)
 
-  // Font pairing — override --font-heading and --font-body
-  const font = FONT_FAMILIES[s.fontFamily] || FONT_FAMILIES.standard
+  // Font pairing
+  const fontKey = s.readingFont || s.fontFamily || "default"
+  const font = FONT_FAMILIES[fontKey] || FONT_FAMILIES["default"]
   root.style.setProperty("--font-heading", font.heading)
-  root.style.setProperty("--font-body",    font.body)
+  root.style.setProperty("--font-body", font.body)
+
+  // Reading settings
+  const sizes = { sm: "0.925rem", md: "1.0625rem", lg: "1.28rem" }
+  const spacings = { tight: 1.65, normal: 1.9, loose: 2.2 }
+  root.style.setProperty("--font-size-base", sizes[s.fontSize || "md"])
+  root.style.setProperty("--font-size-bible", sizes[s.fontSize || "md"])
+  root.style.setProperty("--line-height-reading", spacings[s.lineSpacing || "normal"])
 }
 
 /* ── Helpers ─────────────────────────────────────────────── */
