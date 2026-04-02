@@ -23,14 +23,15 @@ Browser
   │
   ▼
 Next.js Middleware (middleware.js)
-  │  • Checks Supabase auth session
+  │  • Checks Supabase auth session via createSupabaseServerClient
   │  • Redirects unauthenticated users with ?returnTo=
   │  • Passes session to layout via headers
   ▼
 Next.js App Router
   │
   ├── Server Components (layout.jsx, page.jsx)
-  │     • Static metadata
+  │     • Static metadata + SEO
+  │     • Environment validation (lib/env/server.js)
   │     • Initial HTML shell
   │
   └── Client Components ("use client")
@@ -41,26 +42,81 @@ Next.js App Router
         ▼
       API Routes (/api/*)
         • All run as Node.js serverless functions on Vercel
-        • Auth: resolve users.id from Supabase auth
+        • Auth: server-derived identity via shared auth utilities
         • AI: Groq → OpenRouter → Gemini fallback chain
+        • RAG: Jina AI embeddings + Supabase pgvector
         • Bible: bible-api.com proxy
         • Contact: Resend email + Supabase insert
 ```
 
 ---
 
+## Server-Derived Identity (Critical Architecture Rule)
+
+All protected API routes resolve identity on the server. No client-provided user ID is trusted for authorization.
+
+### Identity Resolution Flow
+
+```
+Incoming request (cookies)
+        │
+        ▼
+getRequestUser()          ← lib/server/auth/getRequestUser.js
+Creates Supabase server client from cookies
+Calls supabase.auth.getUser()
+Returns { user, error }
+        │
+        ▼
+getRequestAppUser()       ← lib/server/auth/getRequestAppUser.js
+Resolves app-level profile row from users table
+Lookup: users.auth_id = authUser.id  (primary)
+Fallback: users.id = authUser.id     (legacy safety)
+Returns { authUser, appUser, error }
+        │
+        ▼
+requireRequestAppUser()   ← lib/server/auth/requireRequestAppUser.js
+Wraps getRequestAppUser()
+Returns a 401 response directly if unauthenticated
+Used in all strictly protected routes
+```
+
+### Why auth_id, Not id
+
+`users.id` is an internal profile UUID. `users.auth_id` is the Supabase auth UUID. These are different values. All identity checks use `auth_id` as the resolution key — never the profile ID from the client, which would allow impersonation.
+
+### Standardised HTTP Responses
+
+All API routes use shared response helpers from `lib/server/http/responses.js`:
+
+```js
+ok(data)                  // 200
+badRequest(message)       // 400
+unauthorized(message)     // 401
+forbidden(message)        // 403
+notFound(message)         // 404
+serverError(message)      // 500
+```
+
+---
+
 ## Database Schema
 
-### Tables
+### Core Tables
 
 ```sql
 -- User profiles (separate from Supabase auth.users)
 users (
-  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  auth_id     uuid UNIQUE REFERENCES auth.users(id),
-  email       text,
-  full_name   text,
-  created_at  timestamptz DEFAULT now()
+  id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  auth_id              uuid UNIQUE REFERENCES auth.users(id),
+  email                text,
+  display_name         text,
+  background_faith     text,
+  background_culture   text,
+  current_life_season  text,
+  primary_need         text,
+  is_anonymous         boolean DEFAULT false,
+  settings             jsonb,
+  created_at           timestamptz DEFAULT now()
 )
 
 -- Spiritual journal entries
@@ -69,160 +125,222 @@ journey_entries (
   user_id         uuid REFERENCES users(id) ON DELETE CASCADE,
   title           text NOT NULL,
   content         text,
-  entry_type      text DEFAULT 'reflection',  -- reflection|prayer|insight|verse|note
+  entry_type      text DEFAULT 'reflection',
   scripture_ref   text,
-  source          text,  -- companion|bible|plans
+  source          text,
   created_at      timestamptz DEFAULT now()
+)
+
+-- AI conversation threads
+conversations (
+  id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id   uuid REFERENCES users(id) ON DELETE CASCADE,
+  title     text,
+  created_at timestamptz DEFAULT now()
+)
+
+-- Individual conversation messages
+messages (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id  uuid REFERENCES conversations(id) ON DELETE CASCADE,
+  role             text,   -- 'user' | 'assistant'
+  content          text,
+  model_used       text,
+  created_at       timestamptz DEFAULT now()
 )
 
 -- Reading plan templates
 reading_plans (
-  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  title         text NOT NULL,
-  description   text,
-  category      text,
-  duration_days integer,
-  is_active     boolean DEFAULT true
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title            text NOT NULL,
+  description      text,
+  duration_days    int,
+  category         text,
+  cover_image_url  text,
+  is_curated       boolean DEFAULT false,
+  created_by       uuid REFERENCES users(id),
+  created_at       timestamptz DEFAULT now()
 )
 
--- Individual days within a plan
+-- Individual plan days
 plan_days (
-  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  plan_id          uuid REFERENCES reading_plans(id),
-  day_number       integer NOT NULL,
-  title            text NOT NULL,
-  scripture_refs   text[],
-  devotional_text  text,
-  reflection_prompt text,
-  prayer_prompt    text
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  plan_id            uuid REFERENCES reading_plans(id) ON DELETE CASCADE,
+  day_number         int,
+  title              text,
+  devotional_text    text,
+  scripture_refs     text[],
+  reflection_prompt  text,
+  prayer_prompt      text
 )
 
 -- User plan enrollments
 user_plans (
-  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id     uuid REFERENCES users(id) ON DELETE CASCADE,
-  plan_id     uuid REFERENCES reading_plans(id),
-  current_day integer DEFAULT 1,
-  status      text DEFAULT 'active',  -- active|completed
-  enrolled_at timestamptz DEFAULT now()
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id          uuid REFERENCES users(id) ON DELETE CASCADE,
+  plan_id          uuid REFERENCES reading_plans(id),
+  current_day      int DEFAULT 1,
+  status           text DEFAULT 'active',
+  started_at       timestamptz DEFAULT now(),
+  catch_up_used_at timestamptz,
+  is_private       boolean DEFAULT false
 )
 
--- Individual day completion records
+-- Day-level progress
 user_plan_progress (
-  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_plan_id      uuid REFERENCES user_plans(id),
-  day_number        integer,
-  completed_at      timestamptz DEFAULT now(),
-  personal_notes    text,
-  kairos_reflection text
-)
-
--- Contact form messages
-contact_messages (
-  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name       text NOT NULL,
-  email      text NOT NULL,
-  type       text NOT NULL DEFAULT 'other',
-  message    text NOT NULL,
-  created_at timestamptz DEFAULT now()
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_plan_id       uuid REFERENCES user_plans(id) ON DELETE CASCADE,
+  day_number         int,
+  completed_at       timestamptz,
+  kairos_reflection  text,
+  UNIQUE (user_plan_id, day_number)
 )
 
 -- RAG knowledge base
-biblical_knowledge (
-  id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  content   text NOT NULL,
-  source    text,
-  embedding vector(768)  -- Jina AI 768-dimension vectors
+knowledge_base (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title          text UNIQUE NOT NULL,
+  content        text,
+  category       text,
+  scripture_ref  text,
+  source         text,
+  embedding      vector(768),
+  tags           text[]  DEFAULT '{}',
+  audience       text[]  DEFAULT ARRAY['anyone'],
+  mode_affinity  text[]  DEFAULT '{}',
+  weight         integer DEFAULT 1,
+  created_at     timestamptz DEFAULT now()
+)
+
+-- Contact messages
+contact_messages (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name        text,
+  email       text,
+  type        text,
+  message     text,
+  created_at  timestamptz DEFAULT now()
 )
 ```
 
 ### Row Level Security
 
-All user-data tables have RLS enabled. The pattern:
+All 12 public schema tables have RLS enabled. Key policies:
 
-```sql
--- Users can only read/write their own data
-CREATE POLICY "Users own their journey entries"
-  ON journey_entries
-  FOR ALL
-  USING (user_id = (
-    SELECT id FROM users WHERE auth_id = auth.uid()
-  ));
-```
-
-Service role key (used in API routes only, never exposed to client) bypasses RLS for admin operations.
+- `journey_entries` — users can only read/write their own entries (`user_id = auth.uid()` resolved via `users.auth_id`)
+- `contact_messages` — insert only, no user reads (service role only)
+- `reading_plans INSERT` — only `created_by = auth.uid()` (no `is_curated` loophole)
+- `users` — each user can only read/update their own row (`auth_id = auth.uid()`)
+- `sessions` — owner-scoped policies via `user_id` join
 
 ---
 
-## AI System
+## AI Companion System
 
-### Fallback Chain
+### Model Fallback Chain
 
 ```
-Request arrives at /api/ai/companion
-          │
-          ▼
-    Build context
-    (user history + RAG results)
-          │
-          ▼
-    ┌─────────────┐
-    │   GROQ      │  llama-3.3-70b-versatile (primary — fastest)
-    └─────────────┘
-          │ fail?
-          ▼
-    ┌─────────────────┐
-    │  OPENROUTER     │  4-model chain (secondary)
-    │  • llama-3.1    │
-    │  • mistral      │
-    │  • claude-haiku │
-    │  • qwen         │
-    └─────────────────┘
-          │ fail?
-          ▼
-    ┌─────────────┐
-    │   GEMINI    │  3-model chain (tertiary)
-    └─────────────┘
+User message
+      │
+      ▼
+POST /api/ai/companion
+      │
+      ├── Rate limit check (20 req/min per user or IP)
+      ├── Escalation detection (crisis keywords)
+      ├── Identity resolution (getRequestAppUser)
+      │
+      ▼
+┌─────────────────────┐
+│    GROQ             │  Primary — fastest, most reliable free tier
+│  • llama-3.3-70b    │  15s timeout per model
+│  • llama-3.1-70b    │
+│  • mixtral-8x7b     │
+└─────────────────────┘
+        │ fail?
+        ▼
+┌─────────────────────┐
+│  OPENROUTER         │  Secondary — free models with daily caps
+│  • stepfun-3.5      │
+│  • qwen-2.5-72b     │
+│  • mistral-7b       │
+│  • glm-4.5-air      │
+└─────────────────────┘
+        │ fail?
+        ▼
+┌─────────────────────┐
+│   GEMINI            │  Tertiary — final safety net
+│  • gemini-2.0-flash │
+│  • gemini-1.5-flash │
+│  • gemini-flash-8b  │
+└─────────────────────┘
 ```
 
-The fallback chain means the companion never returns an error to the user on the first attempt. Each model is tried in sequence; only if all fail does an error surface.
+Continuation requests (when the user asks Kairos to continue a truncated response) route to the same model that generated the previous response, tracked via `modelId` returned from each response.
 
 ### RAG Pipeline
 
 ```
 User message
-     │
-     ▼
-Jina AI Embedding API
-(message → 768-dim vector)
-     │
-     ▼
-Supabase pgvector
-cosine similarity search
-against biblical_knowledge
-     │
-     ▼
-Top-k results (k=5)
-retrieved as text chunks
-     │
-     ▼
-Injected into system prompt
-as "relevant knowledge context"
-     │
-     ▼
-LLM generates response
-grounded in retrieved content
+      │
+      ▼
+isSubstantiveMessage()
+(skip greetings and short acks)
+      │
+      ▼
+inferModeHint()          ← heuristic classification from message text
+inferAudienceHint()      ← heuristic classification from message text
+      │
+      ▼
+generateQueryEmbedding() ← Jina AI API, jina-embeddings-v2-base-en
+(message → 768-dim vector, task: "retrieval.query")
+      │
+      ▼
+match_knowledge_base()   ← Supabase pgvector RPC
+  • vector cosine similarity (threshold: 0.5)
+  • optional audience filter (GIN index)
+  • optional mode filter (GIN index)
+  • weight-boosted scoring: score × (1 + (weight-1) × 0.1)
+  • returns top 3 matches
+      │
+      │ if filtered search returns nothing:
+      │   retry without filters (fallback)
+      ▼
+formatKnowledgeContext() ← injects as KNOWLEDGE BASE block in system prompt
 ```
 
-This means the AI's Biblical knowledge is not dependent on what was in the LLM's training data — it is shaped by a curated knowledge base that can be updated at any time by inserting new embeddings.
+Knowledge base: ~113 curated entries across apologetics, pastoral, scripture context, FAQ, formation, and advanced spirituality. Each entry carries `tags`, `audience`, `mode_affinity`, and `weight` metadata for context-aware retrieval.
 
-### Guardrails
+### System Prompt Architecture
 
-`lib/ai/guardrails.js` enforces:
-- Tone constraints (no clickbait optimism, no clinical detachment)
-- Epistemic humility (the AI never claims authority it doesn't have)
-- Scope boundaries (Kairos is not a therapist, financial advisor, or medical professional)
-- Scripture grounding (responses should connect to the text, not float free of it)
+`lib/ai/prompts.js` builds the system prompt from five layers:
+
+```
+KAIROS_IDENTITY          ← who Kairos is, theological commitments, voice rules
+RESPONSE_MODES           ← 7 modes: Pastoral, Clarity, Lament, Formation,
+                           Apologetics, Courage, Release — with mode-specific
+                           posture and closing guidance
+RESPONSE_STRUCTURE       ← Presence → Answer → Depth → Closing (mode-dependent)
+profileContext           ← buildProfileContext(profile): name, faith background,
+                           cultural background, life season, primary need
+memoryContext            ← buildMemoryContext(journeyEntries): last 5 journey
+                           entries, truncated to 300 chars each
+ragContext               ← buildRagContext(searchKnowledgeBase result)
+verseContext             ← verse text from Bible reader handoff (if present)
+```
+
+### Memory Injection
+
+For authenticated users, the companion route fetches the last 5 journey entries in parallel with the profile and RAG search:
+
+```js
+const [profile, ragContext, journeyEntries] = await Promise.all([
+  fetchProfile(identityUserId),
+  searchKnowledgeBase(message),
+  fetchRecentJourney(identityUserId),
+])
+```
+
+These are injected into the system prompt as recent context, giving Kairos continuity without explicitly referencing the memory mechanism to the user.
 
 ---
 
@@ -244,8 +362,7 @@ PKCE flow    OTP/magic link
   └─────┬──────┘
         ▼
 /api/auth/callback
-Exchanges code or token_hash
-for session
+Exchanges code or token_hash for session
         │
         ▼
 Sets Supabase session cookie
@@ -255,34 +372,9 @@ Redirects to ?returnTo= destination
 (or /journey by default)
 ```
 
-### Profile Resolution Pattern
-
-**The rule:** every API route that touches user data must resolve `users.id` before operating. Never trust a client-sent user ID.
-
-```js
-// Pattern used in every protected API route
-const { data: { user } } = await supabase.auth.getUser()
-if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
-const { data: profile } = await supabase
-  .from("users")
-  .select("id")
-  .eq("auth_id", user.id)
-  .maybeSingle()
-
-if (!profile) return NextResponse.json({ error: "Profile not found" }, { status: 404 })
-
-// Now use profile.id for all data operations
-```
-
-This separation means:
-- Auth provider can change without touching data queries
-- Users cannot spoof another user's profile ID (auth UUID is validated server-side)
-- Anonymous/unauthenticated users are caught before any DB operation
-
 ### returnTo Pattern
 
-Unauthenticated users attempting to access protected routes are redirected with their destination preserved:
+Unauthenticated users attempting protected routes are redirected with destination preserved:
 
 ```
 /journey/saved → /login?returnTo=%2Fjourney%2Fsaved
@@ -295,38 +387,9 @@ Implemented in `middleware.js` and consumed in `login/page.jsx` via `useSearchPa
 
 ## Settings & Theme System
 
-### SettingsContext
+All user preferences live in `localStorage` via `SettingsContext`. No database persistence — settings are per-device by design.
 
-All user preferences live in `localStorage` via `SettingsContext`. No database persistence for settings — they are per-device and per-browser by design (a mobile and desktop user might want different font sizes).
-
-```js
-// Settings keys
-{
-  theme:               "dark" | "light" | "system",
-  accentColor:         "gold" | "blue" | "purple" | "green" | "rose",
-  readingFont:         "default" | "serif" | "mono",
-  bibleTranslation:    "WEB" | "KJV" | "ASV" | "BBE",
-  fontSize:            "sm" | "md" | "lg",
-  lineSpacing:         "tight" | "normal" | "relaxed",
-  showVotD:            boolean,
-  showActivePlan:      boolean,
-  showExamplePrompts:  boolean,
-  dailyReminder:       boolean,
-  votdNotification:    boolean,
-}
-```
-
-### ThemeApplier
-
-`ThemeApplier.jsx` is a renderless client component placed inside `SettingsProvider` in the root layout. On every settings change it:
-
-1. Sets `data-theme` attribute on `<html>`
-2. Injects a `<style id="kairos-theme">` tag with CSS variable overrides
-
-This pattern was chosen over class-based theming because:
-- CSS variables cascade to all descendants without prop drilling
-- The `<style>` tag injection is instant and doesn't cause layout shift
-- Any component — including third-party — responds to the CSS variable changes
+`ThemeApplier.jsx` is a renderless client component placed inside `SettingsProvider`. On every settings change it sets the `data-theme` attribute on `<html>` and injects a `<style id="kairos-theme">` tag with CSS variable overrides. This pattern avoids class-based theming and ensures all components — including third-party — respond to changes without prop drilling.
 
 ---
 
@@ -341,7 +404,7 @@ User selects book + chapter
 /api/bible/chapter?book=John&chapter=3&translation=WEB
           │
           ▼
-bible-api.com (external)
+bible-api.com (external, no API key required)
 Returns verse array
           │
           ▼
@@ -349,7 +412,7 @@ Cached in component state
 Rendered as verse list
           │
      User actions:
-     ├── Highlight → sessionStorage
+     ├── Highlight → sessionStorage (session-only)
      ├── Save note → SaveMomentModal → /api/journey/save
      └── Ask Kairos → sessionStorage context → /journey
 ```
@@ -357,20 +420,46 @@ Rendered as verse list
 ### Bible → Companion Handoff
 
 ```js
-// In Bible reader
-const ctx = `Book: ${book}, Chapter: ${chapter}\nVerse ${verseNum}: ${verseText}\n\nSurrounding context: ...`
-sessionStorage.setItem("kairos_verse_context", ctx)
-router.push("/journey")
+// In Bible reader — sendToCompanion()
+const prompt = `I'd like to reflect on ${ref}: "${snippet}" — what does this mean for my life today?`
+sessionStorage.setItem("kairos_verse_context", prompt)
+window.location.href = "/journey"
 
 // In CompanionCore on mount
 const ctx = sessionStorage.getItem("kairos_verse_context")
 if (ctx) {
   sessionStorage.removeItem("kairos_verse_context")
-  // Pre-populate companion with verse context
+  setInput(ctx)
+  setStarted(true)
 }
 ```
 
-This is a single-use, session-scoped handoff — the context is consumed and removed on read.
+Single-use, session-scoped. Context is consumed and removed on read.
+
+---
+
+## API Routes
+
+| Route | Auth | Purpose |
+|-------|------|---------|
+| `POST /api/ai/companion` | Optional | Main AI conversation |
+| `GET /api/bible/chapter` | None | Bible chapter fetch |
+| `GET /api/bible/verse` | None | Single verse fetch |
+| `POST /api/journey/save` | Required | Save journey entry |
+| `GET /api/user/journey` | Required | Fetch user's entries (paginated) |
+| `GET /api/user/profile` | Required | Fetch user profile |
+| `PATCH /api/user/profile` | Required | Update profile fields |
+| `GET /api/plans` | Optional | List reading plans |
+| `POST /api/plans` | Required | Enroll in plan |
+| `GET /api/plans/[id]` | Optional | Plan detail + days + enrollment |
+| `POST /api/plans/progress` | Required | Mark day complete / catch up |
+| `POST /api/contact` | None | Contact form + Resend email |
+| `GET /api/auth/callback` | None | PKCE/OTP callback |
+| `DELETE /api/account/delete` | Required | Delete account |
+| `GET /api/account/export` | Required | Export user data as JSON |
+| `POST /api/admin/seed` | Secret | Seed knowledge base entries |
+
+All protected routes use `requireRequestAppUser()` or `getRequestAppUser()`. No route accepts a client-provided user ID for authorization.
 
 ---
 
@@ -380,53 +469,26 @@ This is a single-use, session-scoped handoff — the context is consumed and rem
 
 ```
 AppPage
-├── <style>{css}</style>          ← scoped CSS with CSS class names
-├── .layout (flex row)
+├── <style>{css}</style>          ← scoped CSS
+├── .layout (CSS grid: 220px 1fr)
 │   ├── <aside> .sidebar          ← 220px sticky, 100vh
-│   │   ├── Logo
-│   │   ├── <nav> SidebarLinks
-│   │   └── UserChip
+│   │   ├── Logo → homepage
+│   │   ├── <nav> links with active gold dot
+│   │   └── UserChip / SignIn link
 │   └── <main> .main              ← flex: 1, overflow-y: auto
 │       └── page content
 └── <nav> .mobile-nav             ← position: fixed, 58px, z-index: 100
+                                     env(safe-area-inset-bottom) padding
 ```
-
-The sidebar is identical across all app pages. `SidebarLink` components take `active` prop — the active page gets a gold dot and highlighted background.
 
 ### Styling Approach
 
-No CSS-in-JS library, no Tailwind utility classes in components (Tailwind is configured but used only as a reference). All styling uses:
-- **CSS variables** from `tokens.css` — for every color, spacing, radius, shadow, font
-- **Inline styles** — for component-specific styles with variable references
-- **Scoped `<style>` tags** — for pseudo-classes, media queries, and `[data-theme]` overrides that can't be expressed in inline styles
+No CSS-in-JS, no Tailwind utility classes in components. All styling uses:
+- **CSS variables** from `tokens.css` — colors, spacing, radius, shadow, font
+- **Inline styles** — component-specific values with variable references
+- **Scoped `<style>` tags** — pseudo-classes, media queries, `[data-theme]` overrides
 
-This approach was chosen because it keeps components completely self-contained — no stylesheet dependencies, no class name collisions, and no build-time CSS processing.
-
----
-
-## API Routes
-
-All API routes are Next.js serverless functions deployed on Vercel.
-
-| Route | Auth | Purpose |
-|-------|------|---------|
-| `POST /api/ai/companion` | Optional | Main AI conversation |
-| `POST /api/ai/guidance` | Optional | Structured guidance |
-| `GET /api/bible/chapter` | None | Bible chapter fetch |
-| `GET /api/bible/verse` | None | Single verse fetch |
-| `POST /api/journey/save` | Required | Save journey entry |
-| `GET /api/user/journey` | Required | Fetch user's entries |
-| `GET /api/user/profile` | Required | Fetch user profile |
-| `GET /api/plans` | Optional | List reading plans |
-| `POST /api/plans` | Required | Enroll in plan |
-| `GET /api/plans/[id]` | Optional | Plan detail + days |
-| `POST /api/plans/progress` | Required | Mark day complete / catch up |
-| `POST /api/contact` | None | Contact form + email |
-| `POST /api/auth` | None | Auth helpers |
-| `GET /api/auth/callback` | None | PKCE/OTP callback |
-| `DELETE /api/account/delete` | Required | Delete account |
-| `GET /api/account/export` | Required | Export user data |
-| `GET /api/admin/seed` | Secret | Seed reading plans |
+Design rule: `--space-7` and `--space-9` do not exist in the token scale. Valid spacing ends at `--space-6`, then jumps to `--space-8`.
 
 ---
 
@@ -434,7 +496,6 @@ All API routes are Next.js serverless functions deployed on Vercel.
 
 ```
 GitHub (main branch)
-        │
         │ push triggers
         ▼
 Vercel Build Pipeline
@@ -450,22 +511,46 @@ Vercel Edge Network
   • Middleware runs at edge
 ```
 
-### Environment Separation
-
-- `dev` branch — development, not auto-deployed
-- `main` branch — production, auto-deployed by Vercel on every push
-- Preview deployments — Vercel generates preview URLs for any PR or non-main branch push
+- `dev` branch — active development, not auto-deployed
+- `main` branch — production, auto-deployed on every push
+- Migrations applied manually in Supabase SQL editor, committed to `supabase/migrations/`
 
 ---
 
-## Performance Considerations
+## Environment Variables
 
-**Static prerendering:** The homepage and all non-auth pages are statically prerendered at build time. Only pages that require auth state (`/journey`, `/bible`, etc.) are client-rendered.
+```env
+# Required
+NEXT_PUBLIC_APP_URL
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
 
-**Turbopack:** Next.js 16 uses Turbopack by default for builds, reducing build time significantly.
+# AI providers (at least one required)
+GROQ_API_KEY
+OPENROUTER_API_KEY
+GEMINI_API_KEY
 
-**No global stylesheets in components:** Components import no external CSS. All styles are inline or in scoped `<style>` tags, eliminating CSS cascade issues and unused style accumulation.
+# RAG embeddings
+JINA_API_KEY
 
-**Verse of the Day:** A static array of 365 verses indexed by day-of-year. Zero API call, zero latency, zero cost, zero dependency.
+# Contact form
+RESEND_API_KEY
+CONTACT_FROM_EMAIL
+CONTACT_TEAM_EMAIL
 
-**bible-api.com caching:** Bible chapter fetches are cached in component state. Navigating between chapters in the same session doesn't re-fetch previously loaded chapters.
+# Admin
+SEED_SECRET
+```
+
+Validated at startup by `lib/env/server.js`. Missing required vars throw on boot. Missing optional vars log warnings.
+
+---
+
+## Performance Notes
+
+- Homepage and all non-auth pages are statically prerendered at build time
+- Bible chapter fetches are cached in component state — no re-fetch on chapter revisit
+- Verse of the Day is a static array of 365 entries indexed by day-of-year — zero API call
+- RAG search runs in parallel with profile fetch and memory fetch — no sequential blocking
+- All AI model calls have 15s individual timeouts with automatic failover
