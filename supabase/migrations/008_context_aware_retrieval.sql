@@ -1,27 +1,23 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- Migration 008: Context-Aware RAG Retrieval
+-- Migration 008: Context-Aware RAG Retrieval Function
 --
--- Replaces the match_knowledge_base function with an updated version that
--- accepts optional metadata filters: audience and mode_affinity.
+-- Replaces the old match_knowledge_base function with an enhanced version
+-- that supports optional audience and mode_affinity filtering.
 --
--- This enables the retrieval layer to pre-filter by who the content is for
--- and which conversation mode it serves, before running vector similarity.
---
--- The function is fully backwards-compatible:
---   - filter_audience  defaults to NULL  → no audience filtering
---   - filter_mode      defaults to NULL  → no mode filtering
---   - weight boosting  is always applied → higher weight entries rank higher
---
--- Called from: src/lib/rag/search.js
+-- Fully backwards compatible and idempotent.
+-- Called from: src/lib/rag/search.js (or wherever you use it)
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- Drop the old version if it exists (safe — we are replacing it)
-DROP FUNCTION IF EXISTS match_knowledge_base(vector, float, int);
-DROP FUNCTION IF EXISTS match_knowledge_base(vector, float, int, text[], text[]);
+-- =============================================
+-- 1. Drop old function versions (safe)
+-- =============================================
+DROP FUNCTION IF EXISTS public.match_knowledge_base(vector, float, int);
+DROP FUNCTION IF EXISTS public.match_knowledge_base(vector, float, int, text[], text[]);
 
--- ── Updated function ──────────────────────────────────────────────────────────
-
-CREATE OR REPLACE FUNCTION match_knowledge_base(
+-- =============================================
+-- 2. Create / Replace the updated function
+-- =============================================
+CREATE OR REPLACE FUNCTION public.match_knowledge_base(
   query_embedding  vector(768),
   match_threshold  float     DEFAULT 0.5,
   match_count      int       DEFAULT 3,
@@ -54,28 +50,26 @@ BEGIN
     kb.audience,
     kb.mode_affinity,
     kb.weight,
-    -- Weight-boosted similarity score:
-    -- Multiplying by (1 + (weight - 1) * 0.1) means:
-    --   weight 1 → score × 1.0   (unchanged)
-    --   weight 2 → score × 1.1   (+10%)
-    --   weight 3 → score × 1.2   (+20%)
-    -- This nudges high-weight entries up without overwhelming vector similarity.
+    -- Weight-boosted similarity:
+    -- weight 1 → ×1.0 (no change)
+    -- weight 2 → ×1.1 (+10%)
+    -- weight 3 → ×1.2 (+20%)
     (1 - (kb.embedding <=> query_embedding)) * (1 + (kb.weight - 1) * 0.1) AS similarity
-  FROM knowledge_base kb
+  FROM public.knowledge_base kb
   WHERE
-    -- Vector similarity threshold (applied before weight boost for efficiency)
+    -- Core vector similarity filter
     (1 - (kb.embedding <=> query_embedding)) > match_threshold
 
-    -- Audience filter: if provided, entry must overlap with requested audience.
-    -- 'anyone' entries always pass — they are universally applicable.
+    -- Audience filter (optional)
+    -- 'anyone' entries are always included
     AND (
       filter_audience IS NULL
       OR kb.audience && filter_audience
       OR kb.audience @> ARRAY['anyone']
     )
 
-    -- Mode filter: if provided, entry must serve at least one of the requested modes.
-    -- Entries with empty mode_affinity pass through — they are broadly applicable.
+    -- Mode filter (optional)
+    -- Empty mode_affinity = broadly applicable
     AND (
       filter_mode IS NULL
       OR kb.mode_affinity = '{}'
@@ -87,6 +81,12 @@ BEGIN
 END;
 $$;
 
--- ── Grant access to authenticated and service role ────────────────────────────
-GRANT EXECUTE ON FUNCTION match_knowledge_base(vector, float, int, text[], text[])
+-- =============================================
+-- 3. Grant execute permissions
+-- =============================================
+GRANT EXECUTE ON FUNCTION public.match_knowledge_base(vector, float, int, text[], text[])
   TO authenticated, service_role;
+
+-- Optional: Add comment for documentation
+COMMENT ON FUNCTION public.match_knowledge_base(vector, float, int, text[], text[]) 
+IS 'Context-aware RAG search with audience + mode affinity filtering + weight boosting';
