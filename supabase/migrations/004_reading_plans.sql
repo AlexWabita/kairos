@@ -5,102 +5,118 @@
 
 -- 1. READING PLANS
 -- Stores both curated (Kairos-authored) and user-created plan definitions
-create table if not exists reading_plans (
-  id               uuid primary key default gen_random_uuid(),
-  title            text not null,
+CREATE TABLE IF NOT EXISTS public.reading_plans (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title            text NOT NULL,
   description      text,
-  duration_days    integer not null,
+  duration_days    integer NOT NULL,
   category         text,
   cover_image_url  text,
-  is_curated       boolean not null default false,
-  created_by       uuid references users(id) on delete set null,
-  created_at       timestamptz not null default now()
+  is_curated       boolean NOT NULL DEFAULT false,
+  created_by       uuid REFERENCES public.users(id) ON DELETE SET NULL,
+  created_at       timestamptz NOT NULL DEFAULT now()
 );
 
 -- 2. PLAN DAYS
 -- One row per day per plan. All content is pre-authored.
-create table if not exists plan_days (
-  id                 uuid primary key default gen_random_uuid(),
-  plan_id            uuid not null references reading_plans(id) on delete cascade,
-  day_number         integer not null,
-  title              text not null,
-  devotional_text    text not null,
-  scripture_refs     text[] not null default '{}',
+CREATE TABLE IF NOT EXISTS public.plan_days (
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  plan_id            uuid NOT NULL REFERENCES public.reading_plans(id) ON DELETE CASCADE,
+  day_number         integer NOT NULL,
+  title              text NOT NULL,
+  devotional_text    text NOT NULL,
+  scripture_refs     text[] NOT NULL DEFAULT '{}',
   reflection_prompt  text,
   prayer_prompt      text,
-  unique (plan_id, day_number)
+  UNIQUE (plan_id, day_number)
 );
 
 -- 3. USER PLANS
 -- Tracks a user's enrollment in a plan and their progress state
-create table if not exists user_plans (
-  id                uuid primary key default gen_random_uuid(),
-  user_id           uuid not null references users(id) on delete cascade,
-  plan_id           uuid not null references reading_plans(id) on delete cascade,
-  started_at        timestamptz not null default now(),
-  current_day       integer not null default 1,
-  status            text not null default 'active'
-                    check (status in ('active', 'paused', 'completed')),
-  is_private        boolean not null default false,
+CREATE TABLE IF NOT EXISTS public.user_plans (
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id           uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  plan_id           uuid NOT NULL REFERENCES public.reading_plans(id) ON DELETE CASCADE,
+  started_at        timestamptz NOT NULL DEFAULT now(),
+  current_day       integer NOT NULL DEFAULT 1,
+  status            text NOT NULL DEFAULT 'active'
+                    CHECK (status IN ('active', 'paused', 'completed')),
+  is_private        boolean NOT NULL DEFAULT false,
   group_id          uuid,                          -- nullable: Phase 8 org hook
   catch_up_used_at  timestamptz,                   -- nullable: last catch-up timestamp
-  unique (user_id, plan_id)
+  UNIQUE (user_id, plan_id)
 );
 
 -- 4. USER PLAN PROGRESS
 -- One row per completed day per user plan
-create table if not exists user_plan_progress (
-  id                  uuid primary key default gen_random_uuid(),
-  user_plan_id        uuid not null references user_plans(id) on delete cascade,
-  day_number          integer not null,
-  completed_at        timestamptz not null default now(),
+CREATE TABLE IF NOT EXISTS public.user_plan_progress (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_plan_id        uuid NOT NULL REFERENCES public.user_plans(id) ON DELETE CASCADE,
+  day_number          integer NOT NULL,
+  completed_at        timestamptz NOT NULL DEFAULT now(),
   kairos_reflection   text,                        -- nullable: saved AI response
-  unique (user_plan_id, day_number)
+  UNIQUE (user_plan_id, day_number)
 );
 
 -- ─────────────────────────────────────────
 -- INDEXES
 -- ─────────────────────────────────────────
-create index if not exists idx_plan_days_plan_id
-  on plan_days(plan_id);
+CREATE INDEX IF NOT EXISTS idx_plan_days_plan_id
+  ON public.plan_days(plan_id);
 
-create index if not exists idx_user_plans_user_id
-  on user_plans(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_plans_user_id
+  ON public.user_plans(user_id);
 
-create index if not exists idx_user_plan_progress_user_plan_id
-  on user_plan_progress(user_plan_id);
+CREATE INDEX IF NOT EXISTS idx_user_plan_progress_user_plan_id
+  ON public.user_plan_progress(user_plan_id);
 
 -- ─────────────────────────────────────────
 -- RLS (Row Level Security)
 -- ─────────────────────────────────────────
-alter table reading_plans      enable row level security;
-alter table plan_days          enable row level security;
-alter table user_plans         enable row level security;
-alter table user_plan_progress enable row level security;
+ALTER TABLE public.reading_plans      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.plan_days          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_plans         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_plan_progress ENABLE ROW LEVEL SECURITY;
 
--- reading_plans: anyone can read, only owner or curated can exist
-create policy "Public read for reading_plans"
-  on reading_plans for select using (true);
+-- ==================== READING_PLANS POLICIES ====================
 
-create policy "Users can create their own plans"
-  on reading_plans for insert
-  with check (created_by = auth.uid() or is_curated = true);
+-- Anyone can read reading plans (public read access)
+DROP POLICY IF EXISTS "Public read for reading_plans" ON public.reading_plans;
+CREATE POLICY "Public read for reading_plans"
+  ON public.reading_plans FOR SELECT TO public
+  USING (true);
+
+-- Users can create their own plans (or curated plans can be inserted)
+DROP POLICY IF EXISTS "Users can create their own plans" ON public.reading_plans;
+CREATE POLICY "Users can create their own plans"
+  ON public.reading_plans FOR INSERT TO public
+  WITH CHECK (created_by = auth.uid() OR is_curated = true);
+
+-- ==================== PLAN_DAYS POLICIES ====================
 
 -- plan_days: publicly readable
-create policy "Public read for plan_days"
-  on plan_days for select using (true);
+DROP POLICY IF EXISTS "Public read for plan_days" ON public.plan_days;
+CREATE POLICY "Public read for plan_days"
+  ON public.plan_days FOR SELECT TO public
+  USING (true);
 
--- user_plans: private to owner
-create policy "Users manage their own user_plans"
-  on user_plans for all
-  using (user_id = (select id from users where auth_id = auth.uid()));
+-- ==================== USER_PLANS POLICIES ====================
+
+-- user_plans: private to owner (full CRUD)
+DROP POLICY IF EXISTS "Users manage their own user_plans" ON public.user_plans;
+CREATE POLICY "Users manage their own user_plans"
+  ON public.user_plans FOR ALL TO public
+  USING (user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid()));
+
+-- ==================== USER_PLAN_PROGRESS POLICIES ====================
 
 -- user_plan_progress: private to owner via user_plan
-create policy "Users manage their own progress"
-  on user_plan_progress for all
-  using (
-    user_plan_id in (
-      select id from user_plans
-      where user_id = (select id from users where auth_id = auth.uid())
+DROP POLICY IF EXISTS "Users manage their own progress" ON public.user_plan_progress;
+CREATE POLICY "Users manage their own progress"
+  ON public.user_plan_progress FOR ALL TO public
+  USING (
+    user_plan_id IN (
+      SELECT id FROM public.user_plans
+      WHERE user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
     )
   );
