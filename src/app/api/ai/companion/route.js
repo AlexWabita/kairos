@@ -502,18 +502,30 @@ export async function POST(request) {
     const activeConversationId = await ensureConversation(identityUserId, conversationId)
 
     // ── 12. Store assistant message ───────────────────────────────────────
-    if (activeConversationId) {
-      try {
-        await adminClient.from("messages").insert({
-          conversation_id: activeConversationId,
-          role:            "assistant",
-          content:         reply,
-          model_used:      modelName,
-        })
-      } catch {
-        // Non-fatal — conversation persistence should never block a response
+      if (activeConversationId) {
+        try {
+          // Store user message first, then assistant response
+          await adminClient.from("messages").insert([
+            {
+              conversation_id: activeConversationId,
+              role:            "user",
+              content:         message,
+              model_used:      null,
+            },
+            {
+              conversation_id: activeConversationId,
+              role:            "assistant",
+              content:         reply,
+              model_used:      modelName,
+            },
+          ])
+          // Touch updated_at so conversations list sorts by recency
+          await adminClient
+            .from("conversations")
+            .update({ updated_at: new Date().toISOString() })
+            .eq("id", activeConversationId)
+        } catch {}
       }
-    }
 
     // ── 13. Return response ───────────────────────────────────────────────
     return NextResponse.json({
