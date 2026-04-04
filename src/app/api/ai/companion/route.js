@@ -28,11 +28,7 @@
 
 import { NextResponse }        from "next/server"
 import { rateLimit }           from "@/lib/rateLimit"
-import {
-  buildSystemPrompt,
-  buildProfileContext,
-  buildMemoryContext,
-}                              from "@/lib/ai/prompts"
+import {  buildSystemPrompt,  buildProfileContext,  buildMemoryContext,  inferResponseMode }                              from "@/lib/ai/prompts"
 import { searchKnowledgeBase } from "@/lib/rag/search"
 import { createClient }        from "@supabase/supabase-js"
 import { GoogleGenerativeAI }  from "@google/generative-ai"
