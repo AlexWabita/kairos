@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-import { getRequestAppUser } from '@/lib/server/auth/getRequestAppUser'
+import { getRequestAppUser }     from '@/lib/server/auth/getRequestAppUser'
 import { requireRequestAppUser } from '@/lib/server/auth/requireRequestAppUser'
 import { ok, badRequest, serverError } from '@/lib/server/http/responses'
 
@@ -11,17 +11,17 @@ const admin = createClient(
 
 // ─────────────────────────────────────────────────────────────
 // GET /api/plans
-// Returns all curated plans + user's enrolled plans (if authenticated)
+// Returns all curated plans + user enrollments if authenticated.
+// slug is required by the frontend situation chip system.
 // ─────────────────────────────────────────────────────────────
 export async function GET() {
   try {
     const { appUser } = await getRequestAppUser()
 
-    // Always fetch curated plans
     const { data: plans, error: plansError } = await admin
       .from('reading_plans')
       .select(
-        'id, title, description, duration_days, category, cover_image_url, is_curated, created_by, created_at'
+        'id, slug, title, description, duration_days, category, cover_image_url, is_curated, created_by, created_at'
       )
       .order('is_curated', { ascending: false })
       .order('created_at', { ascending: true })
@@ -30,23 +30,19 @@ export async function GET() {
 
     let userPlans = []
 
-    // Only fetch enrollments if user exists and is not anonymous
     if (appUser && !appUser.is_anonymous) {
       const { data, error: enrollError } = await admin
         .from('user_plans')
-        .select(
-          'id, plan_id, current_day, status, started_at, catch_up_used_at'
-        )
+        .select('id, plan_id, current_day, status, started_at, catch_up_used_at')
         .eq('user_id', appUser.id)
 
       if (!enrollError) userPlans = data || []
     }
 
-    const enriched = plans.map((plan) => {
-      const enrollment =
-        userPlans.find((up) => up.plan_id === plan.id) || null
-      return { ...plan, enrollment }
-    })
+    const enriched = plans.map((plan) => ({
+      ...plan,
+      enrollment: userPlans.find((up) => up.plan_id === plan.id) || null,
+    }))
 
     return ok({ success: true, plans: enriched })
   } catch (err) {
@@ -56,58 +52,40 @@ export async function GET() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// POST /api/plans
-// Enroll authenticated user in a plan
+// POST /api/plans — enroll authenticated user in a plan
 // Body: { planId, isPrivate? }
 // ─────────────────────────────────────────────────────────────
 export async function POST(req) {
   try {
     const { appUser, response } = await requireRequestAppUser()
+    if (response) return response
 
-    if (response) {
-      return response
-    }
-
-    const body = await req.json()
-
-    const planId =
-      typeof body.planId === 'string' ? body.planId.trim() : null
-
+    const body      = await req.json()
+    const planId    = typeof body.planId === 'string' ? body.planId.trim() : null
     const isPrivate = Boolean(body.isPrivate)
 
-    if (!planId) {
-      return badRequest('Plan ID is required')
-    }
+    if (!planId)              return badRequest('Plan ID is required')
+    if (appUser.is_anonymous) return badRequest('Authentication required')
 
-    if (appUser.is_anonymous) {
-      return badRequest('Authentication required')
-    }
-
-    // Verify plan exists
     const { data: plan, error: planError } = await admin
       .from('reading_plans')
       .select('id, title')
       .eq('id', planId)
       .maybeSingle()
 
-    if (planError || !plan) {
-      return badRequest('Plan not found')
-    }
+    if (planError || !plan) return badRequest('Plan not found')
 
     const { data, error } = await admin
       .from('user_plans')
       .upsert(
         {
-          user_id: appUser.id,
-          plan_id: planId,
-          is_private: isPrivate,
+          user_id:     appUser.id,
+          plan_id:     planId,
+          is_private:  isPrivate,
           current_day: 1,
-          status: 'active',
+          status:      'active',
         },
-        {
-          onConflict: 'user_id,plan_id',
-          ignoreDuplicates: true,
-        }
+        { onConflict: 'user_id,plan_id', ignoreDuplicates: true }
       )
       .select('id, plan_id, current_day, status, started_at')
       .single()
