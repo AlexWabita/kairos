@@ -1,8 +1,15 @@
 /**
  * KAIROS — User Conversations Route
  * GET    /api/user/conversations        — fetch recent conversations + messages
- * PATCH  /api/user/conversations        — rename a conversation
+ * PATCH  /api/user/conversations        — rename or pin a conversation
  * DELETE /api/user/conversations?id=x  — delete a conversation
+ *
+ * Actual DB columns on `conversations` table:
+ *   id, user_id, title, theme, is_crisis,
+ *   started_at, last_message_at, updated_at, is_pinned
+ *
+ * Note: `created_at` does NOT exist — use `started_at` instead.
+ *       `last_message_at` is touched after each message exchange.
  */
 
 import { createClient }          from "@supabase/supabase-js"
@@ -23,19 +30,22 @@ export async function GET(req) {
     const limit  = Math.min(parseInt(searchParams.get("limit")  || "20"), 50)
     const offset = parseInt(searchParams.get("offset") || "0")
 
+    // Use actual column names: started_at (not created_at), last_message_at
     const { data: conversations, error: convError } = await admin
       .from("conversations")
-      .select("id, title, created_at, updated_at, is_pinned")
+      .select("id, title, started_at, last_message_at, updated_at, is_pinned")
       .eq("user_id", appUser.id)
-      .order("is_pinned",  { ascending: false })
-      .order("updated_at", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false })
+      .order("is_pinned",       { ascending: false })
+      .order("last_message_at", { ascending: false, nullsFirst: false })
+      .order("started_at",      { ascending: false })
       .range(offset, offset + limit - 1)
 
     if (convError) throw convError
     if (!conversations?.length) return ok({ success: true, conversations: [] })
 
     const ids = conversations.map(c => c.id)
+
+    // messages table does have created_at — that's fine
     const { data: messages, error: msgError } = await admin
       .from("messages")
       .select("id, conversation_id, role, content, model_used, created_at")
@@ -50,9 +60,17 @@ export async function GET(req) {
       map[m.conversation_id].push(m)
     }
 
+    // Normalise column names so CompanionCore.jsx gets what it expects:
+    //   created_at → mapped from started_at
+    //   updated_at → last_message_at ?? updated_at ?? started_at
     return ok({
       success: true,
-      conversations: conversations.map(c => ({ ...c, messages: map[c.id] || [] })),
+      conversations: conversations.map(c => ({
+        ...c,
+        created_at: c.started_at,
+        updated_at: c.last_message_at || c.updated_at || c.started_at,
+        messages:   map[c.id] || [],
+      })),
     })
 
   } catch (err) {
@@ -70,7 +88,7 @@ export async function PATCH(req) {
     if (!body?.id) return serverError("id required")
 
     const updates = {}
-    if (body.title    !== undefined) updates.title     = body.title.trim()
+    if (body.title     !== undefined) updates.title     = body.title.trim()
     if (body.is_pinned !== undefined) updates.is_pinned = !!body.is_pinned
 
     if (!Object.keys(updates).length) return serverError("No fields to update")

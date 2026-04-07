@@ -158,7 +158,6 @@ const css = `
   @keyframes cc-overlay { from{opacity:0} to{opacity:1} }
   @keyframes cc-scale-in{ from{opacity:0;transform:scale(0.96)}     to{opacity:1;transform:scale(1)} }
 
-  /* ── Root layout ── */
   .cc-layout {
     display: flex;
     height: 100vh;
@@ -166,7 +165,6 @@ const css = `
     position: relative;
   }
 
-  /* ── Rail (collapsed sidebar) ── */
   .cc-rail {
     width: 64px;
     height: calc(100vh - 24px);
@@ -186,7 +184,6 @@ const css = `
     position: relative;
   }
 
-  /* ── Rail icon button ── */
   .cc-rail-btn {
     width: 40px; height: 40px;
     border-radius: 10px;
@@ -211,7 +208,6 @@ const css = `
   }
   .cc-rail-btn:hover .cc-tooltip { opacity: 1; }
 
-  /* ── Drawer ── */
   .cc-drawer {
     position: fixed;
     left: 88px;
@@ -242,14 +238,12 @@ const css = `
   .cc-drawer-scroll::-webkit-scrollbar { width: 3px; }
   .cc-drawer-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
 
-  /* ── Drawer section label ── */
   .cc-drawer-label {
     font-family: var(--font-display);
     font-size: 0.44rem; letter-spacing: 0.2em; text-transform: uppercase;
     color: rgba(255,255,255,0.2); padding: 8px 8px 4px; margin: 0;
   }
 
-  /* ── Drawer nav link ── */
   .cc-drawer-link {
     display: flex; align-items: center; gap: 10px;
     padding: 8px 10px; border-radius: 9px;
@@ -262,18 +256,18 @@ const css = `
   .cc-drawer-link:hover  { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.75); }
   .cc-drawer-link.active { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.9); }
 
-  /* ── Conversation item ── */
+  /* ── Conversation item — now a div, not a button, to avoid nested button violation ── */
   .cc-conv-item {
     display: flex; align-items: center; gap: 8px;
     padding: 8px 10px; border-radius: 9px;
-    cursor: pointer; border: none; background: transparent;
+    cursor: pointer; background: transparent;
     width: 100%; transition: background 0.15s ease;
     position: relative;
+    border: 1px solid transparent;
   }
   .cc-conv-item:hover  { background: rgba(255,255,255,0.05); }
-  .cc-conv-item.active { background: rgba(240,192,96,0.08); border: 1px solid rgba(240,192,96,0.15); }
+  .cc-conv-item.active { background: rgba(240,192,96,0.08); border-color: rgba(240,192,96,0.15); }
 
-  /* ── Conv action menu ── */
   .cc-conv-menu {
     position: absolute; right: 0; top: calc(100% + 2px); z-index: 200;
     min-width: 160px; background: #13151f;
@@ -290,7 +284,6 @@ const css = `
   }
   .cc-conv-menu-item:hover { background: rgba(255,255,255,0.06); }
 
-  /* ── Plan progress item ── */
   .cc-plan-item {
     display: flex; align-items: center; gap: 10px;
     padding: 8px 10px; border-radius: 9px;
@@ -301,14 +294,12 @@ const css = `
   }
   .cc-plan-item:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.09); }
 
-  /* ── Main chat column ── */
   .cc-main {
     flex: 1;
     display: flex; flex-direction: column;
     height: 100vh; overflow: hidden; min-width: 0;
   }
 
-  /* ── Messages scroll area ── */
   .cc-messages {
     flex: 1; overflow-y: auto;
     padding: 24px 32px 12px;
@@ -318,7 +309,6 @@ const css = `
   .cc-messages::-webkit-scrollbar { width: 4px; }
   .cc-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
 
-  /* ── Floating input bar ── */
   .cc-input-wrap {
     padding: 12px 32px 20px;
     flex-shrink: 0;
@@ -356,7 +346,6 @@ const css = `
     cursor: pointer; transition: all 0.15s ease;
   }
 
-  /* ── Capability cards overlay ── */
   .cc-caps-overlay {
     position: fixed; inset: 0; z-index: 300;
     background: rgba(4,6,14,0.85);
@@ -372,7 +361,6 @@ const css = `
     animation: cc-scale-in 0.22s cubic-bezier(0.25,0.46,0.45,0.94) forwards;
   }
 
-  /* ── Mobile bottom nav ── */
   .cc-mobile-nav {
     display: none;
     position: fixed; bottom: 12px; left: 12px; right: 12px;
@@ -385,7 +373,6 @@ const css = `
     align-items: center; justify-content: space-around;
   }
 
-  /* ── Mobile menu button ── */
   .cc-menu-btn {
     display: none; position: fixed; left: 20px; top: 20px; z-index: 50;
     width: 40px; height: 40px; border-radius: 12px;
@@ -417,10 +404,10 @@ const css = `
    INLINE SIGN-IN MODAL
 ───────────────────────────────────────────────────────────── */
 function InlineSignInModal({ onSuccess, onCancel }) {
-  const [email, setEmail]     = useState("")
+  const [email, setEmail]       = useState("")
   const [password, setPassword] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState(null)
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState(null)
 
   const handleSignIn = async () => {
     if (!email || !password) return
@@ -555,14 +542,13 @@ function TypingIndicator() {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   VERSE OF THE DAY CARD — redesigned
+   VERSE OF THE DAY CARD
 ───────────────────────────────────────────────────────────── */
 function VotDCard({ verse, onReflect }) {
   if (!verse) return null
   const prompt = `I'd like to reflect on today's verse — ${verse.ref}${verse.text ? `: "${verse.text}"` : ""}. What does this mean for my life today?`
   return (
     <div style={{ background: "rgba(240,192,96,0.03)", border: "1px solid rgba(240,192,96,0.12)", borderRadius: 18, padding: "22px 24px 18px", marginBottom: 16, animation: "cc-fade 0.6s ease", position: "relative", overflow: "hidden" }}>
-      {/* Subtle glow */}
       <div style={{ position: "absolute", top: -40, right: -40, width: 120, height: 120, borderRadius: "50%", background: "radial-gradient(circle, rgba(240,192,96,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, position: "relative" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -620,7 +606,6 @@ function CapabilityCardsOverlay({ onSelect, onClose }) {
   return (
     <div className="cc-caps-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="cc-caps-panel">
-        {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28, padding: "0 4px" }}>
           <div>
             <p style={{ fontFamily: "var(--font-display)", fontSize: "0.5rem", letterSpacing: "0.25em", textTransform: "uppercase", color: "rgba(240,192,96,0.6)", marginBottom: 8 }}>Guided Conversations</p>
@@ -628,8 +613,6 @@ function CapabilityCardsOverlay({ onSelect, onClose }) {
           </div>
           <button onClick={onClose} style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon.X /></button>
         </div>
-
-        {/* Groups */}
         {CAPABILITIES.map(group => (
           <div key={group.group} style={{ marginBottom: 28 }}>
             <p style={{ fontFamily: "var(--font-display)", fontSize: "0.44rem", letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 10, paddingLeft: 2, color: group.color }}>{group.group}</p>
@@ -661,8 +644,8 @@ function ConvMenu({ conv, isOpen, onToggle, onRename, onPin, onDelete }) {
 
   if (!isOpen) return null
   const items = [
-    { label: conv.is_pinned ? "Unpin" : "Pin",  icon: <Icon.Pin on={conv.is_pinned} />, color: "rgba(240,192,96,0.8)", action: () => { onPin(); onToggle() } },
-    { label: "Rename",  icon: <Icon.Edit  />, color: "rgba(255,255,255,0.6)", action: () => { onRename(); onToggle() } },
+    { label: conv.is_pinned ? "Unpin" : "Pin", icon: <Icon.Pin on={conv.is_pinned} />, color: "rgba(240,192,96,0.8)", action: () => { onPin(); onToggle() } },
+    { label: "Rename", icon: <Icon.Edit />,  color: "rgba(255,255,255,0.6)", action: () => { onRename(); onToggle() } },
     { label: "Delete",  icon: <Icon.Trash />, color: "#f08080",               action: () => { onDelete(); onToggle() } },
   ]
   return (
@@ -682,20 +665,14 @@ function ConvMenu({ conv, isOpen, onToggle, onRename, onPin, onDelete }) {
 function Rail({ onDrawerToggle, drawerOpen, currentPath }) {
   return (
     <div className="cc-rail">
-      {/* Logo */}
       <a href="/" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg, rgba(240,192,96,0.15) 0%, rgba(200,140,40,0.15) 100%)", border: "1px solid rgba(240,192,96,0.25)", marginBottom: 16, textDecoration: "none" }}>
         <Icon.Sparkle />
       </a>
-
-      {/* Expand drawer button */}
       <button className={`cc-rail-btn${drawerOpen ? " active" : ""}`} onClick={onDrawerToggle} aria-label="Toggle menu" style={{ marginBottom: 8 }}>
         <Icon.Menu />
         <span className="cc-tooltip">Menu</span>
       </button>
-
       <div style={{ width: 32, height: 1, background: "rgba(255,255,255,0.06)", margin: "4px 0 8px" }} />
-
-      {/* Nav icons */}
       {NAV.map(item => {
         const active = currentPath === item.href || (item.href !== "/journey" && currentPath.startsWith(item.href)) || (item.href === "/journey" && currentPath === "/journey")
         return (
@@ -705,8 +682,6 @@ function Rail({ onDrawerToggle, drawerOpen, currentPath }) {
           </a>
         )
       })}
-
-      {/* New conversation button — bottom of rail */}
       <div style={{ marginTop: "auto" }}>
         <button className="cc-rail-btn" onClick={() => window.__kairosNewConversation?.()} aria-label="New conversation" style={{ marginBottom: 6 }}>
           <Icon.Plus />
@@ -721,9 +696,9 @@ function Rail({ onDrawerToggle, drawerOpen, currentPath }) {
    DRAWER
 ───────────────────────────────────────────────────────────── */
 function Drawer({ onClose, conversations, currentConvId, onSelectConv, onNewConv, enrolledPlans, userName, initials, isAuth, onCapabilityCards, onRenameConv, onPinConv, onDeleteConv }) {
-  const [convMenuId, setConvMenuId]   = useState(null)
-  const [renamingId, setRenamingId]   = useState(null)
-  const [renameVal,  setRenameVal]    = useState("")
+  const [convMenuId, setConvMenuId] = useState(null)
+  const [renamingId, setRenamingId] = useState(null)
+  const [renameVal,  setRenameVal]  = useState("")
   const currentPath = typeof window !== "undefined" ? window.location.pathname : "/journey"
 
   const handleRenameSubmit = (id) => {
@@ -762,7 +737,7 @@ function Drawer({ onClose, conversations, currentConvId, onSelectConv, onNewConv
             )
           })}
 
-          {/* Capability cards link */}
+          {/* Capability cards */}
           <button className="cc-drawer-link" style={{ color: "rgba(255,255,255,0.4)" }} onClick={() => { onCapabilityCards(); onClose() }}>
             <span style={{ color: "rgba(255,255,255,0.25)", flexShrink: 0 }}><Icon.Grid /></span>
             Guided Conversations
@@ -808,22 +783,54 @@ function Drawer({ onClose, conversations, currentConvId, onSelectConv, onNewConv
               {conversations.map(conv => (
                 <div key={conv.id} style={{ position: "relative" }}>
                   {renamingId === conv.id ? (
-                    <input autoFocus value={renameVal} onChange={e => setRenameVal(e.target.value)} onBlur={() => handleRenameSubmit(conv.id)} onKeyDown={e => { if (e.key === "Enter") handleRenameSubmit(conv.id); if (e.key === "Escape") { setRenamingId(null); setRenameVal("") } }} style={{ width: "100%", boxSizing: "border-box", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(240,192,96,0.4)", borderRadius: 9, padding: "7px 10px", color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-body)", fontSize: "0.8rem", outline: "none", marginBottom: 2 }} />
+                    <input
+                      autoFocus
+                      value={renameVal}
+                      onChange={e => setRenameVal(e.target.value)}
+                      onBlur={() => handleRenameSubmit(conv.id)}
+                      onKeyDown={e => { if (e.key === "Enter") handleRenameSubmit(conv.id); if (e.key === "Escape") { setRenamingId(null); setRenameVal("") } }}
+                      style={{ width: "100%", boxSizing: "border-box", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(240,192,96,0.4)", borderRadius: 9, padding: "7px 10px", color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-body)", fontSize: "0.8rem", outline: "none", marginBottom: 2 }}
+                    />
                   ) : (
-                    <button className={`cc-conv-item${conv.id === currentConvId ? " active" : ""}`} onClick={() => { onSelectConv(conv); onClose() }}>
+                    /*
+                     * FIX: was <button> containing a <button> (nested button = invalid HTML + hydration error).
+                     * Changed outer element to <div role="button"> so the inner ⋯ button is valid.
+                     */
+                    <div
+                      className={`cc-conv-item${conv.id === currentConvId ? " active" : ""}`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => { onSelectConv(conv); onClose() }}
+                      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectConv(conv); onClose() } }}
+                    >
                       <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
                         <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: conv.id === currentConvId ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.55)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>
                           {conv.is_pinned && <span style={{ color: "rgba(240,192,96,0.7)", marginRight: 4 }}>📌</span>}
                           {conv.title || "Untitled"}
                         </p>
-                        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.65rem", color: "rgba(255,255,255,0.2)" }}>{formatRelativeTime(conv.updated_at || conv.created_at)}</p>
+                        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.65rem", color: "rgba(255,255,255,0.2)" }}>
+                          {formatRelativeTime(conv.updated_at || conv.created_at)}
+                        </p>
                       </div>
-                      <button style={{ width: 24, height: 24, borderRadius: 6, background: "transparent", border: "none", color: "rgba(255,255,255,0.2)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.12s ease" }} onClick={e => { e.stopPropagation(); setConvMenuId(convMenuId === conv.id ? null : conv.id) }} onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "rgba(255,255,255,0.5)" }} onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(255,255,255,0.2)" }}>
+                      {/* This button is now a valid child of a div, not a button */}
+                      <button
+                        style={{ width: 24, height: 24, borderRadius: 6, background: "transparent", border: "none", color: "rgba(255,255,255,0.2)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.12s ease" }}
+                        onClick={e => { e.stopPropagation(); setConvMenuId(convMenuId === conv.id ? null : conv.id) }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "rgba(255,255,255,0.5)" }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(255,255,255,0.2)" }}
+                      >
                         <Icon.More />
                       </button>
-                    </button>
+                    </div>
                   )}
-                  <ConvMenu conv={conv} isOpen={convMenuId === conv.id} onToggle={() => setConvMenuId(v => v === conv.id ? null : conv.id)} onRename={() => { setRenamingId(conv.id); setRenameVal(conv.title || "") }} onPin={() => onPinConv(conv.id, !conv.is_pinned)} onDelete={() => onDeleteConv(conv.id)} />
+                  <ConvMenu
+                    conv={conv}
+                    isOpen={convMenuId === conv.id}
+                    onToggle={() => setConvMenuId(v => v === conv.id ? null : conv.id)}
+                    onRename={() => { setRenamingId(conv.id); setRenameVal(conv.title || "") }}
+                    onPin={() => onPinConv(conv.id, !conv.is_pinned)}
+                    onDelete={() => onDeleteConv(conv.id)}
+                  />
                 </div>
               ))}
             </>
@@ -857,11 +864,11 @@ function Drawer({ onClose, conversations, currentConvId, onSelectConv, onNewConv
 ───────────────────────────────────────────────────────────── */
 function MobileNav({ onMenuOpen, currentPath }) {
   const items = [
-    { label: "Menu",      Icon: Icon.Menu,      action: onMenuOpen, href: null },
-    { label: "Saved",     Icon: Icon.Saved,     href: "/journey/saved" },
-    { label: "Bible",     Icon: Icon.Bible,     href: "/bible" },
-    { label: "Plans",     Icon: Icon.Plans,     href: "/plans" },
-    { label: "Account",   Icon: Icon.Account,   href: "/account" },
+    { label: "Menu",    Icon: Icon.Menu,    action: onMenuOpen, href: null },
+    { label: "Saved",   Icon: Icon.Saved,   href: "/journey/saved" },
+    { label: "Bible",   Icon: Icon.Bible,   href: "/bible" },
+    { label: "Plans",   Icon: Icon.Plans,   href: "/plans" },
+    { label: "Account", Icon: Icon.Account, href: "/account" },
   ]
   return (
     <nav className="cc-mobile-nav" aria-label="Mobile navigation">
@@ -884,7 +891,7 @@ function MobileNav({ onMenuOpen, currentPath }) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   SAVE CONVERSATION BUTTON (floats above input when active)
+   SAVE CONVERSATION BAR
 ───────────────────────────────────────────────────────────── */
 function SaveConversationBar({ messages, isAuth, conversationId, onSaveConversation, onSignInToSave }) {
   if (messages.filter(m => m.role === "assistant" && !m.isCapabilityFrame).length === 0) return null
@@ -926,10 +933,10 @@ export default function CompanionCore({ profile: _profile = null }) {
   const [convPersistLoaded, setConvPersistLoaded] = useState(false)
 
   // ── Sidebar data ──
-  const [votd,             setVotd]             = useState(null)
-  const [activePlan,       setActivePlan]       = useState(null)
-  const [enrolledPlans,    setEnrolledPlans]    = useState([])
-  const [conversations,    setConversations]    = useState([])
+  const [votd,          setVotd]          = useState(null)
+  const [activePlan,    setActivePlan]    = useState(null)
+  const [enrolledPlans, setEnrolledPlans] = useState([])
+  const [conversations, setConversations] = useState([])
 
   const bottomRef   = useRef(null)
   const inputRef    = useRef(null)
@@ -959,7 +966,7 @@ export default function CompanionCore({ profile: _profile = null }) {
     setShowConsent(false)
   }
 
-  // ── Bible verse handoff ──
+  // ── Bible verse handoff from Bible reader ──
   useEffect(() => {
     try {
       const ctx = sessionStorage.getItem("kairos_verse_context")
@@ -980,6 +987,7 @@ export default function CompanionCore({ profile: _profile = null }) {
   // ── Load plans + conversations when authenticated ──
   useEffect(() => {
     if (!isAuth || authLoading) return
+
     // Plans
     fetch("/api/plans")
       .then(r => r.json())
@@ -990,13 +998,14 @@ export default function CompanionCore({ profile: _profile = null }) {
         setEnrolledPlans(plans.filter(p => p.enrollment?.status === "active"))
       })
       .catch(() => {})
+
     // Conversations
     fetch("/api/user/conversations?limit=30")
       .then(r => r.json())
       .then(d => {
         if (d.success) {
           setConversations(d.conversations || [])
-          // Resume most recent conversation if no active conversation
+          // Auto-restore most recent conversation on first load
           if (!convPersistLoaded && d.conversations?.length > 0) {
             const latest = d.conversations[0]
             if (latest.messages?.length > 0) {
@@ -1018,8 +1027,8 @@ export default function CompanionCore({ profile: _profile = null }) {
   const restoreConversation = (conv) => {
     if (!conv.messages?.length) return
     const restored = conv.messages.map(m => ({
-      role:        m.role,
-      content:     m.content,
+      role:         m.role,
+      content:      m.content,
       wasTruncated: false,
     }))
     setMessages(restored)
@@ -1079,8 +1088,8 @@ export default function CompanionCore({ profile: _profile = null }) {
   }
 
   // ── Per-message save ──
-  const handleSave          = (idx) => { if (!savedMsgIds.has(idx)) setPendingSave(idx) }
-  const handleSignInToSave  = (idx) => { setPendingSave(idx); setShowInlineSignIn(true) }
+  const handleSave         = (idx) => { if (!savedMsgIds.has(idx)) setPendingSave(idx) }
+  const handleSignInToSave = (idx) => { setPendingSave(idx); setShowInlineSignIn(true) }
   const handleInlineSignInSuccess = () => setShowInlineSignIn(false)
 
   const handleSaveConfirm = async ({ title, entry_type }) => {
@@ -1110,7 +1119,6 @@ export default function CompanionCore({ profile: _profile = null }) {
       const res = await fetch("/api/journey/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content, title, entry_type, conversation_id: conversationId }) })
       const d = await res.json()
       if (d.success) {
-        // Mark all assistant messages as saved
         const allIdxs = messages.reduce((acc, m, i) => { if (m.role === "assistant") acc.add(i); return acc }, new Set())
         setSavedMsgIds(allIdxs)
       }
@@ -1146,20 +1154,45 @@ export default function CompanionCore({ profile: _profile = null }) {
       let verseData = null
       if (verseRef) verseData = await fetchVerse(verseRef)
       const res = await fetch("/api/ai/companion", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history: messages.map(m => ({ role: m.role, content: m.content })), verseContext: verseData ? `Exact text already retrieved: "${verseData.text}" — ${verseData.reference} (${verseData.translation}). Reference this directly.` : null, isVerseRequest: !!verseRef, isSearch, lastModelId, conversationId }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message:      text,
+          history:      messages.map(m => ({ role: m.role, content: m.content })),
+          verseContext: verseData ? `Exact text already retrieved: "${verseData.text}" — ${verseData.reference} (${verseData.translation}). Reference this directly.` : null,
+          isVerseRequest: !!verseRef,
+          isSearch,
+          lastModelId,
+          conversationId,
+        }),
       })
       const data = await res.json()
+
       if (data.conversationId && !conversationId) {
         setConversationId(data.conversationId)
-        // Add to conversations list
-        setConversations(prev => [{ id: data.conversationId, title: truncateText(text, 40), messages: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(), is_pinned: false }, ...prev])
+        setConversations(prev => [{
+          id:         data.conversationId,
+          title:      truncateText(text, 40),
+          messages:   [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          is_pinned:  false,
+        }, ...prev])
       }
+
       if (data.modelId) setLastModelId(data.modelId)
-      const assistantMsg = { role: "assistant", content: data.reply || "Something stilled. Please try again.", escalated: data.escalated || false, verseData, wasTruncated: data.wasTruncated || false }
+
+      const assistantMsg = {
+        role:         "assistant",
+        content:      data.reply || "Something stilled. Please try again.",
+        escalated:    data.escalated || false,
+        verseData,
+        wasTruncated: data.wasTruncated || false,
+      }
       const final = [...updatedHistory, assistantMsg]
       setMessages(final); setNewMsgIdx(final.length - 1)
-      // Update conversation title after first exchange if still "Untitled"
+
+      // Update conversation title in sidebar
       if (conversationId || data.conversationId) {
         setConversations(prev => prev.map(c => {
           if (c.id === (conversationId || data.conversationId) && (c.title === "Untitled conversation" || c.title === truncateText(text, 40))) {
@@ -1191,10 +1224,15 @@ export default function CompanionCore({ profile: _profile = null }) {
       {showCapabilities && <CapabilityCardsOverlay onSelect={handleCapabilityClick} onClose={() => setShowCapabilities(false)} />}
       {showInlineSignIn && <InlineSignInModal onSuccess={handleInlineSignInSuccess} onCancel={() => { setShowInlineSignIn(false); setPendingSave(null) }} />}
 
-      {/* Per-message save modal */}
-      <SaveMomentModal isOpen={showSaveModal} content={pendingMsg?.content || ""} scriptureRef={pendingMsg?.verseData ? `${pendingMsg.verseData.reference} (${pendingMsg.verseData.translation})` : null} onConfirm={handleSaveConfirm} onCancel={() => setPendingSave(null)} saving={savingModal} />
+      <SaveMomentModal
+        isOpen={showSaveModal}
+        content={pendingMsg?.content || ""}
+        scriptureRef={pendingMsg?.verseData ? `${pendingMsg.verseData.reference} (${pendingMsg.verseData.translation})` : null}
+        onConfirm={handleSaveConfirm}
+        onCancel={() => setPendingSave(null)}
+        saving={savingModal}
+      />
 
-      {/* Save entire conversation modal */}
       <SaveMomentModal
         isOpen={saveConvModal}
         content={messages.filter(m => !m.isCapabilityFrame).map(m => `${m.role === "assistant" ? "Kairos" : "Me"}: ${m.content}`).join("\n\n")}
@@ -1212,7 +1250,7 @@ export default function CompanionCore({ profile: _profile = null }) {
 
       <div className="cc-layout" style={{ background: "var(--color-void)" }}>
 
-        {/* ── RAIL (desktop) ── */}
+        {/* ── RAIL ── */}
         <Rail onDrawerToggle={() => setDrawerOpen(v => !v)} drawerOpen={drawerOpen} currentPath={currentPath} />
 
         {/* ── DRAWER ── */}
@@ -1237,7 +1275,7 @@ export default function CompanionCore({ profile: _profile = null }) {
         {/* ── MAIN CHAT COLUMN ── */}
         <div className="cc-main">
 
-          {/* ── Top bar ── */}
+          {/* Top bar */}
           <div className="cc-top-bar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: 52, flexShrink: 0, borderBottom: "1px solid rgba(255,255,255,0.04)", background: "rgba(6,9,18,0.6)", backdropFilter: "blur(12px)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <p style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "rgba(255,255,255,0.25)" }}>Companion</p>
@@ -1256,15 +1294,13 @@ export default function CompanionCore({ profile: _profile = null }) {
             </div>
           </div>
 
-          {/* ── Messages area ── */}
+          {/* Messages area */}
           <div className="cc-messages">
             <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
               {/* Pre-conversation screen */}
               {!started && messages.length === 0 && (
                 <div style={{ animation: "cc-fade 0.7s ease" }}>
-
-                  {/* Greeting */}
                   <div style={{ textAlign: "center", padding: "40px 0 32px" }}>
                     <p style={{ fontFamily: "var(--font-display)", fontSize: "0.5rem", letterSpacing: "0.28em", textTransform: "uppercase", color: "rgba(240,192,96,0.45)", marginBottom: 14 }}>Your appointed moment</p>
                     <h1 style={{ fontFamily: "var(--font-heading)", fontSize: "clamp(1.8rem, 4vw, 2.6rem)", fontWeight: 300, color: "rgba(255,255,255,0.88)", lineHeight: 1.2, marginBottom: 10 }}>
@@ -1275,13 +1311,9 @@ export default function CompanionCore({ profile: _profile = null }) {
                     </p>
                   </div>
 
-                  {/* VotD */}
                   {settings.showVotD !== false && <VotDCard verse={votd} onReflect={handleReflectFromVerse} />}
-
-                  {/* Active plan */}
                   {settings.showActivePlan !== false && <ActivePlanCard plan={activePlan} />}
 
-                  {/* Capability cards — condensed inline with link to full overlay */}
                   {settings.showExamplePrompts !== false && (
                     <div style={{ marginBottom: 24 }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -1290,7 +1322,6 @@ export default function CompanionCore({ profile: _profile = null }) {
                           <Icon.Grid /> SEE ALL 19
                         </button>
                       </div>
-                      {/* Show first 2 groups inline */}
                       {CAPABILITIES.slice(0, 2).map(group => (
                         <div key={group.group} style={{ marginBottom: 16 }}>
                           <p style={{ fontFamily: "var(--font-display)", fontSize: "0.44rem", letterSpacing: "0.16em", textTransform: "uppercase", color: group.color.replace("0.7", "0.5"), marginBottom: 7, paddingLeft: 2 }}>{group.group}</p>
@@ -1330,9 +1361,8 @@ export default function CompanionCore({ profile: _profile = null }) {
             </div>
           </div>
 
-          {/* ── Input area ── */}
+          {/* Input area */}
           <div className="cc-input-wrap" style={{ background: "var(--color-void)" }}>
-            {/* Save conversation bar */}
             {started && hasConvToSave && (
               <SaveConversationBar
                 messages={messages}
@@ -1342,8 +1372,6 @@ export default function CompanionCore({ profile: _profile = null }) {
                 onSignInToSave={() => { setPendingSave(-1); setShowInlineSignIn(true) }}
               />
             )}
-
-            {/* Floating input bar */}
             <div style={{ maxWidth: 720, margin: "0 auto" }}>
               <div className="cc-input-bar">
                 <textarea
@@ -1379,7 +1407,6 @@ export default function CompanionCore({ profile: _profile = null }) {
         </div>{/* end cc-main */}
       </div>{/* end cc-layout */}
 
-      {/* ── Mobile bottom nav ── */}
       <MobileNav onMenuOpen={() => setDrawerOpen(true)} currentPath={currentPath} />
     </>
   )

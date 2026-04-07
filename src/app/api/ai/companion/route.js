@@ -28,7 +28,12 @@
 
 import { NextResponse }        from "next/server"
 import { rateLimit }           from "@/lib/rateLimit"
-import {  buildSystemPrompt,  buildProfileContext,  buildMemoryContext,  inferResponseMode }                              from "@/lib/ai/prompts"
+import {
+  buildSystemPrompt,
+  buildProfileContext,
+  buildMemoryContext,
+  inferResponseMode,
+} from "@/lib/ai/prompts"
 import { searchKnowledgeBase } from "@/lib/rag/search"
 import { createClient }        from "@supabase/supabase-js"
 import { GoogleGenerativeAI }  from "@google/generative-ai"
@@ -363,21 +368,25 @@ async function runModelChain(systemPrompt, messages, preferredModelId = null) {
 }
 
 /* ── Ensure conversation record ─────────────────────────────────────────── */
+// Uses `started_at` instead of `created_at` — actual DB column name.
 async function ensureConversation(appUserId, conversationId) {
   if (conversationId) return conversationId
+  if (!appUserId) return null
 
   try {
     const { data } = await adminClient
       .from("conversations")
       .insert({
-        user_id: appUserId || null,
-        title:   "Untitled conversation",
+        user_id:    appUserId,
+        title:      "Untitled conversation",
+        started_at: new Date().toISOString(),
       })
       .select("id")
       .single()
 
     return data?.id || null
-  } catch {
+  } catch (err) {
+    console.error("[Kairos AI] ensureConversation error:", err.message)
     return null
   }
 }
@@ -462,7 +471,7 @@ export async function POST(request) {
     })
 
     // ── 7. Build message chain ────────────────────────────────────────────
-    // Cap history at last 10 exchanges to control token usage
+    // Cap history at last 20 messages to control token usage
     const messages = [
       ...history.slice(-20),
       { role: "user", content: message },
@@ -497,31 +506,37 @@ export async function POST(request) {
     // ── 11. Ensure conversation record ────────────────────────────────────
     const activeConversationId = await ensureConversation(identityUserId, conversationId)
 
-    // ── 12. Store assistant message ───────────────────────────────────────
-      if (activeConversationId) {
-        try {
-          // Store user message first, then assistant response
-          await adminClient.from("messages").insert([
-            {
-              conversation_id: activeConversationId,
-              role:            "user",
-              content:         message,
-              model_used:      null,
-            },
-            {
-              conversation_id: activeConversationId,
-              role:            "assistant",
-              content:         reply,
-              model_used:      modelName,
-            },
-          ])
-          // Touch updated_at so conversations list sorts by recency
-          await adminClient
-            .from("conversations")
-            .update({ updated_at: new Date().toISOString() })
-            .eq("id", activeConversationId)
-        } catch {}
+    // ── 12. Store messages + touch last_message_at ────────────────────────
+    if (activeConversationId) {
+      try {
+        await adminClient.from("messages").insert([
+          {
+            conversation_id: activeConversationId,
+            role:            "user",
+            content:         message,
+            model_used:      null,
+          },
+          {
+            conversation_id: activeConversationId,
+            role:            "assistant",
+            content:         reply,
+            model_used:      modelName,
+          },
+        ])
+        // Touch last_message_at so conversation list sorts by recency
+        // (updated_at also exists on the table so we set both to be safe)
+        await adminClient
+          .from("conversations")
+          .update({
+            last_message_at: new Date().toISOString(),
+            updated_at:      new Date().toISOString(),
+          })
+          .eq("id", activeConversationId)
+      } catch (err) {
+        // Non-fatal — AI response is already generated, don't fail the request
+        console.error("[Kairos AI] Message storage error:", err.message)
       }
+    }
 
     // ── 13. Return response ───────────────────────────────────────────────
     return NextResponse.json({
