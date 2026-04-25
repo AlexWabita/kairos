@@ -48,7 +48,7 @@ export async function GET(req) {
     // messages table does have created_at — that's fine
     const { data: messages, error: msgError } = await admin
       .from("messages")
-      .select("id, conversation_id, role, content, model_used, created_at")
+      .select("id, conversation_id, role, content, created_at")
       .in("conversation_id", ids)
       .order("created_at", { ascending: true })
 
@@ -74,7 +74,7 @@ export async function GET(req) {
     })
 
   } catch (err) {
-    console.error("[Conversations GET]", err.message)
+    console.error("[Conversations GET] FULL ERROR:", JSON.stringify(err, Object.  getOwnPropertyNames(err)))
     return serverError("Failed to fetch conversations")
   }
 }

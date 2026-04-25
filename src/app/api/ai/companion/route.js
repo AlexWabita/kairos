@@ -514,13 +514,11 @@ export async function POST(request) {
             conversation_id: activeConversationId,
             role:            "user",
             content:         message,
-            model_used:      null,
           },
           {
             conversation_id: activeConversationId,
             role:            "assistant",
             content:         reply,
-            model_used:      modelName,
           },
         ])
         // Touch last_message_at so conversation list sorts by recency

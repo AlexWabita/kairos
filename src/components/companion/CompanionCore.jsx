@@ -1016,7 +1016,7 @@ export default function CompanionCore({ profile: _profile = null }) {
         }
       })
       .catch(() => { setConvPersistLoaded(true) })
-  }, [isAuth, authLoading])
+  }, [isAuth, authLoading, convPersistLoaded])
 
   // ── Auto-scroll ──
   useEffect(() => {
@@ -1024,18 +1024,38 @@ export default function CompanionCore({ profile: _profile = null }) {
   }, [messages, loading])
 
   // ── Restore a conversation from history ──
-  const restoreConversation = (conv) => {
-    if (!conv.messages?.length) return
-    const restored = conv.messages.map(m => ({
-      role:         m.role,
-      content:      m.content,
-      wasTruncated: false,
-    }))
-    setMessages(restored)
-    setConversationId(conv.id)
-    setStarted(true)
-    setNewMsgIdx(null)
+const restoreConversation = async (conv) => {
+  if (!conv.messages?.length) {
+    // Messages not in local state — fetch from server
+    try {
+      const r = await fetch(`/api/user/conversations?limit=30`)
+      const d = await r.json()
+      if (d.success) {
+        const full = d.conversations?.find(c => c.id === conv.id)
+        console.log("[Kairos] restoreConversation fetch:", conv.id, "found:", full?.id, "messages:", full?.messages?.length)
+        if (full?.messages?.length) {
+          setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, messages: full.messages } : c))
+          restoreConversation(full)
+        } else {
+          // Conversation exists but genuinely has no messages — just switch context
+          setMessages([])
+          setConversationId(conv.id)
+          setStarted(false)
+        }
+      }
+    } catch {}
+    return
   }
+  const restored = conv.messages.map(m => ({
+    role:         m.role,
+    content:      m.content,
+    wasTruncated: false,
+  }))
+  setMessages(restored)
+  setConversationId(conv.id)
+  setStarted(true)
+  setNewMsgIdx(null)
+}
 
   // ── Start a fresh conversation ──
   const startNewConversation = useCallback(() => {
