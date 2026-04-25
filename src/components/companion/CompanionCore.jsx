@@ -952,7 +952,7 @@ export default function CompanionCore({ profile: _profile = null }) {
   useEffect(() => {
     window.__kairosNewConversation = startNewConversation
     return () => { delete window.__kairosNewConversation }
-  })
+  }, [startNewConversation])
 
   // ── Consent ──
   useEffect(() => {
@@ -1016,7 +1016,7 @@ export default function CompanionCore({ profile: _profile = null }) {
         }
       })
       .catch(() => { setConvPersistLoaded(true) })
-  }, [isAuth, authLoading, convPersistLoaded])
+  }, [isAuth, authLoading])
 
   // ── Auto-scroll ──
   useEffect(() => {
@@ -1024,7 +1024,7 @@ export default function CompanionCore({ profile: _profile = null }) {
   }, [messages, loading])
 
   // ── Restore a conversation from history ──
-const restoreConversation = async (conv) => {
+const restoreConversation = useCallback(async (conv) => {
   if (!conv.messages?.length) {
     // Messages not in local state — fetch from server
     try {
@@ -1032,7 +1032,6 @@ const restoreConversation = async (conv) => {
       const d = await r.json()
       if (d.success) {
         const full = d.conversations?.find(c => c.id === conv.id)
-        console.log("[Kairos] restoreConversation fetch:", conv.id, "found:", full?.id, "messages:", full?.messages?.length)
         if (full?.messages?.length) {
           setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, messages: full.messages } : c))
           restoreConversation(full)
@@ -1055,7 +1054,7 @@ const restoreConversation = async (conv) => {
   setConversationId(conv.id)
   setStarted(true)
   setNewMsgIdx(null)
-}
+}, [])
 
   // ── Start a fresh conversation ──
   const startNewConversation = useCallback(() => {
