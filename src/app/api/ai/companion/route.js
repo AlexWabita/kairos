@@ -2,8 +2,15 @@
  * KAIROS — AI Companion Route
  * POST /api/ai/companion
  *
+ * V2 CHANGES (Phase 8F):
+ *   - inferUserMode()  called before buildSystemPrompt → behavioral contract
+ *   - inferEngines()   called before buildSystemPrompt → problem specialization
+ *   - inferResponseMode() already existed → pastoral register
+ *   - All three passed to buildSystemPrompt → tiered injection active
+ *   - userMode returned in response payload (for Phase 9A UI mode indicator)
+ *
  * Model chain (in priority order):
- *   Groq  → Groq fallback → OpenRouter chain → Gemini chain
+ *   Groq → Groq fallback → OpenRouter chain → Gemini chain
  *
  * FREE PROVIDERS USED:
  *   Groq        — Free tier, very fast (~1-3s), highly reliable
@@ -24,6 +31,7 @@
  *   - Truncation detection: auto-complete if response is cut off
  *   - Rate limiting (20 req/min per user or IP)
  *   - Memory injection: recent journey entries for conversational continuity
+ *   - V2: tiered prompt injection based on inferred mode + engines
  */
 
 import { NextResponse }        from "next/server"
@@ -32,6 +40,8 @@ import {
   buildSystemPrompt,
   buildProfileContext,
   buildMemoryContext,
+  inferUserMode,
+  inferEngines,
   inferResponseMode,
 } from "@/lib/ai/prompts"
 import { searchKnowledgeBase } from "@/lib/rag/search"
@@ -78,7 +88,6 @@ const GROQ_MODELS = [
  * OpenRouter free models.
  * Free models are marked with :free suffix.
  * Sign up at https://openrouter.ai — get credits for paid models.
- *
  * Free model list: https://openrouter.ai/models?q=free
  */
 const OPENROUTER_MODELS = [
@@ -456,32 +465,53 @@ export async function POST(request) {
     // ── 5. Fetch profile + RAG + memory in parallel ───────────────────────
     // Memory is only meaningful for authenticated users — anonymous sessions
     // have no journey entries. All three are non-blocking on failure.
-    const [profile, ragContext, journeyEntries] = await Promise.all([
+    const [profile, ragEntries, journeyEntries] = await Promise.all([
       profileOverride ? Promise.resolve(profileOverride) : fetchProfile(identityUserId),
       searchKnowledgeBase(message),
       fetchRecentJourney(identityUserId),
     ])
 
-    // ── 6. Build system prompt ────────────────────────────────────────────
+    // ── 6. V2 — Infer mode + engines ─────────────────────────────────────
+    // Order matters: inferUserMode first (behavioral contract),
+    // inferEngines second (problem specialization, independent of mode),
+    // inferResponseMode third (pastoral register).
+    // history is passed so inference can read recent context, not just
+    // the current message.
+    const userMode = inferUserMode(message, history)   // null → PERSONAL (not injected)
+    const engines  = inferEngines(message, history)    // [] → no engine blocks
+    const mode     = inferResponseMode(message, history) // null → no register
+
+    // Log inference decisions in dev for behavior tuning
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[Kairos AI] Inference — userMode: ${userMode ?? "PERSONAL (default)"} | engines: [${engines.join(", ") || "none"}] | responseMode: ${mode ?? "none"}`)
+    }
+
+    // ── 7. Build system prompt (tiered injection) ─────────────────────────
+    // buildSystemPrompt assembles Tier 1 always, Tier 2 conditionally,
+    // Tier 3 only when complexity warrants it (DEBATE, LEADERSHIP, etc.)
+    // See prompts.js for full tier logic.
     const systemPrompt = buildSystemPrompt({
-      ragContext:     ragContext || "",
+      ragContext:     ragEntries || "",
       profileContext: buildProfileContext(profile),
       verseContext:   verseContext || "",
       memoryContext:  buildMemoryContext(journeyEntries),
+      userMode,
+      engines,
+      mode,
     })
 
-    // ── 7. Build message chain ────────────────────────────────────────────
+    // ── 8. Build message chain ────────────────────────────────────────────
     // Cap history at last 20 messages to control token usage
     const messages = [
       ...history.slice(-20),
       { role: "user", content: message },
     ]
 
-    // ── 8. Detect continuation ────────────────────────────────────────────
+    // ── 9. Detect continuation ────────────────────────────────────────────
     const isContinuation = isContinuationRequest(message)
     const preferredModel = isContinuation ? lastModelId : null
 
-    // ── 9. Run model chain ────────────────────────────────────────────────
+    // ── 10. Run model chain ───────────────────────────────────────────────
     const result = await runModelChain(systemPrompt, messages, preferredModel)
 
     if (!result) {
@@ -497,16 +527,16 @@ export async function POST(request) {
 
     let { reply, modelId, modelName } = result
 
-    // ── 10. Truncation detection ──────────────────────────────────────────
+    // ── 11. Truncation detection ──────────────────────────────────────────
     const wasTruncated = isTruncated(reply)
     if (wasTruncated) {
       console.warn(`[Kairos AI] Truncation detected from ${modelName}`)
     }
 
-    // ── 11. Ensure conversation record ────────────────────────────────────
+    // ── 12. Ensure conversation record ────────────────────────────────────
     const activeConversationId = await ensureConversation(identityUserId, conversationId)
 
-    // ── 12. Store messages + touch last_message_at ────────────────────────
+    // ── 13. Store messages + touch last_message_at ────────────────────────
     if (activeConversationId) {
       try {
         await adminClient.from("messages").insert([
@@ -536,13 +566,16 @@ export async function POST(request) {
       }
     }
 
-    // ── 13. Return response ───────────────────────────────────────────────
+    // ── 14. Return response ───────────────────────────────────────────────
+    // userMode is returned so Phase 9A UI can display the mode indicator
+    // without needing to re-run inference on the client side.
     return NextResponse.json({
       reply,
       escalated:      escalated,
       conversationId: activeConversationId,
       modelId,
       wasTruncated,
+      userMode:       userMode ?? "PERSONAL",   // Phase 9A — mode chip in UI
     })
 
   } catch (error) {
