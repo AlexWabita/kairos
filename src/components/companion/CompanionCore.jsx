@@ -47,6 +47,18 @@ function truncateText(text, max = 60) {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   MODE CONFIG (Phase 9A) — 5 user modes only
+───────────────────────────────────────────────────────────── */
+const USER_MODES = [
+  { key: "PERSONAL",   label: "Personal"   },
+  { key: "GROWTH",     label: "Growth"     },
+  { key: "LEADERSHIP", label: "Leadership" },
+  { key: "DEBATE",     label: "Debate"     },
+  { key: "CRISIS",     label: "Crisis"     },
+]
+const MODE_LABEL = Object.fromEntries(USER_MODES.map(m => [m.key, m.label]))
+
+/* ─────────────────────────────────────────────────────────────
    ICONS
 ───────────────────────────────────────────────────────────── */
 const Icon = {
@@ -58,7 +70,7 @@ const Icon = {
   Settings:   () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
   Sparkle:    () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
   Plus:       () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-  Chevron:    () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>,
+  Chevron:    () => <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>,
   History:    () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.96"/></svg>,
   Pin:        (p) => <svg width="12" height="12" viewBox="0 0 24 24" fill={p?.on ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg>,
   Edit:       () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
@@ -256,7 +268,6 @@ const css = `
   .cc-drawer-link:hover  { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.75); }
   .cc-drawer-link.active { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.9); }
 
-  /* ── Conversation item — now a div, not a button, to avoid nested button violation ── */
   .cc-conv-item {
     display: flex; align-items: center; gap: 8px;
     padding: 8px 10px; border-radius: 9px;
@@ -383,6 +394,50 @@ const css = `
     color: rgba(255,255,255,0.5); cursor: pointer;
     box-shadow: 0 4px 16px rgba(0,0,0,0.3);
   }
+
+  /* ── Mode chip ── */
+  .cc-mode-chip {
+    display: flex; align-items: center; gap: 5px;
+    padding: 3px 8px 3px 6px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 100px; cursor: pointer;
+    transition: all 0.15s ease;
+    min-height: 24px;
+    user-select: none;
+  }
+  .cc-mode-chip:hover {
+    border-color: rgba(240,192,96,0.3);
+    background: rgba(240,192,96,0.06);
+  }
+  .cc-mode-chip.manual {
+    border-color: rgba(100,200,160,0.35);
+    background: rgba(100,200,160,0.07);
+  }
+  .cc-mode-selector {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 500;
+    background: #0f1117;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 5px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+    display: flex; flex-direction: column; gap: 2px;
+    min-width: 150px;
+    animation: cc-slide-u 0.12s ease forwards;
+  }
+  .cc-mode-option {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; border-radius: 8px; border: none;
+    background: transparent; cursor: pointer;
+    font-family: var(--font-body); font-size: 0.82rem;
+    color: rgba(255,255,255,0.45); text-align: left;
+    transition: all 0.1s ease; min-height: 34px; width: 100%;
+  }
+  .cc-mode-option:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); }
+  .cc-mode-option.active { color: rgba(240,192,96,0.9); background: rgba(240,192,96,0.08); }
 
   @media (max-width: 768px) {
     .cc-rail    { display: none; }
@@ -792,10 +847,6 @@ function Drawer({ onClose, conversations, currentConvId, onSelectConv, onNewConv
                       style={{ width: "100%", boxSizing: "border-box", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(240,192,96,0.4)", borderRadius: 9, padding: "7px 10px", color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-body)", fontSize: "0.8rem", outline: "none", marginBottom: 2 }}
                     />
                   ) : (
-                    /*
-                     * FIX: was <button> containing a <button> (nested button = invalid HTML + hydration error).
-                     * Changed outer element to <div role="button"> so the inner ⋯ button is valid.
-                     */
                     <div
                       className={`cc-conv-item${conv.id === currentConvId ? " active" : ""}`}
                       role="button"
@@ -812,7 +863,6 @@ function Drawer({ onClose, conversations, currentConvId, onSelectConv, onNewConv
                           {formatRelativeTime(conv.updated_at || conv.created_at)}
                         </p>
                       </div>
-                      {/* This button is now a valid child of a div, not a button */}
                       <button
                         style={{ width: 24, height: 24, borderRadius: 6, background: "transparent", border: "none", color: "rgba(255,255,255,0.2)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.12s ease" }}
                         onClick={e => { e.stopPropagation(); setConvMenuId(convMenuId === conv.id ? null : conv.id) }}
@@ -922,6 +972,12 @@ export default function CompanionCore({ profile: _profile = null }) {
   const [savedMsgIds,      setSavedMsgIds]      = useState(new Set())
   const [lastModelId,      setLastModelId]      = useState(null)
 
+  // ── Mode state (Phase 9A) ──
+  // current: active user mode key
+  // autoDetected: true = set by API inference, false = manually overridden
+  const [modeState,        setModeState]        = useState({ current: "PERSONAL", autoDetected: true })
+  const [showModeSelector, setShowModeSelector] = useState(false)
+
   // ── UI state ──
   const [showConsent,       setShowConsent]       = useState(false)
   const [drawerOpen,        setDrawerOpen]        = useState(false)
@@ -941,6 +997,8 @@ export default function CompanionCore({ profile: _profile = null }) {
   const bottomRef   = useRef(null)
   const inputRef    = useRef(null)
   const textareaRef = useRef(null)
+  // Ref for mode chip container — used to close selector on outside click
+  const modeChipRef = useRef(null)
 
   const translation = settings.bibleTranslation || "WEB"
   const currentPath = typeof window !== "undefined" ? window.location.pathname : "/journey"
@@ -948,11 +1006,17 @@ export default function CompanionCore({ profile: _profile = null }) {
   const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || null
   const initials  = userName ? userName.trim().split(" ").slice(0,2).map(p => p[0]).join("").toUpperCase() : "K"
 
-  // ── Expose new conversation handler globally for Rail button ──
+  // ── Close mode selector on outside click ──
   useEffect(() => {
-    window.__kairosNewConversation = startNewConversation
-    return () => { delete window.__kairosNewConversation }
-  }, [startNewConversation])
+    if (!showModeSelector) return
+    const handler = (e) => {
+      if (modeChipRef.current && !modeChipRef.current.contains(e.target)) {
+        setShowModeSelector(false)
+      }
+    }
+    document.addEventListener("mousedown", handler, true)
+    return () => document.removeEventListener("mousedown", handler, true)
+  }, [showModeSelector])
 
   // ── Consent ──
   useEffect(() => {
@@ -988,7 +1052,6 @@ export default function CompanionCore({ profile: _profile = null }) {
   useEffect(() => {
     if (!isAuth || authLoading) return
 
-    // Plans
     fetch("/api/plans")
       .then(r => r.json())
       .then(d => {
@@ -999,18 +1062,14 @@ export default function CompanionCore({ profile: _profile = null }) {
       })
       .catch(() => {})
 
-    // Conversations
     fetch("/api/user/conversations?limit=30")
       .then(r => r.json())
       .then(d => {
         if (d.success) {
           setConversations(d.conversations || [])
-          // Auto-restore most recent conversation on first load
           if (!convPersistLoaded && d.conversations?.length > 0) {
             const latest = d.conversations[0]
-            if (latest.messages?.length > 0) {
-              restoreConversation(latest)
-            }
+            if (latest.messages?.length > 0) restoreConversation(latest)
           }
           setConvPersistLoaded(true)
         }
@@ -1024,37 +1083,35 @@ export default function CompanionCore({ profile: _profile = null }) {
   }, [messages, loading])
 
   // ── Restore a conversation from history ──
-const restoreConversation = useCallback(async (conv) => {
-  if (!conv.messages?.length) {
-    // Messages not in local state — fetch from server
-    try {
-      const r = await fetch(`/api/user/conversations?limit=30`)
-      const d = await r.json()
-      if (d.success) {
-        const full = d.conversations?.find(c => c.id === conv.id)
-        if (full?.messages?.length) {
-          setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, messages: full.messages } : c))
-          restoreConversation(full)
-        } else {
-          // Conversation exists but genuinely has no messages — just switch context
-          setMessages([])
-          setConversationId(conv.id)
-          setStarted(false)
+  const restoreConversation = useCallback(async (conv) => {
+    if (!conv.messages?.length) {
+      try {
+        const r = await fetch(`/api/user/conversations?limit=30`)
+        const d = await r.json()
+        if (d.success) {
+          const full = d.conversations?.find(c => c.id === conv.id)
+          if (full?.messages?.length) {
+            setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, messages: full.messages } : c))
+            restoreConversation(full)
+          } else {
+            setMessages([])
+            setConversationId(conv.id)
+            setStarted(false)
+          }
         }
-      }
-    } catch {}
-    return
-  }
-  const restored = conv.messages.map(m => ({
-    role:         m.role,
-    content:      m.content,
-    wasTruncated: false,
-  }))
-  setMessages(restored)
-  setConversationId(conv.id)
-  setStarted(true)
-  setNewMsgIdx(null)
-}, [])
+      } catch {}
+      return
+    }
+    const restored = conv.messages.map(m => ({
+      role:         m.role,
+      content:      m.content,
+      wasTruncated: false,
+    }))
+    setMessages(restored)
+    setConversationId(conv.id)
+    setStarted(true)
+    setNewMsgIdx(null)
+  }, [])
 
   // ── Start a fresh conversation ──
   const startNewConversation = useCallback(() => {
@@ -1065,9 +1122,16 @@ const restoreConversation = useCallback(async (conv) => {
     setLastModelId(null)
     setStarted(false)
     setNewMsgIdx(null)
+    setModeState({ current: "PERSONAL", autoDetected: true })
     if (textareaRef.current) textareaRef.current.style.height = "auto"
     setTimeout(() => inputRef.current?.focus(), 50)
   }, [])
+
+  // ── Expose new conversation handler globally for Rail button ──
+  useEffect(() => {
+    window.__kairosNewConversation = startNewConversation
+    return () => { delete window.__kairosNewConversation }
+  }, [startNewConversation])
 
   // ── Conversation management ──
   const handleRenameConv = async (id, title) => {
@@ -1201,6 +1265,12 @@ const restoreConversation = useCallback(async (conv) => {
 
       if (data.modelId) setLastModelId(data.modelId)
 
+      // ── Phase 9A: update mode chip from API response ──
+      // Only update if not manually overridden by user this session
+      if (data.userMode && modeState.autoDetected) {
+        setModeState({ current: data.userMode, autoDetected: true })
+      }
+
       const assistantMsg = {
         role:         "assistant",
         content:      data.reply || "Something stilled. Please try again.",
@@ -1211,7 +1281,6 @@ const restoreConversation = useCallback(async (conv) => {
       const final = [...updatedHistory, assistantMsg]
       setMessages(final); setNewMsgIdx(final.length - 1)
 
-      // Update conversation title in sidebar
       if (conversationId || data.conversationId) {
         setConversations(prev => prev.map(c => {
           if (c.id === (conversationId || data.conversationId) && (c.title === "Untitled conversation" || c.title === truncateText(text, 40))) {
@@ -1296,11 +1365,85 @@ const restoreConversation = useCallback(async (conv) => {
 
           {/* Top bar */}
           <div className="cc-top-bar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: 52, flexShrink: 0, borderBottom: "1px solid rgba(255,255,255,0.04)", background: "rgba(6,9,18,0.6)", backdropFilter: "blur(12px)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+
+            {/* Left side: label + status dot + mode chip */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, position: "relative" }}>
               <p style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "rgba(255,255,255,0.25)" }}>Companion</p>
               <div style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(100,220,100,0.7)", boxShadow: "0 0 6px rgba(100,220,100,0.5)", animation: "cc-pulse 2.5s ease-in-out infinite" }} />
-              {conversationId && <p style={{ fontFamily: "var(--font-body)", fontSize: "0.7rem", color: "rgba(255,255,255,0.15)" }}>· {conversations.find(c => c.id === conversationId)?.title || "Active"}</p>}
+
+              {/* ── Mode chip (Phase 9A) — only shown during active conversation ── */}
+              {started && (
+                <div ref={modeChipRef} style={{ position: "relative" }}>
+                  <button
+                    className={`cc-mode-chip${!modeState.autoDetected ? " manual" : ""}`}
+                    onClick={() => setShowModeSelector(v => !v)}
+                    aria-label="Change conversation mode"
+                  >
+                    {/* Dot: gold = auto-detected, green = manually set */}
+                    <div style={{
+                      width: 5, height: 5, borderRadius: "50%", flexShrink: 0,
+                      background: modeState.autoDetected ? "rgba(240,192,96,0.7)" : "rgba(100,200,160,0.8)",
+                    }} />
+                    <span style={{ fontFamily: "var(--font-display)", fontSize: "0.5rem", letterSpacing: "0.1em", color: modeState.autoDetected ? "rgba(255,255,255,0.5)" : "rgba(100,200,160,0.9)" }}>
+                      {MODE_LABEL[modeState.current] || modeState.current}
+                    </span>
+                    {modeState.autoDetected && (
+                      <span style={{ fontFamily: "var(--font-body)", fontSize: "0.48rem", color: "rgba(255,255,255,0.2)" }}>· Auto</span>
+                    )}
+                    <Icon.Chevron />
+                  </button>
+
+                  {/* ── Mode selector dropdown ── */}
+                  {showModeSelector && (
+                    <div className="cc-mode-selector">
+                      <p style={{ fontFamily: "var(--font-display)", fontSize: "0.42rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.2)", padding: "4px 10px 6px", margin: 0 }}>
+                        Conversation Mode
+                      </p>
+                      {USER_MODES.map(m => (
+                        <button
+                          key={m.key}
+                          className={`cc-mode-option${modeState.current === m.key ? " active" : ""}`}
+                          onClick={() => {
+                            setModeState({ current: m.key, autoDetected: false })
+                            setShowModeSelector(false)
+                          }}
+                        >
+                          <div style={{
+                            width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
+                            background: modeState.current === m.key ? "rgba(240,192,96,0.8)" : "rgba(255,255,255,0.15)",
+                          }} />
+                          {m.label}
+                          {modeState.current === m.key && (
+                            <svg style={{ marginLeft: "auto" }} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(240,192,96,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          )}
+                        </button>
+                      ))}
+                      {!modeState.autoDetected && (
+                        <button
+                          className="cc-mode-option"
+                          style={{ borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: 4, paddingTop: 8, color: "rgba(255,255,255,0.25)", fontSize: "0.75rem" }}
+                          onClick={() => {
+                            setModeState(prev => ({ ...prev, autoDetected: true }))
+                            setShowModeSelector(false)
+                          }}
+                        >
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 .49-4.96"/></svg>
+                          Resume auto-detect
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {conversationId && (
+                <p style={{ fontFamily: "var(--font-body)", fontSize: "0.7rem", color: "rgba(255,255,255,0.15)" }}>
+                  · {conversations.find(c => c.id === conversationId)?.title || "Active"}
+                </p>
+              )}
             </div>
+
+            {/* Right side: new + translation */}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {started && (
                 <button onClick={startNewConversation} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-display)", fontSize: "0.5rem", letterSpacing: "0.12em", cursor: "pointer", transition: "all 0.15s ease" }} onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; e.currentTarget.style.color = "rgba(255,255,255,0.55)" }} onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "rgba(255,255,255,0.3)" }}>
